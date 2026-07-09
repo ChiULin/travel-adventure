@@ -23,6 +23,9 @@ public class Scene {
     @Column(length = 255)
     private String description;
 
+    @Column(length = 255)
+    private String imageUrl;
+
     private Integer rarity = 1;
 
     private Integer expReward = 0;

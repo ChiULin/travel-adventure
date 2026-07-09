@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.regex.Matcher;
@@ -65,7 +66,8 @@ class DemoApplicationTests {
 		mockMvc.perform(post("/api/auth/register")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"username\":\"x\",\"password\":\"short\"}"))
-				.andExpect(status().isBadRequest());
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").isString());
 
 		String registration = "{\"username\":\"duplicate-test\",\"password\":\"correct-password\"}";
 		mockMvc.perform(post("/api/auth/register")

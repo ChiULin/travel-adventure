@@ -107,6 +107,7 @@ public class JourneyStateService {
         dto.put("name", scene.getName());
         dto.put("type", scene.getType());
         dto.put("desc", scene.getDescription());
+        dto.put("imageUrl", scene.getImageUrl());
         dto.put("rarity", scene.getRarity());
         dto.put("expReward", scene.getExpReward());
         dto.put("coinReward", scene.getCoinReward());

@@ -219,12 +219,15 @@
     .scene-card.done .scene-status-box { background: var(--green); }
 
     .scene-image {
-      height: 78px;
+      height: 130px;
       margin-bottom: 12px;
       border-radius: 10px;
       background:
         linear-gradient(180deg, rgba(255,255,255,.38), transparent 50%),
         linear-gradient(135deg, #59baff, #4db56a);
+      background-position: center;
+      background-size: cover;
+      box-shadow: inset 0 -28px 30px rgba(11, 35, 71, .18);
     }
 
     .scene-card h3 { margin-bottom: 6px; color: var(--ink); font-size: 17px; }
@@ -453,9 +456,24 @@
       const response = await fetch(path, { ...options, headers });
       if (!response.ok) {
         const text = await response.text();
-        throw new Error(text || `HTTP ${response.status}`);
+        let message = text;
+        try {
+          const errorBody = JSON.parse(text);
+          message = errorBody.message || errorBody.error || "";
+        } catch {
+          // Plain-text API errors are already suitable for display.
+        }
+        throw new Error(message || `操作失敗（${response.status}）`);
       }
       return response.json();
+    }
+
+    function validateAuthInput(username, password) {
+      if (!username) return "請輸入玩家名稱";
+      if (username.length < 3 || username.length > 20) return "玩家名稱需為 3 到 20 個字元";
+      if (!password) return "請輸入密碼";
+      if (password.length < 8 || password.length > 72) return "密碼需為 8 到 72 個字元";
+      return "";
     }
 
     function addLog(text) {
@@ -555,7 +573,7 @@
       document.getElementById("sceneGrid").innerHTML = city.scenes.map(scene => `
         <article class="scene-card ${scene.checked ? "done" : ""}">
           <div class="scene-status-box" aria-label="${scene.checked ? "已打卡" : "尚未打卡"}">${scene.checked ? "✓" : ""}</div>
-          <div class="scene-image"></div>
+          <div class="scene-image" ${scene.imageUrl ? `style="background-image: linear-gradient(180deg, rgba(255,255,255,.08), rgba(11,35,71,.18)), url('${scene.imageUrl}')"` : ""} role="img" aria-label="${scene.name}"></div>
           <h3>${scene.name}</h3>
           <p>${scene.desc}</p>
           <div class="reward-row"><span>EXP +${scene.expReward}</span><span>金幣 +${scene.coinReward}</span></div>
@@ -660,11 +678,14 @@
     document.getElementById("registerBtn").addEventListener("click", async () => {
       const username = document.getElementById("nameInput").value.trim();
       const password = document.getElementById("passwordInput").value;
-      document.getElementById("loginError").textContent = "";
+      const errorElement = document.getElementById("loginError");
+      const validationMessage = validateAuthInput(username, password);
+      errorElement.textContent = validationMessage;
+      if (validationMessage) return;
       try {
         await register(username, password);
       } catch (error) {
-        document.getElementById("loginError").textContent = error.message;
+        errorElement.textContent = error.message;
       }
     });
 
