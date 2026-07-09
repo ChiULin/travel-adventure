@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>台灣旅行冒險</title>
+  <style>
+    :root {
+      --bg: #eef5ff;
+      --panel: #ffffff;
+      --ink: #111827;
+      --text: #2f3a4f;
+      --muted: #68748a;
+      --line: #d8e5fb;
+      --blue: #246fe5;
+      --green: #28b45c;
+      --gold: #f3b43f;
+      --red: #d9434e;
+      --shadow: 0 16px 42px rgba(31, 70, 130, .13);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif;
+      background:
+        radial-gradient(circle at 8% 8%, rgba(36, 112, 232, .13), transparent 28%),
+        radial-gradient(circle at 88% 0%, rgba(40, 180, 92, .13), transparent 26%),
+        var(--bg);
+    }
+
+    button, input { font: inherit; }
+    button { border: 0; cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .52; }
+    h1, h2, h3, p { margin-top: 0; }
+
+    .app {
+      width: min(100%, 1180px);
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    .topbar, .panel, .login-card, .hero {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .9);
+      box-shadow: var(--shadow);
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: center;
+      padding: 16px;
+      border-radius: 18px;
+    }
+
+    .brand {
+      display: grid;
+      grid-template-columns: 56px 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .brand-mark {
+      width: 56px;
+      height: 56px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      color: white;
+      background: linear-gradient(145deg, #34a4ff, #34bd73 62%, #f0c447);
+      font-weight: 900;
+    }
+
+    .brand h1 { margin-bottom: 4px; color: var(--ink); font-size: 28px; }
+    .brand p { margin-bottom: 0; color: var(--muted); font-weight: 700; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 88px);
+      gap: 8px;
+    }
+
+    .stat {
+      min-height: 64px;
+      padding: 9px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #f7faff;
+      text-align: center;
+    }
+
+    .stat strong { display: block; color: var(--ink); font-size: 19px; }
+    .stat span { color: var(--muted); font-size: 12px; font-weight: 800; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr) 300px;
+      gap: 14px;
+      align-items: start;
+      margin-top: 14px;
+    }
+
+    .panel { border-radius: 16px; overflow: hidden; }
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 13px 15px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-head h2 { margin-bottom: 0; color: var(--ink); font-size: 17px; }
+    .panel-body { padding: 14px; }
+
+    .city-list, .scene-grid, .side-stack, .log-list { display: grid; gap: 10px; }
+
+    .city-btn {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 42px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: white;
+      color: var(--text);
+      text-align: left;
+    }
+
+    .city-btn.active {
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--blue), #39a66a);
+      color: white;
+    }
+
+    .city-btn.locked { filter: grayscale(.8); }
+    .city-btn small { display: block; color: inherit; opacity: .75; font-weight: 800; }
+
+    .city-badge {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: rgba(36, 111, 229, .12);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .hero {
+      padding: 18px;
+      border-radius: 18px;
+      color: white;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.2), transparent 50%),
+        linear-gradient(135deg, #4f9eff, #38af73);
+    }
+
+    .hero h2 { margin-bottom: 6px; font-size: 30px; color: white; }
+    .hero p { margin-bottom: 12px; line-height: 1.55; font-weight: 700; }
+
+    .progress {
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.32);
+      overflow: hidden;
+    }
+
+    .progress span {
+      display: block;
+      width: var(--w, 0%);
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold), #ffffff);
+    }
+
+    .scene-grid {
+      grid-template-columns: repeat(3, 1fr);
+      margin-top: 14px;
+    }
+
+    .scene-card {
+      position: relative;
+      min-height: 230px;
+      display: flex;
+      flex-direction: column;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--panel);
+    }
+
+    .scene-card.done {
+      border-color: rgba(40, 180, 92, .42);
+      background: linear-gradient(180deg, #f3fff7, #ffffff);
+    }
+
+    .scene-status-box {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border: 2px solid var(--green);
+      border-radius: 6px;
+      background: #fff;
+      color: #fff;
+      font-weight: 900;
+      box-shadow: 0 6px 14px rgba(40, 180, 92, .28);
+    }
+
+    .scene-card.done .scene-status-box { background: var(--green); }
+
+    .scene-image {
+      height: 78px;
+      margin-bottom: 12px;
+      border-radius: 10px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.38), transparent 50%),
+        linear-gradient(135deg, #59baff, #4db56a);
+    }
+
+    .scene-card h3 { margin-bottom: 6px; color: var(--ink); font-size: 17px; }
+    .scene-card p { color: var(--muted); line-height: 1.45; font-size: 13px; font-weight: 700; }
+
+    .reward-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: auto;
+      padding-top: 10px;
+      border-top: 1px solid #e8effc;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .btn {
+      min-height: 40px;
+      padding: 9px 13px;
+      border-radius: 10px;
+      color: white;
+      background: linear-gradient(180deg, #34ca69, #21994a);
+      font-weight: 900;
+    }
+
+    .btn.blue { background: linear-gradient(180deg, #3c8cff, #1763cb); }
+    .btn.red { background: linear-gradient(180deg, #ff5964, #cf2630); }
+    .btn.ghost { color: #123b78; border: 1px solid #bfd3f6; background: white; }
+    .btn.full { width: 100%; margin-top: 10px; }
+
+    .player-card {
+      padding: 14px;
+      border-radius: 16px;
+      color: white;
+      background: linear-gradient(145deg, #164d9b, #0d2c68);
+    }
+
+    .player-row {
+      display: grid;
+      grid-template-columns: 50px 1fr;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .avatar {
+      width: 50px;
+      height: 50px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: rgba(255,255,255,.18);
+      font-weight: 900;
+      font-size: 24px;
+    }
+
+    .log {
+      padding: 10px;
+      border-radius: 10px;
+      background: #f7faff;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .login {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(14, 31, 68, .58);
+      backdrop-filter: blur(10px);
+    }
+
+    .login.hidden { display: none; }
+    .login-card {
+      width: min(100%, 420px);
+      padding: 22px;
+      border-radius: 18px;
+    }
+
+    .login-card h2 { margin-bottom: 8px; color: var(--ink); font-size: 28px; }
+    .login-card p { color: var(--muted); line-height: 1.55; font-weight: 700; }
+    .login-card input {
+      width: 100%;
+      height: 44px;
+      margin-bottom: 10px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      outline: none;
+    }
+
+    .error {
+      min-height: 20px;
+      margin-bottom: 8px;
+      color: var(--red);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .stats, .scene-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 640px) {
+      .topbar, .brand { grid-template-columns: 1fr; }
+      .stats, .scene-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="login" class="login">
+    <form class="login-card" id="loginForm">
+      <h2>台灣旅行冒險</h2>
+      <p>登入帳號，繼續你的台灣冒險旅程。</p>
+      <input id="nameInput" minlength="3" maxlength="20" autocomplete="username" placeholder="玩家名稱" value="旅行者" />
+      <input id="passwordInput" type="password" minlength="8" maxlength="72" autocomplete="current-password" placeholder="密碼（至少 8 個字元）" />
+      <div class="error" id="loginError"></div>
+      <button class="btn full" type="submit">登入</button>
+      <button class="btn ghost full" id="registerBtn" type="button">建立帳號</button>
+    </form>
+  </div>
+
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">TA</div>
+        <div>
+          <h1>台灣旅行冒險</h1>
+          <p id="routeHint">旅程資料已與後端同步</p>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><strong id="statLevel">1</strong><span>等級</span></div>
+        <div class="stat"><strong id="statExp">0</strong><span>EXP</span></div>
+        <div class="stat"><strong id="statCoins">0</strong><span>金幣</span></div>
+        <div class="stat"><strong id="statCities">1/5</strong><span>城市</span></div>
+      </div>
+    </header>
+
+    <section class="layout">
+      <aside class="panel">
+        <div class="panel-head">
+          <h2>城市</h2>
+          <button class="btn ghost" type="button" id="logoutBtn">登出</button>
+        </div>
+        <div class="panel-body">
+          <div id="cityList" class="city-list"></div>
+        </div>
+      </aside>
+
+      <section>
+        <div class="hero">
+          <h2 id="cityName">載入中</h2>
+          <p id="cityIntro"></p>
+          <div style="display:flex;justify-content:space-between;font-weight:900;margin-bottom:6px">
+            <span id="nextGoal">正在載入旅程</span><span id="cityProgressText">0%</span>
+          </div>
+          <div class="progress" id="cityProgressBar"><span></span></div>
+        </div>
+        <div class="scene-grid" id="sceneGrid"></div>
+      </section>
+
+      <aside class="side-stack">
+        <section class="player-card">
+          <div class="player-row">
+            <div class="avatar" id="avatar">T</div>
+            <div>
+              <strong id="playerName">旅行者</strong><br />
+              <span id="playerTitle">新手旅行者</span>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-weight:900;margin-bottom:6px">
+            <span id="expText">0 / 220 EXP</span><span id="bossPointText">首領點數 0</span>
+          </div>
+          <div class="progress" id="expBar"><span></span></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2>城市首領</h2><small id="bossNeed"></small></div>
+          <div class="panel-body">
+            <h3 id="bossName" style="margin-bottom:10px;color:var(--ink)">首領</h3>
+            <button class="btn red full" id="bossBtn" type="button">挑戰</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2>旅程紀錄</h2></div>
+          <div class="panel-body"><div class="log-list" id="timeline"></div></div>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const SESSION_KEY = "travelAdventureApiSession";
+    let session = loadSession();
+    let appState = null;
+    let activeCityId = null;
+    let logs = [];
+
+    function loadSession() {
+      try {
+        return JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+      } catch {
+        return null;
+      }
+    }
+
+    function saveSession(nextSession) {
+      session = nextSession;
+      if (nextSession) {
+        localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
+      } else {
+        localStorage.removeItem(SESSION_KEY);
+      }
+    }
+
+    async function api(path, options = {}) {
+      const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+      if (session?.token) headers.Authorization = `Bearer ${session.token}`;
+      const response = await fetch(path, { ...options, headers });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `HTTP ${response.status}`);
+      }
+      return response.json();
+    }
+
+    function addLog(text) {
+      const time = new Date().toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" });
+      logs.unshift({ time, text });
+      logs = logs.slice(0, 8);
+      renderTimeline();
+    }
+
+    async function authenticate(path, username, password) {
+      const auth = await api(path, {
+        method: "POST",
+        body: JSON.stringify({ username, password })
+      });
+      saveSession(auth);
+      document.getElementById("login").classList.add("hidden");
+      await refreshState();
+      return auth;
+    }
+
+    async function login(username, password) {
+      const auth = await authenticate("/api/auth/login", username, password);
+      addLog(`${auth.username} 已登入。`);
+    }
+
+    async function register(username, password) {
+      const auth = await authenticate("/api/auth/register", username, password);
+      addLog(`${auth.username} 的帳號已建立。`);
+    }
+
+    async function refreshState() {
+      if (!session?.token) return;
+      appState = await api("/api/journey/me");
+      if (!activeCityId) {
+        const firstUnlocked = appState.cities.find(city => city.unlocked) || appState.cities[0];
+        activeCityId = firstUnlocked.id;
+      }
+      const active = appState.cities.find(city => city.id === activeCityId);
+      if (!active || !active.unlocked) {
+        activeCityId = (appState.cities.find(city => city.unlocked) || appState.cities[0]).id;
+      }
+      renderAll();
+    }
+
+    function activeCity() {
+      return appState?.cities.find(city => city.id === activeCityId) || appState?.cities[0];
+    }
+
+    function progress(city) {
+      const total = city?.total || 0;
+      const done = city?.done || 0;
+      return { done, total, percent: total ? Math.round(done / total * 100) : 0 };
+    }
+
+    function formatNumber(value) {
+      return Number(value || 0).toLocaleString("zh-TW");
+    }
+
+    function renderHeader() {
+      const user = appState.user;
+      const unlocked = appState.cities.filter(city => city.unlocked).length;
+      document.getElementById("statLevel").textContent = user.level || 1;
+      document.getElementById("statExp").textContent = formatNumber(user.exp);
+      document.getElementById("statCoins").textContent = formatNumber(user.coins);
+      document.getElementById("statCities").textContent = `${unlocked}/${appState.cities.length}`;
+    }
+
+    function renderCities() {
+      document.getElementById("cityList").innerHTML = appState.cities.map(city => {
+        const itemProgress = progress(city);
+        const active = city.id === activeCityId;
+        return `
+          <button class="city-btn ${active ? "active" : ""} ${city.unlocked ? "" : "locked"}" type="button" ${city.unlocked ? "" : "disabled"} data-city-id="${city.id}">
+            <span class="city-badge">${city.unlocked ? city.code : "未解鎖"}</span>
+            <span><strong>${city.name}</strong><small>${city.unlocked ? `完成 ${itemProgress.percent}%` : "尚未解鎖"}</small></span>
+            <span>${city.defeated ? "已勝利" : city.unlocked ? `${itemProgress.done}/${itemProgress.total}` : ""}</span>
+          </button>
+        `;
+      }).join("");
+
+      document.querySelectorAll("[data-city-id]").forEach(button => {
+        button.addEventListener("click", () => {
+          activeCityId = Number(button.dataset.cityId);
+          renderAll();
+        });
+      });
+    }
+
+    function renderMainCity() {
+      const city = activeCity();
+      const itemProgress = progress(city);
+      document.getElementById("cityName").textContent = city.name;
+      document.getElementById("cityIntro").textContent = city.intro;
+      document.getElementById("cityProgressText").textContent = `${itemProgress.percent}%`;
+      document.getElementById("cityProgressBar").style.setProperty("--w", `${itemProgress.percent}%`);
+      document.getElementById("nextGoal").textContent = nextGoalText(city, itemProgress);
+      document.getElementById("sceneGrid").innerHTML = city.scenes.map(scene => `
+        <article class="scene-card ${scene.checked ? "done" : ""}">
+          <div class="scene-status-box" aria-label="${scene.checked ? "已打卡" : "尚未打卡"}">${scene.checked ? "✓" : ""}</div>
+          <div class="scene-image"></div>
+          <h3>${scene.name}</h3>
+          <p>${scene.desc}</p>
+          <div class="reward-row"><span>EXP +${scene.expReward}</span><span>金幣 +${scene.coinReward}</span></div>
+          <button class="btn full" type="button" ${scene.checked ? "disabled" : ""} data-scene-id="${scene.id}">
+            ${scene.checked ? "已打卡" : "打卡"}
+          </button>
+        </article>
+      `).join("");
+
+      document.querySelectorAll("[data-scene-id]").forEach(button => {
+        button.addEventListener("click", () => checkin(Number(button.dataset.sceneId)));
+      });
+    }
+
+    function nextGoalText(city, itemProgress) {
+      if (city.defeated) {
+        const next = appState.cities.find(item => !item.unlocked);
+        return next ? `下一座城市：${next.name}` : "所有旅程皆已完成";
+      }
+      if (itemProgress.done < itemProgress.total) {
+        return `還有 ${itemProgress.total - itemProgress.done} 個景點`;
+      }
+      return `可以挑戰 ${city.bossName}`;
+    }
+
+    function renderPlayer() {
+      const user = appState.user;
+      const current = (user.exp || 0) % 220;
+      const percent = Math.round(current / 220 * 100);
+      document.getElementById("playerName").textContent = user.username;
+      document.getElementById("playerTitle").textContent = `Lv.${user.level || 1} ${user.title || "新手旅行者"}`;
+      document.getElementById("avatar").textContent = user.username.trim().slice(0, 1).toUpperCase() || "T";
+      document.getElementById("expText").textContent = `${current} / 220 EXP`;
+      document.getElementById("bossPointText").textContent = `首領點數 ${user.bossPoints || 0}`;
+      document.getElementById("expBar").style.setProperty("--w", `${percent}%`);
+    }
+
+    function renderBoss() {
+      const city = activeCity();
+      const itemProgress = progress(city);
+      document.getElementById("bossName").textContent = city.bossName;
+      document.getElementById("bossNeed").textContent = city.defeated ? "已擊敗" : itemProgress.done >= itemProgress.total ? "可以挑戰" : `還差 ${itemProgress.total - itemProgress.done} 個`;
+      document.getElementById("bossBtn").disabled = city.defeated || itemProgress.done < itemProgress.total;
+      document.getElementById("bossBtn").textContent = city.defeated ? "已擊敗" : "挑戰";
+    }
+
+    function renderTimeline() {
+      const visible = logs.length ? logs : [{ time: "--:--", text: "歡迎來到台灣旅行冒險。" }];
+      document.getElementById("timeline").innerHTML = visible.map(log => `
+        <div class="log"><strong>${log.time}</strong> ${log.text}</div>
+      `).join("");
+    }
+
+    function renderAll() {
+      if (!appState) return;
+      renderHeader();
+      renderCities();
+      renderMainCity();
+      renderPlayer();
+      renderBoss();
+      renderTimeline();
+    }
+
+    async function checkin(sceneId) {
+      try {
+        await api("/api/checkins", {
+          method: "POST",
+          body: JSON.stringify({ sceneId })
+        });
+        addLog("景點打卡完成。");
+        await refreshState();
+      } catch (error) {
+        addLog(error.message);
+      }
+    }
+
+    async function challengeBoss() {
+      const city = activeCity();
+      try {
+        const result = await api(`/api/cities/${city.id}/boss/challenge`, {
+          method: "POST"
+        });
+        addLog(result.win ? `成功擊敗 ${city.bossName}。` : `${city.bossName} 太強了，請提升實力後再挑戰。`);
+        await refreshState();
+      } catch (error) {
+        addLog(error.message);
+      }
+    }
+
+    document.getElementById("loginForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const username = document.getElementById("nameInput").value.trim() || "旅行者";
+      const password = document.getElementById("passwordInput").value;
+      document.getElementById("loginError").textContent = "";
+      try {
+        await login(username, password);
+      } catch (error) {
+        document.getElementById("loginError").textContent = error.message;
+      }
+    });
+
+    document.getElementById("registerBtn").addEventListener("click", async () => {
+      const username = document.getElementById("nameInput").value.trim();
+      const password = document.getElementById("passwordInput").value;
+      document.getElementById("loginError").textContent = "";
+      try {
+        await register(username, password);
+      } catch (error) {
+        document.getElementById("loginError").textContent = error.message;
+      }
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      saveSession(null);
+      appState = null;
+      activeCityId = null;
+      logs = [];
+      document.getElementById("login").classList.remove("hidden");
+    });
+
+    document.getElementById("bossBtn").addEventListener("click", challengeBoss);
+
+    if (session?.token) {
+      document.getElementById("login").classList.add("hidden");
+      refreshState().catch(() => {
+        saveSession(null);
+        document.getElementById("login").classList.remove("hidden");
+      });
+    }
+  </script>
+</body>
+</html>

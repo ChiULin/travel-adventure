@@ -1,0 +1,763 @@
+﻿<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Travel Adventure</title>
+  <style>
+    :root {
+      --bg: #eef3fb;
+      --panel: #ffffff;
+      --panel-2: #f7f9ff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --primary: #1d9bf0;
+      --primary-2: #0f6ec7;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --purple: #8b5cf6;
+      --gold: #facc15;
+      --line: rgba(31,41,55,0.12);
+      --shadow: 0 14px 40px rgba(30,60,100,0.14);
+      --radius: 22px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif;
+      color: var(--text);
+      background: linear-gradient(135deg, rgba(29,155,240,0.18), rgba(139,92,246,0.16)), var(--bg);
+    }
+    button, input { font: inherit; }
+    button { border: 0; cursor: pointer; transition: 0.18s ease; }
+    button:hover { transform: translateY(-1px); }
+    .app-shell {
+      width: min(100%, 980px);
+      margin: 0 auto;
+      padding: 20px 16px 96px;
+    }
+    .login-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(29,155,240,0.95), rgba(139,92,246,0.92));
+      color: white;
+    }
+    .login-card {
+      width: min(100%, 430px);
+      border-radius: 28px;
+      padding: 26px;
+      background: rgba(255,255,255,0.16);
+      border: 1px solid rgba(255,255,255,0.25);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.24);
+    }
+    .login-card h1 { margin: 0 0 8px; font-size: 30px; }
+    .login-card p { margin: 0 0 16px; line-height: 1.6; opacity: 0.95; }
+    .input {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.18);
+      color: white;
+      outline: 0;
+      margin-bottom: 10px;
+    }
+    .input::placeholder { color: rgba(255,255,255,0.75); }
+    .btn {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 16px;
+      font-weight: 800;
+      color: white;
+      background: var(--primary);
+    }
+    .btn.secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); }
+    .btn.warning { background: var(--warning); color: #111827; }
+    .btn.purple { background: var(--purple); }
+    .btn.success { background: var(--success); }
+    .btn.danger { background: var(--danger); }
+    .btn.small { padding: 10px 12px; width: auto; }
+    .hidden { display: none !important; }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 24px;
+      background: rgba(255,255,255,0.78);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      margin-bottom: 14px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-icon {
+      width: 42px; height: 42px; display: grid; place-items: center; border-radius: 14px;
+      background: linear-gradient(135deg, var(--primary), var(--purple)); color: white; font-size: 22px;
+    }
+    .brand h1 { margin: 0; font-size: 17px; }
+    .brand p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .tab {
+      padding: 10px 12px; border-radius: 999px; background: rgba(255,255,255,0.72); color: var(--muted); border: 1px solid var(--line);
+      font-weight: 700;
+    }
+    .tab.active { background: linear-gradient(135deg, var(--primary), var(--purple)); color: white; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .hero {
+      color: white;
+      background: linear-gradient(135deg, rgba(29,155,240,0.95), rgba(139,92,246,0.92));
+      position: relative; overflow: hidden;
+    }
+    .hero::after {
+      content: ""; position: absolute; inset: 0; background: radial-gradient(circle at top right, rgba(255,255,255,0.22), transparent 30%); pointer-events: none;
+    }
+    .hero > * { position: relative; z-index: 1; }
+    .hero-top { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    .avatar { width: 60px; height: 60px; display: grid; place-items: center; border-radius: 22px; background: rgba(255,255,255,0.2); font-size: 32px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+    .stat-card { padding: 10px 6px; border-radius: 16px; background: rgba(255,255,255,0.16); text-align: center; }
+    .stat-card strong { display: block; font-size: 18px; }
+    .stat-card span { font-size: 11px; opacity: 0.9; }
+    .progress-wrap { margin-top: 14px; }
+    .progress-info { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; margin-bottom: 6px; opacity: 0.95; }
+    .progress { height: 12px; background: rgba(255,255,255,0.24); border-radius: 999px; overflow: hidden; }
+    .bar { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #22c55e, #facc15); }
+    .section-title { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .section-title h2 { margin: 0; font-size: 18px; }
+    .section-title small { color: var(--muted); }
+    .city-list, .scene-grid, .collection-grid { display: grid; gap: 12px; }
+    .city-card, .scene-card, .collect-card, .skill-card, .task-row, .achievement-item, .timeline-item {
+      border-radius: 18px; background: var(--panel-2); border: 1px solid var(--line); padding: 14px;
+    }
+    .city-card { min-height: 170px; color: white; background: linear-gradient(135deg, rgba(29,155,240,0.9), rgba(139,92,246,0.9)); }
+    .city-card.locked { filter: grayscale(0.7); opacity: 0.72; }
+    .city-card h3 { margin: 0 0 6px; font-size: 20px; }
+    .city-card p { margin: 0 0 10px; line-height: 1.5; font-size: 13px; opacity: 0.92; }
+    .pill-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .pill { display: inline-flex; align-items: center; gap: 4px; padding: 6px 9px; border-radius: 999px; background: rgba(255,255,255,0.16); font-size: 12px; font-weight: 700; }
+    .scene-card .scene-top { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
+    .scene-card h3 { margin: 0 0 4px; font-size: 16px; }
+    .scene-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .scene-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .scene-actions .btn { width: 100%; padding: 10px 12px; }
+    .task-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .task-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 14px; background: rgba(29,155,240,0.16); font-size: 20px; }
+    .task-row h3 { margin: 0; font-size: 14px; }
+    .task-row p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+    .collection-grid { grid-template-columns: repeat(2, 1fr); }
+    .collect-card.locked { opacity: 0.55; filter: grayscale(0.9); }
+    .collect-card .emoji { font-size: 24px; margin-bottom: 6px; }
+    .collect-card h3 { margin: 0 0 2px; font-size: 14px; }
+    .collect-card p { margin: 0; color: var(--muted); font-size: 12px; }
+    .skill-card h3 { margin: 0 0 5px; font-size: 15px; }
+    .skill-card p { margin: 0 0 10px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .skill-levels { display: flex; gap: 6px; margin-top: 8px; }
+    .skill-dot { width: 22px; height: 10px; border-radius: 999px; background: rgba(120,130,150,0.25); }
+    .skill-dot.on { background: linear-gradient(90deg, var(--primary), var(--purple)); }
+    .gacha-box { text-align: center; padding: 18px; border-radius: 22px; background: linear-gradient(135deg, rgba(139,92,246,0.14), rgba(29,155,240,0.12)); border: 1px solid var(--line); }
+    .gacha-ball { width: 95px; height: 95px; margin: 8px auto 12px; border-radius: 50%; display: grid; place-items: center; font-size: 42px; background: radial-gradient(circle at 30% 30%, white, #facc15 35%, #f97316 80%); box-shadow: 0 16px 40px rgba(249,115,22,0.2); }
+    .achievement-item { margin-bottom: 10px; display: flex; gap: 10px; align-items: center; }
+    .achievement-item.done { background: linear-gradient(135deg, rgba(250,204,21,0.14), rgba(34,197,94,0.12)); }
+    .achievement-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 14px; background: rgba(250,204,21,0.18); font-size: 20px; }
+    .achievement-item h3 { margin: 0 0 2px; font-size: 14px; }
+    .achievement-item p { margin: 0; color: var(--muted); font-size: 12px; }
+    .timeline-item { margin-bottom: 10px; }
+    .timeline-item h3 { margin: 0 0 2px; font-size: 14px; }
+    .timeline-item p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+    .muted { color: var(--muted); }
+    @media (min-width: 780px) {
+      .city-list { grid-template-columns: repeat(2, 1fr); }
+      .scene-grid { grid-template-columns: repeat(2, 1fr); }
+      .collection-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <h1>ð Travel Adventure</h1>
+      <p>è¼¸å¥ä½ çåå­ï¼éå§ä¸å ´èåæå¡ãæ½å¡è Boss ææ°çæéåéªã</p>
+      <input id="playerNameInput" class="input" placeholder="è¼¸å¥ç©å®¶åç¨±ï¼ä¾å¦ Tom" value="Tom" />
+      <button class="btn warning" id="startBtn">éå§åéª</button>
+      <button class="btn secondary" id="demoBtn" style="margin-top:8px;">å¿«éé«é© Demo</button>
+    </div>
+  </div>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon">ð§­</div>
+        <div>
+          <h1 id="playerName">Travel Adventure</h1>
+          <p id="playerTitle">æè¡æ°æ</p>
+        </div>
+      </div>
+      <button class="btn small secondary" id="resetBtn">éç½®</button>
+    </header>
+
+    <div class="tabs">
+      <button class="tab active" data-screen="home">ð  é¦é </button>
+      <button class="tab" data-screen="explore">ðº æ¢ç´¢</button>
+      <button class="tab" data-screen="collection">ð åé</button>
+      <button class="tab" data-screen="skills">â¨ æè½</button>
+      <button class="tab" data-screen="achievements">ð æå°±</button>
+    </div>
+
+    <section class="panel hero" id="screen-home">
+      <div class="hero-top">
+        <div>
+          <div style="font-size: 22px; font-weight: 900;">æ­¡è¿åä¾ï¼<span id="heroName">Tom</span></div>
+          <div style="margin-top: 6px; display: inline-block; padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 12px;">Lv.<span id="heroLevel">1</span> Â· <span id="heroTitle">æè¡æ°æ</span></div>
+        </div>
+        <div class="avatar">ð§ââï¸</div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card"><strong id="statExp">0</strong><span>EXP</span></div>
+        <div class="stat-card"><strong id="statCoins">200</strong><span>Coins</span></div>
+        <div class="stat-card"><strong id="statSkill">0</strong><span>æè½é»</span></div>
+        <div class="stat-card"><strong id="statCheckin">0</strong><span>æå¡</span></div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-info"><span id="expText">0 / 100 EXP</span><span id="nextText">è·é¢åç´ 100</span></div>
+        <div class="progress"><div class="bar" id="expBar" style="width:0%"></div></div>
+      </div>
+    </section>
+
+    <section class="panel hidden" id="screen-explore">
+      <div class="section-title">
+        <h2>ð åå¸æ¢ç´¢</h2>
+        <small>ææ°åå¸ Bossï¼è§£éä¸ä¸ç«</small>
+      </div>
+      <div id="cityList" class="city-list"></div>
+      <div class="panel" style="margin-top:14px;">
+        <div class="section-title">
+          <h2 id="sceneTitle">ð æ¯é»åè¡¨</h2>
+          <small id="sceneSubtitle">é¸æåå¸éå§åéª</small>
+        </div>
+        <div id="sceneGrid" class="scene-grid"></div>
+      </div>
+    </section>
+
+    <section class="panel hidden" id="screen-collection">
+      <div class="section-title">
+        <h2>ð æ¯é»åé</h2>
+        <small id="dexSummary">0 / 0</small>
+      </div>
+      <div id="dexGrid" class="collection-grid"></div>
+      <div class="section-title" style="margin-top:16px;">
+        <h2>ð ç´å¿µåæ¶è</h2>
+        <small id="cardSummary">0 / 0</small>
+      </div>
+      <div id="souvenirGrid" class="collection-grid"></div>
+    </section>
+
+    <section class="panel hidden" id="screen-skills">
+      <div class="section-title">
+        <h2>ð æè½æ¨¹</h2>
+        <small>å¯ç¨æè½é»ï¼<b id="skillPointText">0</b></small>
+      </div>
+      <div id="skillList"></div>
+      <div class="gacha-box" style="margin-top:16px;">
+        <div class="gacha-ball">ð</div>
+        <h3>æè¡èåæ½å¡</h3>
+        <p class="muted">ä½¿ç¨ Coins æ½ä¸å¼µç´å¿µåï¼ç¨æåº¦å¾ N å° URã</p>
+        <button class="btn warning" id="drawOneBtn">æ½ 1 æ¬¡ï½100 Coins</button>
+        <button class="btn purple" id="drawFiveBtn" style="margin-top:8px;">æ½ 5 æ¬¡ï½450 Coins</button>
+      </div>
+    </section>
+
+    <section class="panel hidden" id="screen-achievements">
+      <div class="section-title">
+        <h2>ð æå°±ç</h2>
+        <small>å®æä»»åèåéªï¼è§£éæ´å¤æå°±</small>
+      </div>
+      <div id="achievementList"></div>
+      <div class="panel" style="margin-top:14px;">
+        <div class="section-title">
+          <h2>ð æçæç¨</h2>
+          <small>è¡åç´é</small>
+        </div>
+        <div id="timeline"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'travelAdventureV3Demo';
+    const gameData = {
+      cities: [
+        { id: 'taipei', name: 'å°å', intro: 'æ©å¤©å¤§æ¨ãèè¡æåèå¤å¸ç¾é£äº¤æçèµ·é»åå¸ã', boss: 'å°åç', unlock: 'é è¨­è§£é', scenes: [
+          { id: 'taipei101', name: 'å°å101', emoji: 'ðï¸', type: 'å°æ¨', exp: 80, coins: 80, rarity: 3 },
+          { id: 'longshan', name: 'é¾å±±å¯º', emoji: 'ð¯', type: 'æå', exp: 55, coins: 60, rarity: 2 },
+          { id: 'ximen', name: 'è¥¿éçº', emoji: 'ðï¸', type: 'æ½®æµ', exp: 35, coins: 45, rarity: 1 }
+        ] },
+        { id: 'taichung', name: 'å°ä¸­', intro: 'åµæãèªç¶èç¾é£å¼å·çåéªåå¸ã', boss: 'ä¸­é½å·¨ç¸', unlock: 'ææå°åçå¾è§£é', scenes: [
+          { id: 'gaomei', name: 'é«ç¾æ¿å°', emoji: 'ð', type: 'èªç¶', exp: 90, coins: 80, rarity: 3 },
+          { id: 'rainbow', name: 'å½©è¹ç·æ', emoji: 'ð', type: 'èè¡', exp: 60, coins: 60, rarity: 2 },
+          { id: 'opera', name: 'åå®¶æ­åé¢', emoji: 'ð­', type: 'å»ºç¯', exp: 85, coins: 85, rarity: 3 }
+        ] },
+        { id: 'tainan', name: 'å°å', intro: 'å¤é½æåèå°åæäºï¼è®äººæ³æ¢æ¢åéªã', boss: 'å¤é½å®è­·ç¥', unlock: 'ææä¸­é½å·¨ç¸å¾è§£é', scenes: [
+          { id: 'anping', name: 'å®å¹³å¤å ¡', emoji: 'ð°', type: 'æ­·å²', exp: 100, coins: 95, rarity: 3 },
+          { id: 'chihkan', name: 'èµ¤å´æ¨', emoji: 'ð®', type: 'æå', exp: 95, coins: 90, rarity: 3 },
+          { id: 'guohua', name: 'åè¯è¡', emoji: 'ð', type: 'ç¾é£', exp: 70, coins: 75, rarity: 2 }
+        ] }
+      ],
+      skills: [
+        { id: 'photo', name: 'æå½±å¸«', emoji: 'ð¸', desc: 'æ¯ç´é¡å¤å¢å æå¡ EXP 10%ã', max: 3 },
+        { id: 'foodie', name: 'ç¾é£å®¶', emoji: 'ð', desc: 'æ¯ç´æåé¨æ©ç¾é£äºä»¶æ©çã', max: 3 },
+        { id: 'explorer', name: 'æ¢éªå®¶', emoji: 'ð§­', desc: 'æåé±èæ¯é»ç¼ç¾çã', max: 3 }
+      ],
+      souvenirs: [
+        { id: 'bubbletea', name: 'çç å¥¶è¶', emoji: 'ð§', rarity: 'N' },
+        { id: 'pineapple', name: 'é³³æ¢¨é¥', emoji: 'ð', rarity: 'N' },
+        { id: 'stinkytofu', name: 'è­è±è', emoji: 'ð¥¢', rarity: 'R' },
+        { id: 'beefnoodle', name: 'çèéºµ', emoji: 'ð', rarity: 'R' },
+        { id: 'jade', name: 'ç¿ çç½è', emoji: 'ð¥¬', rarity: 'SSR' },
+        { id: 'lantern', name: 'å¤©çå³èªª', emoji: 'ð®', rarity: 'UR' }
+      ],
+      achievements: [
+        { id: 'firstCheckin', icon: 'ð', name: 'ç¬¬ä¸æ¬¡æå¡', desc: 'å®æä»»ä¸æ¯é»æå¡ã' },
+        { id: 'bossHunter', icon: 'âï¸', name: 'Boss çµäºº', desc: 'ææä»»ä¸åå¸ Bossã' },
+        { id: 'threeCity', icon: 'ð', name: 'ç°å³¶éäºº', desc: 'ææä¸ååå¸ Bossã' },
+        { id: 'fiveCards', icon: 'ð', name: 'å¡çæ¶èå®¶', desc: 'ææäºç¨®ç´å¿µåã' }
+      ]
+    };
+
+    const defaultState = () => ({
+      name: 'Tom',
+      loggedIn: false,
+      exp: 0,
+      coins: 200,
+      skillPoints: 0,
+      level: 1,
+      title: 'æè¡æ°æ',
+      checkins: [],
+      souvenirs: [],
+      skills: { photo: 0, foodie: 0, explorer: 0 },
+      unlockedCities: ['taipei'],
+      activeCity: 'taipei',
+      defeatedBosses: [],
+      achievements: [],
+      timeline: [],
+      daily: { checkinCount: 0, gachaCount: 0 }
+    });
+
+    let state = loadState();
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return defaultState();
+        return { ...defaultState(), ...JSON.parse(raw) };
+      } catch {
+        return defaultState();
+      }
+    }
+    function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+    function recalcLevel() {
+      let level = 1;
+      let remaining = state.exp;
+      while (remaining >= level * 120) {
+        remaining -= level * 120;
+        level += 1;
+      }
+      state.level = level;
+      if (level >= 5) state.title = 'åéªéäºº';
+      else if (level >= 3) state.title = 'åå¸æ¢ç´¢å®¶';
+      else state.title = 'æè¡æ°æ';
+      return { current: remaining, need: level * 120 };
+    }
+
+    function gainReward(exp, coins, reason) {
+      state.exp += exp;
+      state.coins += coins;
+      addTimeline('ç²å¾çåµ', `${reason}ï½+${exp} EXPï¼+${coins} Coins`, 'ð');
+      recalcLevel();
+      checkAchievements();
+      renderAll();
+    }
+
+    function checkin(cityId, sceneId) {
+      const city = gameData.cities.find(c => c.id === cityId);
+      const scene = city.scenes.find(s => s.id === sceneId);
+      if (!state.checkins.includes(sceneId)) {
+        state.checkins.push(sceneId);
+        state.daily.checkinCount += 1;
+        gainReward(scene.exp + scene.rarity * 10, scene.coins, `${city.name}ï½${scene.name} æå¡æå`);
+      }
+      addTimeline('æ¯é»æå¡', `${city.name}ï½${scene.name}`, 'ð');
+      saveState();
+      renderAll();
+    }
+
+    function challengeBoss(cityId) {
+      const city = gameData.cities.find(c => c.id === cityId);
+      if (state.defeatedBosses.includes(cityId)) return;
+      if (state.checkins.length < 3) return alert('åå®æ 3 åæ¯é»æå¡åææ° Bossã');
+      state.defeatedBosses.push(cityId);
+      if (cityId === 'taipei' && !state.unlockedCities.includes('taichung')) state.unlockedCities.push('taichung');
+      if (cityId === 'taichung' && !state.unlockedCities.includes('tainan')) state.unlockedCities.push('tainan');
+      state.coins += 120;
+      state.exp += 180;
+      addTimeline('Boss ææ°', `ææ ${city.boss}`, 'âï¸');
+      checkAchievements();
+      saveState();
+      renderAll();
+    }
+
+    function upgradeSkill(skillId) {
+      if (state.skillPoints <= 0) return;
+      const skill = gameData.skills.find(s => s.id === skillId);
+      if (state.skills[skillId] >= skill.max) return;
+      state.skills[skillId] += 1;
+      state.skillPoints -= 1;
+      addTimeline('æè½åç´', `${skill.name} åç´å° Lv.${state.skills[skillId]}`, skill.emoji);
+      saveState();
+      renderAll();
+    }
+
+    function drawGacha(times) {
+      const cost = times === 5 ? 450 : 100;
+      if (state.coins < cost) return alert('Coins ä¸è¶³ï¼åå»æå¡è³ºé¢ã');
+      state.coins -= cost;
+      state.daily.gachaCount += times;
+      const results = Array.from({ length: times }, () => {
+        const pool = gameData.souvenirs[Math.floor(Math.random() * gameData.souvenirs.length)];
+        if (!state.souvenirs.includes(pool.id)) state.souvenirs.push(pool.id);
+        return pool;
+      });
+      addTimeline('æ½å¡çµæ', results.map(r => `${r.emoji}${r.name}`).join('ã'), 'ð');
+      checkAchievements();
+      saveState();
+      renderAll();
+      alert(`æ½å¡æåï¼${results.map(r => `${r.name}`).join('ã')}`);
+    }
+
+    function addTimeline(title, desc, icon) {
+      state.timeline.unshift({ title, desc, icon, time: new Date().toLocaleString('zh-TW') });
+      state.timeline = state.timeline.slice(0, 12);
+    }
+
+    function checkAchievements() {
+      const done = new Set(state.achievements);
+      if (state.checkins.length >= 1) done.add('firstCheckin');
+      if (state.defeatedBosses.length >= 1) done.add('bossHunter');
+      if (state.defeatedBosses.length >= 3) done.add('threeCity');
+      if (state.souvenirs.length >= 5) done.add('fiveCards');
+      state.achievements = [...done];
+    }
+
+    function renderHome() {
+      const info = recalcLevel();
+      document.getElementById('playerName').textContent = state.name;
+      document.getElementById('playerTitle').textContent = state.title;
+      document.getElementById('heroName').textContent = state.name;
+      document.getElementById('heroLevel').textContent = state.level;
+      document.getElementById('heroTitle').textContent = state.title;
+      document.getElementById('statExp').textContent = state.exp;
+      document.getElementById('statCoins').textContent = state.coins;
+      document.getElementById('statSkill').textContent = state.skillPoints;
+      document.getElementById('statCheckin').textContent = state.checkins.length;
+      document.getElementById('expText').textContent = `${info.current} / ${info.need} EXP`;
+      document.getElementById('nextText').textContent = `è·é¢åç´ ${info.need - info.current}`;
+      document.getElementById('expBar').style.width = `${Math.max(0, Math.min(100, Math.floor(info.current / info.need * 100)))}%`;
+    }
+
+    function renderCities() {
+      const list = document.getElementById('cityList');
+      list.innerHTML = gameData.cities.map(city => {
+        const unlocked = state.unlockedCities.includes(city.id);
+        const progress = Math.min(100, Math.floor((state.checkins.filter(id => city.scenes.some(s => s.id === id)).length / city.scenes.length) * 100));
+        return `
+          <div class="city-card ${unlocked ? '' : 'locked'}">
+            <h3>${city.name}</h3>
+            <p>${city.intro}</p>
+            <div class="pill-row">
+              <span class="pill">ð§­ ${progress}%</span>
+              <span class="pill">âï¸ ${city.boss}</span>
+            </div>
+            <button class="btn secondary" style="width:auto; padding:10px 12px;" onclick="selectCity('${city.id}')" ${unlocked ? '' : 'disabled'}>${unlocked ? 'é²å¥æ¢ç´¢' : city.unlock}</button>
+          </div>`;
+      }).join('');
+    }
+
+    function selectCity(cityId) {
+      state.activeCity = cityId;
+      renderScenes();
+      saveState();
+    }
+
+    function renderScenes() {
+      const city = gameData.cities.find(c => c.id === state.activeCity) || gameData.cities[0];
+      document.getElementById('sceneTitle').textContent = `ð ${city.name} æ¯é»åè¡¨`;
+      document.getElementById('sceneSubtitle').textContent = `æ¢ç´¢ãæå¡ãææ° Boss`;
+      document.getElementById('sceneGrid').innerHTML = city.scenes.map(scene => `
+        <div class="scene-card">
+          <div class="scene-top">
+            <div>
+              <h3>${scene.emoji} ${scene.name}</h3>
+              <p>${scene.type}ï½EXP ${scene.exp}ï½Coins ${scene.coins}</p>
+            </div>
+            <span class="pill">${'â'.repeat(scene.rarity)}</span>
+          </div>
+          <div class="scene-actions">
+            <button class="btn success" onclick="checkin('${city.id}', '${scene.id}')">ç«å³æå¡</button>
+            <button class="btn secondary" onclick="challengeBoss('${city.id}')">ææ° Boss</button>
+          </div>
+        </div>`).join('');
+    }
+
+    function renderCollection() {
+      const scenes = gameData.cities.flatMap(city => city.scenes.map(scene => ({ ...scene, cityName: city.name })));
+      document.getElementById('dexSummary').textContent = `${state.checkins.length} / ${scenes.length}`;
+      document.getElementById('dexGrid').innerHTML = scenes.map(scene => {
+        const checked = state.checkins.includes(scene.id);
+        return `
+          <div class="collect-card ${checked ? '' : 'locked'}">
+            <div class="emoji">${checked ? scene.emoji : 'â'}</div>
+            <h3>${checked ? scene.name : '???'}</h3>
+            <p>${checked ? scene.cityName : 'å°æªç¼ç¾'}</p>
+          </div>`;
+      }).join('');
+      document.getElementById('cardSummary').textContent = `${state.souvenirs.length} / ${gameData.souvenirs.length}`;
+      document.getElementById('souvenirGrid').innerHTML = gameData.souvenirs.map(item => {
+        const owned = state.souvenirs.includes(item.id);
+        return `
+          <div class="collect-card ${owned ? '' : 'locked'}">
+            <div class="emoji">${owned ? item.emoji : 'ð'}</div>
+            <h3>${owned ? item.name : 'æªåå¾'}</h3>
+            <p class="rarity-${item.rarity}">${item.rarity}</p>
+          </div>`;
+      }).join('');
+    }
+
+    function renderSkills() {
+      document.getElementById('skillPointText').textContent = state.skillPoints;
+      document.getElementById('skillList').innerHTML = gameData.skills.map(skill => {
+        const lv = state.skills[skill.id] || 0;
+        return `
+          <div class="skill-card">
+            <h3>${skill.emoji} ${skill.name}</h3>
+            <p>${skill.desc}</p>
+            <button class="btn small secondary" onclick="upgradeSkill('${skill.id}')" ${state.skillPoints <= 0 || lv >= skill.max ? 'disabled' : ''}>åç´</button>
+            <div class="skill-levels">${Array.from({ length: skill.max }).map((_, i) => `<span class="skill-dot ${i < lv ? 'on' : ''}"></span>`).join('')}</div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderAchievements() {
+      document.getElementById('achievementList').innerHTML = gameData.achievements.map(item => {
+        const done = state.achievements.includes(item.id);
+        return `
+          <div class="achievement-item ${done ? 'done' : ''}">
+            <div class="achievement-icon">${done ? item.icon : 'ð'}</div>
+            <div>
+              <h3>${item.name}</h3>
+              <p>${item.desc}</p>
+            </div>
+          </div>`;
+      }).join('');
+      document.getElementById('timeline').innerHTML = state.timeline.length ? state.timeline.map(item => `
+        <div class="timeline-item">
+          <h3>${item.icon} ${item.title}</h3>
+          <p>${item.desc}</p>
+          <p>${item.time}</p>
+        </div>`).join('') : '<p class="muted">å°ç¡æç¨ç´éã</p>';
+    }
+
+    function renderAll() {
+      recalcLevel();
+      renderHome();
+      renderCities();
+      renderScenes();
+      renderCollection();
+      renderSkills();
+      renderAchievements();
+      saveState();
+    }
+
+    function showScreen(screen) {
+      document.querySelectorAll('.tabs .tab').forEach(btn => btn.classList.toggle('active', btn.dataset.screen === screen));
+      document.querySelectorAll('section.panel').forEach(section => {
+        if (section.id.startsWith('screen-')) section.classList.toggle('hidden', section.id !== `screen-${screen}`);
+      });
+    }
+
+    document.querySelectorAll('.tabs .tab').forEach(btn => btn.addEventListener('click', () => showScreen(btn.dataset.screen)));
+    document.getElementById('startBtn').addEventListener('click', () => {
+      const name = document.getElementById('playerNameInput').value.trim() || 'Tom';
+      state.name = name;
+      state.loggedIn = true;
+      state.skillPoints += 1;
+      addTimeline('ç»å¥åéª', `${name} éå§æéåéªã`, 'ð');
+      document.getElementById('loginScreen').classList.add('hidden');
+      renderAll();
+    });
+    document.getElementById('demoBtn').addEventListener('click', () => {
+      document.getElementById('playerNameInput').value = 'Demoç©å®¶';
+      document.getElementById('startBtn').click();
+    });
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      localStorage.removeItem(STORAGE_KEY);
+      state = defaultState();
+      renderAll();
+      document.getElementById('loginScreen').classList.remove('hidden');
+    });
+    document.getElementById('drawOneBtn').addEventListener('click', () => drawGacha(1));
+    document.getElementById('drawFiveBtn').addEventListener('click', () => drawGacha(5));
+
+    if (!state.loggedIn) {
+      document.getElementById('loginScreen').classList.remove('hidden');
+    }
+    renderAll();
+  </script>
+</body>
+</html>
+
+
+    async function loadCities() {
+      if (!token) return;
+      const res = await fetch('/api/cities', {headers: authHeaders()});
+      if (!res.ok) {
+        setStatus('è¼å¥åå¸å¤±æ');
+        return;
+      }
+      const list = await res.json();
+      cityList.innerHTML = '';
+      sceneList.innerHTML = '';
+      currentCityId = null;
+      updateTargetInfo();
+      if (list.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'city-item';
+        li.textContent = 'ç®åæ²æå¯ç¨åå¸ï¼è«ç¢ºèªè³æåº«åå§åæåã';
+        li.style.cursor = 'default';
+        cityList.appendChild(li);
+        setActionInfo('åå¸åè¡¨çºç©ºï¼è«æª¢æ¥è³æåå§åã');
+        logMessage('åå¸åè¡¨çºç©º');
+        return;
+      }
+      list.forEach(city => {
+        const li = document.createElement('li');
+        li.className = 'city-item';
+        li.textContent = `${city.name} (ID: ${city.id})`;
+        li.addEventListener('click', () => loadScenes(city.id, li, city.name, city.bossName));
+        cityList.appendChild(li);
+      });
+      setActionInfo('é¸æåå¸ä»¥æ¥çå ´æ¯ã');
+      logMessage('åå¸åè¡¨å·²æ´æ°');
+    }
+
+    async function loadScenes(cityId, element, cityName, bossName) {
+      if (!token) return;
+      currentCityId = cityId;
+      Array.from(cityList.children).forEach(item => item.classList.remove('active'));
+      element.classList.add('active');
+      const res = await fetch(`/api/cities/${cityId}/scenes`, {headers: authHeaders()});
+      if (!res.ok) {
+        setStatus('è¼å¥å ´æ¯å¤±æ');
+        return;
+      }
+      const list = await res.json();
+      sceneList.innerHTML = '';
+      list.forEach(scene => {
+        const li = document.createElement('li');
+        li.className = 'scene-item';
+        li.textContent = `${scene.name} (ID: ${scene.id})`;
+        sceneList.appendChild(li);
+      });
+      setStatus(`å·²é¸æåå¸ï¼${cityName}`);
+      updateTargetInfo(cityName, bossName, list.length ? list[0].name : null, list.length ? `EXP ${list[0].expReward}, Coins ${list[0].coinReward}` : null);
+      setActionInfo('ä½ å¯ä»¥ææ° Boss ææ½å¡ï¼ææ¥çæç¨ã');
+      logMessage(`é¸æåå¸ï¼${cityName}`);
+    }
+
+    document.getElementById('drawGacha').addEventListener('click', async () => {
+      if (!token) return alert('è«åç»å¥');
+      const res = await fetch('/api/gacha/draw', {
+        method: 'POST',
+        headers: authHeaders({'Content-Type': 'application/json'}),
+        body: JSON.stringify({userId})
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        setStatus('æ½å¡å¤±æ');
+        logMessage(`æ½å¡é¯èª¤ï¼${result}`);
+        return;
+      }
+      const item = result.name || JSON.stringify(result);
+      setStatus(`æ½å¡çµæï¼${item}`);
+      logMessage(`æ½å¡æåï¼${item}`);
+    });
+
+    document.getElementById('bossChallenge').addEventListener('click', async () => {
+      if (!token) return alert('è«åç»å¥');
+      if (!currentCityId) {
+        return alert('è«åé¸æä¸ååå¸ææ° Boss');
+      }
+      const res = await fetch(`/api/cities/${currentCityId}/boss/challenge`, {
+        method: 'POST',
+        headers: authHeaders({'Content-Type': 'application/json'}),
+        body: JSON.stringify({userId})
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        setStatus('Boss ææ°å¤±æ');
+        logMessage(`Boss ææ°é¯èª¤ï¼${result}`);
+        return;
+      }
+      const winText = result.win ? 'åå©ï¼' : 'å¤±æ...';
+      setStatus(`Boss ææ°çµæï¼${winText}`);
+      logMessage(`Boss ææ°ï¼${winText}`);
+      if (winText === 'åå©ï¼') {
+        setActionInfo('Boss å·²ææï¼ä½ å¯ä»¥ç¹¼çºæ¢ç´¢å¶ä»åå¸ã');
+      }
+    });
+
+    document.getElementById('viewJourney').addEventListener('click', async () => {
+      if (!token) return alert('è«åç»å¥');
+      const res = await fetch(`/api/journey/me?userId=${userId}`, {headers: authHeaders()});
+      if (!res.ok) {
+        setStatus('è¼å¥æç¨å¤±æ');
+        logMessage('æç¨è¼å¥å¤±æ');
+        return;
+      }
+      const list = await res.json();
+      if (!Array.isArray(list) || list.length === 0) {
+        setStatus('ç®åéæ²ææç¨ç´é');
+        logMessage('æç¨ç´éçºç©º');
+        return;
+      }
+      setStatus('æç¨ç´éå·²è¼å¥');
+      setActionInfo(`ä½ æ ${list.length} æ¬¡æå¡ç´é`);
+      logMessage(`æç¨ç´éï¼${list.map(c => c.sceneId ? 'scene ' + c.sceneId : JSON.stringify(c)).join(' / ')}`);
+      sceneList.innerHTML = '';
+      list.forEach(checkin => {
+        const li = document.createElement('li');
+        li.className = 'scene-item';
+        li.textContent = `æå¡ï¼å ´æ¯ ${checkin.sceneId || 'æªç¥'}ï¼æé ${checkin.timestamp || 'N/A'}`;
+        sceneList.appendChild(li);
+      });
+    });
+  </script>
+</body>
+</html>
+
