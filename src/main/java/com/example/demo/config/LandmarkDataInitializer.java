@@ -28,37 +28,54 @@ public class LandmarkDataInitializer implements CommandLineRunner {
         }
 
         migrateJiufenToGaomei(cities.get(1));
+        migrateScene(
+                cities.get(3),
+                "龍虎塔",
+                new Landmark(3, "旗津", "海港風景",
+                        "搭渡輪前往高雄港邊沙洲，漫步海岸、燈塔與老街，感受南方海風與港都日常。",
+                        "/images/landmarks/cijin.png", 3, 155, 135)
+        );
+
+        if (cities.size() > 4) {
+            migrateScene(
+                    cities.get(4),
+                    "太魯閣峽谷",
+                    new Landmark(4, "阿美文化村", "原住民文化",
+                            "走進花蓮阿美族文化場域，認識木雕、圖騰、歌舞與山海生活記憶。",
+                            "/images/landmarks/amis-cultural-village.png", 3, 165, 140)
+            );
+        }
 
         List<Landmark> landmarks = List.of(
-                new Landmark(0, "台北 101", "現代地標",
+                new Landmark(0, "台北 101", "城市地標",
                         "登上臺灣代表性的摩天大樓，從高空俯瞰臺北盆地與城市天際線。",
                         "/images/landmarks/taipei-101.png", 2, 130, 110),
                 new Landmark(0, "中正紀念堂", "歷史建築",
                         "漫步自由廣場，欣賞白牆藍瓦的紀念建築與臺北城市風景。",
                         "/images/landmarks/chiang-kai-shek-memorial.png", 2, 125, 105),
-                new Landmark(1, "臺中國家歌劇院", "建築藝術",
-                        "走進以曲牆與洞穴空間聞名的現代建築，感受藝術與城市交會。",
+                new Landmark(1, "臺中國家歌劇院", "現代建築",
+                        "走進由曲牆與洞穴空間展開的現代建築，感受藝術與城市交會。",
                         "/images/landmarks/taichung-theater.png", 2, 140, 120),
-                new Landmark(1, "高美濕地", "自然生態",
-                        "沿著木棧道走入潮間帶，在風車與水面倒影之間欣賞夕陽。",
+                new Landmark(1, "高美濕地", "自然景觀",
+                        "沿著木棧道走向夕陽與風車，觀察潮間帶生態與壯闊海景。",
                         "/images/landmarks/gaomei-wetlands.png", 2, 135, 115),
                 new Landmark(2, "安平古堡", "歷史古蹟",
                         "穿梭紅磚城牆與老樹之間，閱讀臺南數百年的海港歷史。",
                         "/images/landmarks/anping-fort.png", 2, 145, 125),
                 new Landmark(2, "赤崁樓", "歷史古蹟",
-                        "探索紅瓦樓閣與古老碑林，感受臺南府城深厚的歷史層次。",
+                        "探訪臺南古城核心，感受亭閣、石碑與廟埕交織出的歷史層次。",
                         "/images/landmarks/chihkan-tower.png", 2, 140, 120),
-                new Landmark(3, "龍虎塔", "宗教建築",
-                        "造訪蓮池潭畔色彩鮮明的龍虎雙塔，收藏高雄經典湖景。",
-                        "/images/landmarks/dragon-tiger-pagodas.png", 3, 155, 135),
-                new Landmark(3, "駁二藝術特區", "藝術園區",
-                        "穿梭港邊倉庫、裝置藝術與輕軌，探索高雄活力十足的創意港區。",
+                new Landmark(3, "旗津", "海港風景",
+                        "搭渡輪前往高雄港邊沙洲，漫步海岸、燈塔與老街，感受南方海風與港都日常。",
+                        "/images/landmarks/cijin.png", 3, 155, 135),
+                new Landmark(3, "駁二藝術特區", "藝術空間",
+                        "走進由舊倉庫改造的創意街區，探索展覽、裝置藝術與港邊風景。",
                         "/images/landmarks/pier-2-art-center.png", 2, 145, 125),
-                new Landmark(4, "太魯閣峽谷", "自然景觀",
-                        "走進壯麗的大理石峽谷，沿著湛藍溪流探索花蓮群山與險峻岩壁。",
-                        "/images/landmarks/taroko-gorge.png", 3, 165, 140),
-                new Landmark(5, "雙心石滬", "海島文化",
-                        "從高處欣賞七美海岸的雙心造型石滬，認識澎湖傳統潮間帶漁法。",
+                new Landmark(4, "阿美文化村", "原住民文化",
+                        "走進花蓮阿美族文化場域，認識木雕、圖騰、歌舞與山海生活記憶。",
+                        "/images/landmarks/amis-cultural-village.png", 3, 165, 140),
+                new Landmark(5, "雙心石滬", "海島地景",
+                        "在潮汐之間尋找澎湖最浪漫的石滬線條，收藏海島經典風景。",
                         "/images/landmarks/twin-hearts-stone-weir.png", 3, 165, 145)
         );
 
@@ -73,12 +90,28 @@ public class LandmarkDataInitializer implements CommandLineRunner {
         sceneRepository.findFirstByName("九份老街").ifPresent(scene -> {
             scene.setCity(taichung);
             scene.setName("高美濕地");
-            scene.setType("自然生態");
-            scene.setDescription("沿著木棧道走入潮間帶，在風車與水面倒影之間欣賞夕陽。");
+            scene.setType("自然景觀");
+            scene.setDescription("沿著木棧道走向夕陽與風車，觀察潮間帶生態與壯闊海景。");
             scene.setImageUrl("/images/landmarks/gaomei-wetlands.png");
             scene.setRarity(2);
             scene.setExpReward(135);
             scene.setCoinReward(115);
+            scene.setIsHidden(false);
+            sceneRepository.save(scene);
+        });
+    }
+
+    private void migrateScene(City city, String oldName, Landmark replacement) {
+        sceneRepository.findFirstByName(oldName).ifPresent(scene -> {
+            scene.setCity(city);
+            scene.setName(replacement.name());
+            scene.setType(replacement.type());
+            scene.setDescription(replacement.description());
+            scene.setImageUrl(replacement.imageUrl());
+            scene.setRarity(replacement.rarity());
+            scene.setExpReward(replacement.expReward());
+            scene.setCoinReward(replacement.coinReward());
+            scene.setIsHidden(false);
             sceneRepository.save(scene);
         });
     }
@@ -104,7 +137,9 @@ public class LandmarkDataInitializer implements CommandLineRunner {
                 Map.entry("台中彩虹眷村", "/images/landmarks/rainbow-village.png"),
                 Map.entry("台南神農街", "/images/landmarks/shennong-street.png"),
                 Map.entry("蓮池潭", "/images/landmarks/dragon-tiger-pagodas.png"),
+                Map.entry("旗津", "/images/landmarks/cijin.png"),
                 Map.entry("太魯閣國家公園", "/images/landmarks/taroko-gorge.png"),
+                Map.entry("阿美文化村", "/images/landmarks/amis-cultural-village.png"),
                 Map.entry("七星潭", "/images/landmarks/qixingtan-beach.png"),
                 Map.entry("澎湖跨海大橋", "/images/landmarks/penghu-great-bridge.png"),
                 Map.entry("澎湖花火節", "/images/landmarks/penghu-fireworks-festival.png")
