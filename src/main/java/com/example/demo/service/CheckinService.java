@@ -6,7 +6,9 @@ import com.example.demo.entity.User;
 import com.example.demo.repository.CheckinRepository;
 import com.example.demo.repository.SceneRepository;
 import com.example.demo.repository.UserRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -26,8 +28,11 @@ public class CheckinService {
     public Checkin checkin(Long userId, Long sceneId) {
         Optional<User> ou = userRepository.findById(userId);
         Optional<Scene> os = sceneRepository.findById(sceneId);
-        if (ou.isEmpty() || os.isEmpty()) {
-            throw new IllegalArgumentException("invalid user or scene");
+        if (ou.isEmpty()) {
+            throw new IllegalArgumentException("invalid user");
+        }
+        if (os.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "scene not found");
         }
 
         User user = ou.get();
