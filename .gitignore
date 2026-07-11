@@ -31,3 +31,11 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Runtime logs
+*.log
+spring-boot-run.log
+
+# Local environment files
+.env
+.env.*
