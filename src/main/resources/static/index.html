@@ -450,15 +450,41 @@
       display: grid;
       place-items: center;
       padding: 20px;
-      background: rgba(14, 31, 68, .58);
+      background:
+        linear-gradient(120deg, rgba(14, 31, 68, .72), rgba(20, 81, 105, .56)),
+        radial-gradient(circle at 18% 20%, rgba(243, 180, 63, .28), transparent 24%),
+        radial-gradient(circle at 78% 68%, rgba(42, 174, 107, .22), transparent 28%),
+        rgba(14, 31, 68, .58);
       backdrop-filter: blur(10px);
     }
 
     .login.hidden { display: none; }
+
+    .login-shell {
+      width: min(100%, 980px);
+      display: grid;
+      grid-template-columns: 420px minmax(0, 1fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+
     .login-card {
-      width: min(100%, 420px);
+      width: 100%;
       padding: 22px;
       border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+      animation: loginRise .36s ease both;
+    }
+
+    .login-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 4px;
+      background: linear-gradient(90deg, var(--blue), var(--green), var(--gold));
+      background-size: 180% 100%;
+      animation: routeGlow 4s ease-in-out infinite;
     }
 
     .login-card h2 { margin-bottom: 8px; color: var(--ink); font-size: 28px; }
@@ -471,6 +497,117 @@
       border: 1px solid var(--line);
       border-radius: 8px;
       outline: none;
+      transition: border-color .18s ease, box-shadow .18s ease;
+    }
+
+    .login-card input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(36, 111, 229, .13);
+    }
+
+    .login-banner {
+      min-height: 370px;
+      display: grid;
+      align-content: space-between;
+      gap: 18px;
+      padding: 22px;
+      border: 1px solid rgba(216, 229, 251, .46);
+      border-radius: 8px;
+      color: white;
+      background:
+        linear-gradient(180deg, rgba(8, 37, 72, .08), rgba(8, 37, 72, .72)),
+        linear-gradient(135deg, rgba(36, 111, 229, .88), rgba(26, 126, 103, .9)),
+        url("/images/landmarks/taipei-101.webp");
+      background-position: center;
+      background-size: cover;
+      box-shadow: 0 24px 70px rgba(7, 25, 58, .28);
+      overflow: hidden;
+      position: relative;
+      animation: loginRise .48s ease both;
+    }
+
+    .login-banner::after {
+      content: "";
+      position: absolute;
+      inset: 18px;
+      border: 1px solid rgba(255, 255, 255, .28);
+      border-radius: 8px;
+      pointer-events: none;
+    }
+
+    .login-banner h3 {
+      margin-bottom: 8px;
+      color: white;
+      font-size: 28px;
+      line-height: 1.25;
+      max-width: 12em;
+    }
+
+    .login-banner p {
+      margin-bottom: 0;
+      max-width: 28em;
+      color: rgba(255,255,255,.86);
+      font-weight: 800;
+      line-height: 1.55;
+    }
+
+    .route-map {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .route-map::before {
+      content: "";
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      top: 20px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--gold), white, var(--green));
+      opacity: .72;
+    }
+
+    .route-node {
+      display: grid;
+      justify-items: center;
+      gap: 8px;
+      color: white;
+      font-size: 12px;
+      font-weight: 900;
+      position: relative;
+      z-index: 1;
+    }
+
+    .route-dot {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 2px solid rgba(255,255,255,.76);
+      border-radius: 999px;
+      background: rgba(255,255,255,.16);
+      box-shadow: 0 8px 18px rgba(0,0,0,.18);
+    }
+
+    .login-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .login-tag {
+      padding: 7px 9px;
+      border: 1px solid rgba(255,255,255,.28);
+      border-radius: 999px;
+      background: rgba(255,255,255,.14);
+      color: white;
+      font-size: 13px;
+      font-weight: 900;
     }
 
     .error {
@@ -580,6 +717,10 @@
       text-align: center;
     }
 
+    .result-card.failed {
+      border-color: rgba(217, 67, 78, .68);
+    }
+
     .result-card h2 {
       margin-bottom: 8px;
       color: var(--ink);
@@ -617,6 +758,11 @@
       line-height: 1.5;
     }
 
+    .result-highlight.failed {
+      color: #8a1f2a;
+      background: #ffe5e8;
+    }
+
     .result-card p {
       margin-bottom: 10px;
       color: var(--text);
@@ -649,10 +795,17 @@
       50% { background-position: 100% 50%; }
     }
 
+    @keyframes loginRise {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     @media (max-width: 980px) {
       .home-grid { grid-template-columns: 1fr; }
       .detail-card { position: static; }
       .city-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .login-shell { grid-template-columns: 1fr; }
+      .login-banner { min-height: 280px; }
     }
 
     @media (max-width: 640px) {
@@ -667,11 +820,17 @@
       .avatar { width: 52px; height: 52px; font-size: 23px; }
       .scene-card { grid-template-columns: 72px minmax(0, 1fr); }
       .scene-image { width: 72px; }
+      .login { padding: 12px; align-items: start; overflow: auto; }
+      .login-shell { gap: 12px; }
+      .login-banner { min-height: 250px; padding: 18px; }
+      .route-map { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .route-map::before { display: none; }
     }
   </style>
 </head>
 <body>
   <div id="login" class="login">
+    <div class="login-shell">
     <form class="login-card" id="loginForm">
       <h2>台灣旅行冒險</h2>
       <p>一邊玩遊戲，一邊認識台灣歷史與文化。</p>
@@ -681,6 +840,27 @@
       <button class="btn full" type="submit">登入</button>
       <button class="btn ghost full" id="registerBtn" type="button">建立帳號</button>
     </form>
+    <aside class="login-banner" aria-label="台灣旅行冒險預覽">
+      <div>
+        <h3>從台北出發，解鎖六座城市</h3>
+        <p>探索景點、回答問題、挑戰守護者，把台灣的歷史與文化收進你的旅程徽章。</p>
+      </div>
+      <div class="route-map" aria-hidden="true">
+        <span class="route-node"><span class="route-dot">北</span>台北</span>
+        <span class="route-node"><span class="route-dot">中</span>台中</span>
+        <span class="route-node"><span class="route-dot">南</span>台南</span>
+        <span class="route-node"><span class="route-dot">港</span>高雄</span>
+        <span class="route-node"><span class="route-dot">山</span>花蓮</span>
+        <span class="route-node"><span class="route-dot">海</span>澎湖</span>
+      </div>
+      <div class="login-tags" aria-hidden="true">
+        <span class="login-tag">景點答題</span>
+        <span class="login-tag">EXP 成長</span>
+        <span class="login-tag">城市徽章</span>
+        <span class="login-tag">Boss 挑戰</span>
+      </div>
+    </aside>
+    </div>
   </div>
 
   <div id="tutorial" class="tutorial hidden" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle">
@@ -880,13 +1060,24 @@
       document.getElementById("resultCard").innerHTML = "";
     }
 
-    function showResultCard(html) {
+    function showResultCard(html, type = "success") {
+      const resultCard = document.getElementById("resultCard");
+      resultCard.className = `result-card ${type === "failed" ? "failed" : ""}`.trim();
       document.getElementById("resultCard").innerHTML = `
         ${html}
         <button class="btn full" id="resultCloseBtn" type="button">繼續旅程</button>
       `;
       document.getElementById("resultModal").classList.remove("hidden");
       document.getElementById("resultCloseBtn").addEventListener("click", closeResultCard);
+    }
+
+    function showWrongAnswerResult(scene) {
+      showResultCard(`
+        <h2>答題失敗</h2>
+        <h3>${escapeHtml(scene?.name || "景點")}尚未完成</h3>
+        <div class="result-highlight failed">沒有獲得 EXP 與金幣</div>
+        <p>再閱讀一次景點故事，找出最符合線索的答案。</p>
+      `, "failed");
     }
 
     function showSceneResult(city, scene) {
@@ -901,6 +1092,15 @@
         </div>
         <div class="result-highlight">目前城市進度：${nextDone} / ${cityProgress.total}</div>
       `);
+    }
+
+    function showBossFailedResult(city) {
+      showResultCard(`
+        <h2>守護者挑戰失敗</h2>
+        <h3>${escapeHtml(city?.bossName || "城市守護者")} 擋下了這次挑戰</h3>
+        <div class="result-highlight failed">徽章尚未解鎖</div>
+        <p>完成所有景點後，重新確認城市故事與題目線索，再次挑戰守護者。</p>
+      `, "failed");
     }
 
     function showBossResult(city) {
@@ -1169,6 +1369,7 @@
           body: JSON.stringify({ sceneId, answer, answerText })
         });
         if (!result.ok) {
+          showWrongAnswerResult(scene);
           addLog("答錯了，再想想看。");
           return;
         }
@@ -1193,6 +1394,7 @@
           showBossResult(city);
           addLog(`成功擊敗 ${city.bossName}。`);
         } else {
+          showBossFailedResult(city);
           addLog(`${city.bossName} 太強了，請提升實力後再挑戰。`);
         }
         await refreshState();
