@@ -24,6 +24,9 @@ public class Scene {
     @Column(length = 255)
     private String description;
 
+    @Column(length = 2000)
+    private String story;
+
     @Column(length = 255)
     private String imageUrl;
 

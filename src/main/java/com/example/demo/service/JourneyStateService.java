@@ -67,6 +67,7 @@ public class JourneyStateService {
             dto.put("name", city.getName());
             dto.put("code", city.getCode());
             dto.put("intro", city.getIntro());
+            dto.put("story", city.getStory());
             dto.put("badgeIcon", badge.icon());
             dto.put("badgeName", badge.name());
             dto.put("badgeUnlocked", cityProgress != null && Boolean.TRUE.equals(cityProgress.getBadgeUnlocked()));
@@ -162,6 +163,7 @@ public class JourneyStateService {
         dto.put("name", scene.getName());
         dto.put("type", scene.getType());
         dto.put("desc", scene.getDescription());
+        dto.put("story", scene.getStory());
         dto.put("imageUrl", scene.getImageUrl());
         dto.put("rarity", scene.getRarity());
         dto.put("quizQuestion", scene.getQuizQuestion());

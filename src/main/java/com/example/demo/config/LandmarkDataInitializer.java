@@ -6,12 +6,10 @@ import com.example.demo.repository.CheckinRepository;
 import com.example.demo.repository.CityRepository;
 import com.example.demo.repository.SceneRepository;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
 
-@Component
 public class LandmarkDataInitializer implements CommandLineRunner {
     private final CityRepository cityRepository;
     private final SceneRepository sceneRepository;

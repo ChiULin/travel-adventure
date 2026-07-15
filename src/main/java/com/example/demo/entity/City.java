@@ -24,6 +24,9 @@ public class City {
     @Column(name = "description", length = 500)
     private String intro;
 
+    @Column(length = 2000)
+    private String story;
+
     @Column(name = "image_url", length = 255)
     private String imageUrl;
 

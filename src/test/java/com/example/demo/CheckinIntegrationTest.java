@@ -125,7 +125,7 @@ class CheckinIntegrationTest {
                                 {
                                   "sceneId": 1,
                                   "answer": "C",
-                                  "answerText": "自由廣場"
+                                  "answerText": "節節高升"
                                 }
                                 """))
                 .andExpect(status().isOk())
