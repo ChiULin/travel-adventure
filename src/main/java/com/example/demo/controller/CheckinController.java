@@ -25,7 +25,8 @@ public class CheckinController {
     @PostMapping
     public ResponseEntity<?> checkin(@RequestBody CheckinRequest req, Authentication authentication) {
         try {
-            var checkin = checkinService.checkin(userService.userIdFor(authentication.getName()), req.getSceneId(), req.getAnswer());
+            var checkin = checkinService.checkin(userService.userIdFor(authentication.getName()), req.getSceneId(),
+                    req.getAnswer(), req.getAnswerText());
             if (!Boolean.TRUE.equals(checkin.getCompleted())) {
                 return ResponseEntity.ok(java.util.Map.of(
                         "ok", false,

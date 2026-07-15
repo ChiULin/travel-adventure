@@ -12,13 +12,14 @@ import com.example.demo.repository.UserProgressRepository;
 import com.example.demo.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.time.LocalDateTime;
 
 @Service
 public class JourneyStateService {
@@ -173,10 +174,23 @@ public class JourneyStateService {
     }
 
     private Map<String, String> optionsDto(String optionA, String optionB, String optionC) {
+        List<String> options = new ArrayList<>();
+        if (optionA != null && !optionA.isBlank()) {
+            options.add(optionA);
+        }
+        if (optionB != null && !optionB.isBlank()) {
+            options.add(optionB);
+        }
+        if (optionC != null && !optionC.isBlank()) {
+            options.add(optionC);
+        }
+        Collections.shuffle(options);
+
         Map<String, String> dto = new LinkedHashMap<>();
-        dto.put("A", optionA);
-        dto.put("B", optionB);
-        dto.put("C", optionC);
+        String[] labels = {"A", "B", "C"};
+        for (int i = 0; i < options.size() && i < labels.length; i++) {
+            dto.put(labels[i], options.get(i));
+        }
         return dto;
     }
 

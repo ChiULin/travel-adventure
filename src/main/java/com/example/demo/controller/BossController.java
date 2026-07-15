@@ -29,7 +29,8 @@ public class BossController {
                                        Authentication authentication) {
         try {
             String answer = body == null ? null : body.get("answer");
-            boolean win = bossService.challenge(userService.userIdFor(authentication.getName()), cityId, answer);
+            String answerText = body == null ? null : body.get("answerText");
+            boolean win = bossService.challenge(userService.userIdFor(authentication.getName()), cityId, answer, answerText);
             return ResponseEntity.ok(java.util.Map.of("win", win));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(ex.getMessage());

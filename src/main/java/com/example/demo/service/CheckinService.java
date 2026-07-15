@@ -33,6 +33,10 @@ public class CheckinService {
     }
 
     public Checkin checkin(Long userId, Long sceneId, String selectedAnswer) {
+        return checkin(userId, sceneId, selectedAnswer, null);
+    }
+
+    public Checkin checkin(Long userId, Long sceneId, String selectedAnswer, String selectedAnswerText) {
         Optional<User> ou = userRepository.findById(userId);
         Optional<Scene> os = sceneRepository.findById(sceneId);
         if (ou.isEmpty()) {
@@ -60,7 +64,7 @@ public class CheckinService {
         c.setCheckinTime(LocalDateTime.now());
         c.setSelectedAnswer(normalizeAnswer(selectedAnswer));
 
-        boolean correct = isCorrect(scene, selectedAnswer);
+        boolean correct = isCorrect(scene, selectedAnswer, selectedAnswerText);
         c.setQuizCorrect(correct);
         if (!correct) {
             return checkinRepository.save(c);
@@ -85,11 +89,16 @@ public class CheckinService {
         return c;
     }
 
-    private boolean isCorrect(Scene scene, String selectedAnswer) {
+    private boolean isCorrect(Scene scene, String selectedAnswer, String selectedAnswerText) {
         String correctAnswer = normalizeAnswer(scene.getQuizCorrectAnswer());
         String answer = normalizeAnswer(selectedAnswer);
         if (correctAnswer == null || correctAnswer.isBlank()) {
             return true;
+        }
+        String correctText = optionText(scene, correctAnswer);
+        String answerText = normalizeText(selectedAnswerText);
+        if (answerText != null && correctText != null) {
+            return answerText.equals(normalizeText(correctText));
         }
         if (answer == null || answer.isBlank()) {
             return true;
@@ -97,10 +106,26 @@ public class CheckinService {
         return correctAnswer.equals(answer);
     }
 
+    private String optionText(Scene scene, String answer) {
+        return switch (answer) {
+            case "A" -> scene.getQuizOptionA();
+            case "B" -> scene.getQuizOptionB();
+            case "C" -> scene.getQuizOptionC();
+            default -> null;
+        };
+    }
+
     private String normalizeAnswer(String answer) {
         if (answer == null) {
             return null;
         }
         return answer.trim().toUpperCase();
+    }
+
+    private String normalizeText(String answerText) {
+        if (answerText == null || answerText.isBlank()) {
+            return null;
+        }
+        return answerText.trim();
     }
 }

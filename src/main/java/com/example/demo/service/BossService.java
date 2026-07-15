@@ -34,6 +34,10 @@ public class BossService {
     }
 
     public boolean challenge(Long userId, Long cityId, String selectedAnswer) {
+        return challenge(userId, cityId, selectedAnswer, null);
+    }
+
+    public boolean challenge(Long userId, Long cityId, String selectedAnswer, String selectedAnswerText) {
         Optional<User> optionalUser = userRepository.findById(userId);
         Optional<City> optionalCity = cityRepository.findById(cityId);
         if (optionalUser.isEmpty() || optionalCity.isEmpty()) {
@@ -57,7 +61,7 @@ public class BossService {
         int userPower = (user.getLevel() == null ? 1 : user.getLevel()) * 10
                 + ((user.getExp() == null ? 0 : user.getExp()) / 10);
         int bossPower = city.getBossPower() == null ? 0 : city.getBossPower();
-        boolean answerCorrect = bossAnswerCorrect(city, selectedAnswer);
+        boolean answerCorrect = bossAnswerCorrect(city, selectedAnswer, selectedAnswerText);
         boolean win = answerCorrect && userPower >= bossPower;
 
         if (win) {
@@ -89,11 +93,16 @@ public class BossService {
         return win;
     }
 
-    private boolean bossAnswerCorrect(City city, String selectedAnswer) {
+    private boolean bossAnswerCorrect(City city, String selectedAnswer, String selectedAnswerText) {
         String correctAnswer = normalizeAnswer(city.getBossCorrectAnswer());
         String answer = normalizeAnswer(selectedAnswer);
         if (correctAnswer == null || correctAnswer.isBlank()) {
             return true;
+        }
+        String correctText = optionText(city, correctAnswer);
+        String answerText = normalizeText(selectedAnswerText);
+        if (answerText != null && correctText != null) {
+            return answerText.equals(normalizeText(correctText));
         }
         if (answer == null || answer.isBlank()) {
             return true;
@@ -101,10 +110,26 @@ public class BossService {
         return correctAnswer.equals(answer);
     }
 
+    private String optionText(City city, String answer) {
+        return switch (answer) {
+            case "A" -> city.getBossOptionA();
+            case "B" -> city.getBossOptionB();
+            case "C" -> city.getBossOptionC();
+            default -> null;
+        };
+    }
+
     private String normalizeAnswer(String answer) {
         if (answer == null) {
             return null;
         }
         return answer.trim().toUpperCase();
+    }
+
+    private String normalizeText(String answerText) {
+        if (answerText == null || answerText.isBlank()) {
+            return null;
+        }
+        return answerText.trim();
     }
 }

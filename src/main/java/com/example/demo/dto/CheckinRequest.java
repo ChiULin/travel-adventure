@@ -6,4 +6,5 @@ import lombok.Data;
 public class CheckinRequest {
     private Long sceneId;
     private String answer;
+    private String answerText;
 }

@@ -114,6 +114,30 @@ class CheckinIntegrationTest {
                 .andExpect(jsonPath("$.ok").value(true));
     }
 
+    @Test
+    void answerTextShouldBeAcceptedWhenOptionLabelIsShuffled() throws Exception {
+        String token = registerAndGetToken("shuffleTester01");
+
+        mockMvc.perform(post("/api/checkins")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "sceneId": 1,
+                                  "answer": "C",
+                                  "answerText": "自由廣場"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ok").value(true));
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.experience").value(125))
+                .andExpect(jsonPath("$.cities[0].done").value(1));
+    }
+
     private String registerAndGetToken(String username) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)

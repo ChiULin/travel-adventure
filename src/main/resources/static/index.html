@@ -582,7 +582,7 @@
       return Object.entries(options)
         .filter(([, value]) => value)
         .map(([key, value]) => `
-          <button class="quiz-option" type="button" ${dataAttribute}="${targetId}" data-answer="${key}">
+          <button class="quiz-option" type="button" ${dataAttribute}="${targetId}" data-answer="${key}" data-answer-text="${escapeHtml(value)}">
             ${key}. ${escapeHtml(value)}
           </button>
         `).join("");
@@ -787,11 +787,11 @@
       `;
 
       document.querySelectorAll("[data-scene-id]").forEach(button => {
-        button.addEventListener("click", () => checkin(Number(button.dataset.sceneId), button.dataset.answer));
+        button.addEventListener("click", () => checkin(Number(button.dataset.sceneId), button.dataset.answer, button.dataset.answerText));
       });
 
       document.querySelectorAll("[data-boss-city-id]").forEach(button => {
-        button.addEventListener("click", () => challengeBoss(button.dataset.answer));
+        button.addEventListener("click", () => challengeBoss(button.dataset.answer, button.dataset.answerText));
       });
     }
 
@@ -828,11 +828,11 @@
       renderCityDetail(activeCityId);
     }
 
-    async function checkin(sceneId, answer) {
+    async function checkin(sceneId, answer, answerText) {
       try {
         const result = await api("/api/checkins", {
           method: "POST",
-          body: JSON.stringify({ sceneId, answer })
+          body: JSON.stringify({ sceneId, answer, answerText })
         });
         if (!result.ok) {
           addLog("答錯了，再想想看。");
@@ -845,12 +845,12 @@
       }
     }
 
-    async function challengeBoss(answer) {
+    async function challengeBoss(answer, answerText) {
       const city = activeCity();
       try {
         const result = await api(`/api/cities/${city.id}/boss/challenge`, {
           method: "POST",
-          body: JSON.stringify({ answer })
+          body: JSON.stringify({ answer, answerText })
         });
         addLog(result.win ? `成功擊敗 ${city.bossName}。` : `${city.bossName} 太強了，請提升實力後再挑戰。`);
         await refreshState();
