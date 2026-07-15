@@ -81,6 +81,11 @@ public class JourneyStateService {
             dto.put("unlocked", cityProgress != null && Boolean.TRUE.equals(cityProgress.getUnlocked()));
             dto.put("bossUnlocked", cityProgress != null && Boolean.TRUE.equals(cityProgress.getBossUnlocked()));
             dto.put("defeated", cityProgress != null && Boolean.TRUE.equals(cityProgress.getBossCompleted()));
+            dto.put("bestRank", cityProgress == null ? null : cityProgress.getBestRank());
+            dto.put("bestCombo", cityProgress == null || cityProgress.getBestCombo() == null ? 0 : cityProgress.getBestCombo());
+            dto.put("bestRemainingLives", cityProgress == null || cityProgress.getBestRemainingLives() == null ? 0 : cityProgress.getBestRemainingLives());
+            dto.put("challengeCount", cityProgress == null || cityProgress.getChallengeCount() == null ? 0 : cityProgress.getChallengeCount());
+            dto.put("lastCompletedAt", cityProgress == null ? null : cityProgress.getLastCompletedAt());
             dto.put("done", done);
             dto.put("total", scenes.size());
             dto.put("scenes", scenes.stream().map(scene -> sceneDto(scene, checkedSceneIds.contains(scene.getId()))).toList());

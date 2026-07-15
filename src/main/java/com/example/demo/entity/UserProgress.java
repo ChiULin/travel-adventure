@@ -28,4 +28,18 @@ public class UserProgress {
     private Boolean badgeUnlocked = false;
 
     private java.time.LocalDateTime completedAt;
+
+    @Column(name = "best_rank", length = 1)
+    private String bestRank;
+
+    @Column(name = "best_combo")
+    private Integer bestCombo = 0;
+
+    @Column(name = "best_remaining_lives")
+    private Integer bestRemainingLives = 0;
+
+    @Column(name = "challenge_count")
+    private Integer challengeCount = 0;
+
+    private java.time.LocalDateTime lastCompletedAt;
 }

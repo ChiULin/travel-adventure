@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.BattleResultRequest;
 import com.example.demo.service.BossService;
 import com.example.demo.service.UserService;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +33,25 @@ public class BossController {
             String answerText = body == null ? null : body.get("answerText");
             boolean win = bossService.challenge(userService.userIdFor(authentication.getName()), cityId, answer, answerText);
             return ResponseEntity.ok(java.util.Map.of("win", win));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        }
+    }
+
+    @PostMapping("/{cityId}/battle-result")
+    public ResponseEntity<?> battleResult(@PathVariable Long cityId, @RequestBody BattleResultRequest request,
+                                          Authentication authentication) {
+        try {
+            return ResponseEntity.ok(bossService.recordBattleResult(userService.userIdFor(authentication.getName()), cityId, request));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        }
+    }
+
+    @PostMapping("/{cityId}/restart")
+    public ResponseEntity<?> restart(@PathVariable Long cityId, Authentication authentication) {
+        try {
+            return ResponseEntity.ok(bossService.restartCity(userService.userIdFor(authentication.getName()), cityId));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(ex.getMessage());
         }

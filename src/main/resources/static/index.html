@@ -132,7 +132,7 @@
 
     .home-grid {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 340px;
+      grid-template-columns: minmax(0, 1fr);
       gap: 14px;
       align-items: start;
       margin-top: 14px;
@@ -446,6 +446,28 @@
     .city-card.locked .city-icon { background: #e6ebf3; }
     .city-copy { margin-bottom: 0; color: inherit; font-size: 14px; line-height: 1.45; font-weight: 800; }
     .city-badge-line { color: #74510d; font-weight: 900; }
+    .city-record {
+      display: grid;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .rank-badge {
+      width: fit-content;
+      padding: 4px 8px;
+      border-radius: 999px;
+      color: #5f6673;
+      background: #eef2f7;
+      font-weight: 900;
+    }
+
+    .rank-s { color: #7a4a00; background: #fff0b8; box-shadow: 0 0 0 3px rgba(255, 207, 75, .2); }
+    .rank-a { color: #43546a; background: #edf3fb; }
+    .rank-b { color: #74420d; background: #ffe3c4; }
+    .rank-c { color: #5f6673; background: #eef2f7; }
+
     .status-pill {
       width: fit-content;
       margin-top: auto;
@@ -462,8 +484,7 @@
     .status-pill.completed { color: #126236; background: #def8e8; }
 
     .detail-card {
-      position: sticky;
-      top: 14px;
+      position: static;
     }
 
     .detail-hero {
@@ -988,8 +1009,6 @@
     }
 
     @media (max-width: 980px) {
-      .home-grid { grid-template-columns: 1fr; }
-      .detail-card { position: static; }
       .city-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .login-shell { grid-template-columns: 1fr; }
       .login-banner { min-height: 280px; }
@@ -1110,8 +1129,8 @@
         <section id="daily-missions"></section>
         <section id="achievements"></section>
         <section id="city-list"></section>
+        <section id="city-detail"></section>
       </div>
-      <section id="city-detail"></section>
     </div>
   </main>
 
@@ -1479,6 +1498,15 @@
       }
     }
 
+    function resetLocalBattleState() {
+      activeSceneQuizId = null;
+      activeBossQuizCityId = null;
+      answerCombo = 0;
+      cityLives = 3;
+      resetCityBattleStats();
+      stopQuizTimer();
+    }
+
     function calculateBattleRank() {
       if (
         !cityHadFailedAttempt &&
@@ -1540,15 +1568,17 @@
       `, "failed");
     }
 
-    function showBossResult(city) {
+    function showBossResult(city, recordResult = null) {
       const badge = badgeParts(city);
       const nextCity = nextCityAfter(city);
       const itemProgress = progress(city);
-      const rank = calculateBattleRank();
+      const rank = recordResult?.rank || calculateBattleRank();
+      const newRecord = Boolean(recordResult?.newRecord);
       showResultCard(`
         <h2>城市關卡完成！</h2>
         <h3>城市：${escapeHtml(city?.name || "城市")}</h3>
         <div class="result-highlight">評價：${rank}</div>
+        ${newRecord ? `<div class="result-highlight">NEW RECORD</div>` : ""}
         <div class="result-rewards">
           <div class="result-reward">完成景點：${itemProgress.done} / ${itemProgress.total}</div>
           <div class="result-reward">最高 Combo：${cityBattleStats.maxCombo}</div>
@@ -1568,6 +1598,22 @@
           <div class="result-highlight">六座城市探索完成！</div>
         `}
       `);
+    }
+
+    async function submitBattleResult(city, rank) {
+      return api(`/api/cities/${city.id}/battle-result`, {
+        method: "POST",
+        body: JSON.stringify({
+          rank,
+          maxCombo: cityBattleStats.maxCombo,
+          remainingLives: cityLives,
+          correctAnswers: cityBattleStats.correctAnswers,
+          wrongAnswers: cityBattleStats.wrongAnswers,
+          timeoutCount: cityBattleStats.timeoutCount,
+          earnedExp: cityBattleStats.earnedExp,
+          earnedCoins: cityBattleStats.earnedCoins
+        })
+      });
     }
 
     async function authenticate(path, username, password) {
@@ -1778,9 +1824,15 @@
             const status = cityStatus(city);
             const active = city.id === activeCityId;
             const icon = city.unlocked ? city.badgeIcon || "🎒" : "🔒";
+            const bestRank = city.bestRank || "";
+            const rankClass = bestRank ? `rank-${bestRank.toLowerCase()}` : "";
             const progressMarkup = city.unlocked ? `
               <p class="city-copy">城市進度：${itemProgress.done} / ${itemProgress.total}</p>
               <div class="progress" aria-label="${escapeHtml(city.name)} 進度"><span style="--w:${itemProgress.percent}%"></span></div>
+              <div class="city-record">
+                <span class="rank-badge ${rankClass}">最佳評價：${bestRank || "尚未通關"}</span>
+                <span>最高 Combo：${city.bestCombo || 0}</span>
+              </div>
               <div class="city-badge-line">🏅 ${escapeHtml(city.badgeName || city.name + "徽章")}</div>
             ` : `
               <p class="city-copy">${status.note}</p>
@@ -1800,12 +1852,7 @@
       document.querySelectorAll("[data-city-id]").forEach(button => {
         button.addEventListener("click", () => {
           activeCityId = Number(button.dataset.cityId);
-          activeSceneQuizId = null;
-          activeBossQuizCityId = null;
-          answerCombo = 0;
-          cityLives = 3;
-          resetCityBattleStats();
-          stopQuizTimer();
+          resetLocalBattleState();
           renderCityCards();
           renderPlayerSummary();
           renderCityDetail(activeCityId);
@@ -1897,6 +1944,10 @@
         button.addEventListener("click", () => challengeBoss(button.dataset.answer, button.dataset.answerText));
       });
 
+      document.querySelectorAll("[data-restart-city-id]").forEach(button => {
+        button.addEventListener("click", () => restartCity(Number(button.dataset.restartCityId)));
+      });
+
       startActiveQuizTimer();
     }
 
@@ -1905,6 +1956,7 @@
         return `
           <div class="detail-actions">
             <button class="btn red full" type="button" disabled>首領已擊敗，徽章已取得</button>
+            <button class="btn full" type="button" data-restart-city-id="${city.id}">重新挑戰城市</button>
           </div>
         `;
       }
@@ -1986,7 +2038,14 @@
         });
         if (result.win) {
           registerCorrectAnswer({ expReward: 260, coinReward: 300 });
-          showBossResult(city);
+          const rank = calculateBattleRank();
+          let recordResult = null;
+          try {
+            recordResult = await submitBattleResult(city, rank);
+          } catch (error) {
+            addLog(`最佳紀錄儲存失敗：${error.message}`);
+          }
+          showBossResult(city, recordResult);
           addLog(`成功擊敗 ${city.bossName}。`);
         } else {
           registerWrongAnswer();
@@ -1998,6 +2057,18 @@
           showBossFailedResult(city);
           addLog(`${city.bossName} 太強了，請提升實力後再挑戰。`);
         }
+        await refreshState();
+      } catch (error) {
+        addLog(error.message);
+      }
+    }
+
+    async function restartCity(cityId) {
+      const city = appState?.cities.find(item => item.id === cityId);
+      try {
+        await api(`/api/cities/${cityId}/restart`, { method: "POST" });
+        resetLocalBattleState();
+        addLog(`${city?.name || "城市"}已重新開啟挑戰，最佳紀錄會保留。`);
         await refreshState();
       } catch (error) {
         addLog(error.message);
