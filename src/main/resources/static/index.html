@@ -481,6 +481,154 @@
       font-weight: 800;
     }
 
+    .tutorial {
+      position: fixed;
+      inset: 0;
+      z-index: 9;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(14, 31, 68, .66);
+      backdrop-filter: blur(12px);
+    }
+
+    .tutorial.hidden { display: none; }
+
+    .tutorial-card {
+      width: min(100%, 760px);
+      max-height: min(92vh, 760px);
+      overflow: auto;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .96);
+      box-shadow: 0 24px 70px rgba(7, 25, 58, .28);
+    }
+
+    .tutorial-card h2 {
+      margin-bottom: 8px;
+      color: var(--ink);
+      font-size: 26px;
+    }
+
+    .tutorial-card > p {
+      margin-bottom: 16px;
+      color: var(--muted);
+      font-weight: 800;
+      line-height: 1.55;
+    }
+
+    .tutorial-steps {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .tutorial-step {
+      min-height: 156px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f7faff;
+    }
+
+    .tutorial-step strong {
+      display: block;
+      margin-bottom: 8px;
+      color: #123b78;
+      font-size: 14px;
+    }
+
+    .tutorial-step h3 {
+      margin-bottom: 8px;
+      color: var(--ink);
+      font-size: 18px;
+    }
+
+    .tutorial-step p {
+      margin-bottom: 0;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.55;
+      white-space: pre-line;
+    }
+
+    .result-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 11;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(14, 31, 68, .62);
+      backdrop-filter: blur(12px);
+    }
+
+    .result-modal.hidden { display: none; }
+
+    .result-card {
+      width: min(100%, 520px);
+      padding: 22px;
+      border: 1px solid rgba(243, 180, 63, .72);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.98), rgba(247,250,255,.98)),
+        white;
+      box-shadow: 0 24px 70px rgba(7, 25, 58, .32);
+      text-align: center;
+    }
+
+    .result-card h2 {
+      margin-bottom: 8px;
+      color: var(--ink);
+      font-size: 26px;
+    }
+
+    .result-card h3 {
+      margin-bottom: 14px;
+      color: #123b78;
+      font-size: 20px;
+    }
+
+    .result-rewards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    .result-reward {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f7faff;
+      font-weight: 900;
+    }
+
+    .result-highlight {
+      margin: 12px 0;
+      padding: 12px;
+      border-radius: 8px;
+      color: #74510d;
+      background: #fff6dc;
+      font-weight: 900;
+      line-height: 1.5;
+    }
+
+    .result-card p {
+      margin-bottom: 10px;
+      color: var(--text);
+      font-weight: 800;
+      line-height: 1.55;
+    }
+
+    .result-quote {
+      color: var(--ink);
+      font-size: 18px;
+    }
+
     @keyframes ambientSweep {
       from { background-position: -260px 0, 0 0; }
       to { background-position: 260px 0, 0 0; }
@@ -514,6 +662,7 @@
       .brand-mark { width: 44px; height: 44px; }
       .brand h1 { font-size: 22px; }
       .metric-grid, .city-grid { grid-template-columns: 1fr; }
+      .tutorial-steps { grid-template-columns: 1fr; }
       .summary-layout { grid-template-columns: 52px 1fr; }
       .avatar { width: 52px; height: 52px; font-size: 23px; }
       .scene-card { grid-template-columns: 72px minmax(0, 1fr); }
@@ -532,6 +681,46 @@
       <button class="btn full" type="submit">登入</button>
       <button class="btn ghost full" id="registerBtn" type="button">建立帳號</button>
     </form>
+  </div>
+
+  <div id="tutorial" class="tutorial hidden" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle">
+    <div class="tutorial-card">
+      <h2 id="tutorialTitle">新手教學</h2>
+      <p>跟著四個步驟開始旅程，準備好後就出發探索台灣。</p>
+      <div class="tutorial-steps">
+        <article class="tutorial-step">
+          <strong>步驟一</strong>
+          <h3>歡迎來到台灣旅行冒險！</h3>
+          <p>你將透過探索景點、回答問題與挑戰守護者，
+逐步解鎖台灣六座城市。</p>
+        </article>
+        <article class="tutorial-step">
+          <strong>步驟二</strong>
+          <h3>查看角色狀態</h3>
+          <p>完成景點後可以獲得：
+・EXP
+・金幣
+・城市徽章</p>
+        </article>
+        <article class="tutorial-step">
+          <strong>步驟三</strong>
+          <h3>選擇已解鎖城市</h3>
+          <p>選擇目前已解鎖的城市，
+閱讀城市故事後開始探索。</p>
+        </article>
+        <article class="tutorial-step">
+          <strong>步驟四</strong>
+          <h3>挑戰城市守護者</h3>
+          <p>完成城市內全部景點，
+即可挑戰城市守護者。</p>
+        </article>
+      </div>
+      <button class="btn full" id="startAdventureBtn" type="button">開始冒險</button>
+    </div>
+  </div>
+
+  <div id="resultModal" class="result-modal hidden" role="dialog" aria-modal="true" aria-live="polite">
+    <div class="result-card" id="resultCard"></div>
   </div>
 
   <main class="app">
@@ -558,6 +747,7 @@
 
   <script>
     const SESSION_KEY = "travelAdventureApiSession";
+    const TUTORIAL_KEY = "tutorialCompleted";
     let session = loadSession();
     let appState = null;
     let activeCityId = null;
@@ -578,6 +768,22 @@
       } else {
         localStorage.removeItem(SESSION_KEY);
       }
+    }
+
+    function tutorialIsCompleted() {
+      return localStorage.getItem(TUTORIAL_KEY) === "true";
+    }
+
+    function showTutorialIfNeeded() {
+      if (!tutorialIsCompleted()) {
+        document.getElementById("tutorial").classList.remove("hidden");
+      }
+    }
+
+    function completeTutorial() {
+      localStorage.setItem(TUTORIAL_KEY, "true");
+      document.getElementById("tutorial").classList.add("hidden");
+      addLog("新手教學完成，開始你的台灣探索旅程。");
     }
 
     async function api(path, options = {}) {
@@ -657,6 +863,62 @@
         `).join("");
     }
 
+    function badgeParts(city) {
+      const raw = city?.badgeName || `${city?.name || "城市"}探索者`;
+      const [name, quote] = raw.split(/[：:]/).map(part => part.trim());
+      return { name, quote: quote || "" };
+    }
+
+    function nextCityAfter(city) {
+      if (!appState?.cities || !city) return null;
+      const index = appState.cities.findIndex(item => item.id === city.id);
+      return index >= 0 ? appState.cities[index + 1] : null;
+    }
+
+    function closeResultCard() {
+      document.getElementById("resultModal").classList.add("hidden");
+      document.getElementById("resultCard").innerHTML = "";
+    }
+
+    function showResultCard(html) {
+      document.getElementById("resultCard").innerHTML = `
+        ${html}
+        <button class="btn full" id="resultCloseBtn" type="button">繼續旅程</button>
+      `;
+      document.getElementById("resultModal").classList.remove("hidden");
+      document.getElementById("resultCloseBtn").addEventListener("click", closeResultCard);
+    }
+
+    function showSceneResult(city, scene) {
+      const cityProgress = progress(city);
+      const nextDone = Math.min(cityProgress.done + 1, cityProgress.total);
+      showResultCard(`
+        <h2>答題成功！</h2>
+        <h3>${escapeHtml(scene.name)}探索完成</h3>
+        <div class="result-rewards">
+          <div class="result-reward">EXP +${scene.expReward || 0}</div>
+          <div class="result-reward">金幣 +${scene.coinReward || 0}</div>
+        </div>
+        <div class="result-highlight">目前城市進度：${nextDone} / ${cityProgress.total}</div>
+      `);
+    }
+
+    function showBossResult(city) {
+      const badge = badgeParts(city);
+      const nextCity = nextCityAfter(city);
+      showResultCard(`
+        <h2>城市守護者挑戰成功！</h2>
+        <p>獲得徽章：</p>
+        <div class="result-highlight">${escapeHtml(badge.name)}</div>
+        ${badge.quote ? `<p class="result-quote">「${escapeHtml(badge.quote)}」</p>` : ""}
+        ${nextCity ? `
+          <div class="result-highlight">下一座城市：${escapeHtml(nextCity.name)}<br>已解鎖</div>
+        ` : `
+          <div class="result-highlight">六座城市探索完成！</div>
+        `}
+      `);
+    }
+
     async function authenticate(path, username, password) {
       const auth = await api(path, {
         method: "POST",
@@ -665,6 +927,7 @@
       saveSession(auth);
       document.getElementById("login").classList.add("hidden");
       await refreshState();
+      showTutorialIfNeeded();
       return auth;
     }
 
@@ -898,6 +1161,8 @@
     }
 
     async function checkin(sceneId, answer, answerText) {
+      const city = activeCity();
+      const scene = city?.scenes?.find(item => item.id === sceneId);
       try {
         const result = await api("/api/checkins", {
           method: "POST",
@@ -907,7 +1172,10 @@
           addLog("答錯了，再想想看。");
           return;
         }
-        addLog("答對了，景點打卡完成。");
+        if (city && scene) {
+          showSceneResult(city, scene);
+        }
+        addLog(`${scene?.name || "景點"}探索完成。`);
         await refreshState();
       } catch (error) {
         addLog(error.message);
@@ -921,7 +1189,12 @@
           method: "POST",
           body: JSON.stringify({ answer, answerText })
         });
-        addLog(result.win ? `成功擊敗 ${city.bossName}。` : `${city.bossName} 太強了，請提升實力後再挑戰。`);
+        if (result.win) {
+          showBossResult(city);
+          addLog(`成功擊敗 ${city.bossName}。`);
+        } else {
+          addLog(`${city.bossName} 太強了，請提升實力後再挑戰。`);
+        }
         await refreshState();
       } catch (error) {
         addLog(error.message);
@@ -959,13 +1232,18 @@
       appState = null;
       activeCityId = null;
       logs = [];
+      document.getElementById("tutorial").classList.add("hidden");
+      closeResultCard();
       document.getElementById("login").classList.remove("hidden");
     });
 
+    document.getElementById("startAdventureBtn").addEventListener("click", completeTutorial);
+
     if (session?.token) {
       document.getElementById("login").classList.add("hidden");
-      refreshState().catch(() => {
+      refreshState().then(showTutorialIfNeeded).catch(() => {
         saveSession(null);
+        document.getElementById("tutorial").classList.add("hidden");
         document.getElementById("login").classList.remove("hidden");
       });
     }
