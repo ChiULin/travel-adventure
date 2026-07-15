@@ -87,7 +87,7 @@ MERGE INTO landmarks (
 許多珍貴文物因歷史變遷而來到台灣，如今成為世界知名的博物館之一。
 
 每一件文物，都記錄著歷史留下的痕跡。',
-   '/images/landmarks/national-palace-museum.webp',
+   '/images/landmarks/national-palace-museum.png',
    '【歷史學者】若要判斷故宮博物院的核心價值，哪個描述最準確？',
    '保存與展示珍貴歷史文物', '提供大型戶外遊樂設施', '作為台北主要金融交易中心', 'A', '故宮的核心價值在於典藏、研究與展示文物，讓歷史記憶被看見。',
    2, 130, 110, false, 1),
@@ -98,7 +98,7 @@ MERGE INTO landmarks (
 電影院、流行文化、街頭藝術、美食，讓這裡成為許多年輕人最喜歡聚集的地方。
 
 即使歷經時代變遷，它依然是台北最具代表性的商圈之一。',
-   '/images/landmarks/ximending.webp',
+   '/images/landmarks/ximending.png',
    '【在地居民】西門町之所以成為台北重要商圈，最主要是因為它長期扮演哪種角色？',
    '娛樂與流行文化中心', '濕地候鳥棲地', '傳統漁業作業場域', 'A', '西門町長期與電影、流行文化和年輕族群連結，是台北娛樂文化的重要場域。',
    1, 95, 90, false, 1),
@@ -160,7 +160,7 @@ MERGE INTO landmarks (
 自清朝開始，許多讀書人都在這裡學習。
 
 如果你聽見風穿過樹蔭，那也許是舊時書聲仍留在這裡。',
-   '/images/landmarks/tainan-confucius-temple.webp',
+   '/images/landmarks/tainan-confucius-temple.png',
    '【老師】台南孔廟被稱為全臺首學，主要是因為什麼？',
    '它是台灣第一座孔廟', '它是台灣最高摩天大樓', '它是澎湖跨海交通工程', 'A', '台南孔廟是台灣第一座孔廟，因此有全臺首學之稱。',
    2, 135, 115, false, 3),
@@ -182,7 +182,7 @@ MERGE INTO landmarks (
 白天，它是城市的水脈；夜晚，燈光倒映在河面上，像港都寫給旅人的信。
 
 一座城市願意親近河流，就會慢慢學會與生活和解。',
-   '/images/landmarks/love-river.webp',
+   '/images/landmarks/love-river.png',
    '【船夫】愛河對高雄的意義，最接近哪一種描述？',
    '城市水岸生活與觀光記憶', '山岳峽谷地質核心', '中華文物典藏中心', 'A', '愛河是高雄重要水岸景觀，也承載市民生活與觀光記憶。',
    2, 135, 115, false, 4),
@@ -226,7 +226,7 @@ MERGE INTO landmarks (
 陡峭山壁直落太平洋，形成花蓮最震撼的山海畫面之一。
 
 當你站在遠處觀看，會明白自然的尺度遠比想像更巨大。',
-   '/images/landmarks/qingshui-cliff.webp',
+   '/images/landmarks/qingshui-cliff.png',
    '【地質研究員】清水斷崖最能展現哪一種花蓮特色？',
    '山壁直落海洋的壯闊地形', '曲牆劇場的建築設計', '漁村潮汐捕魚設施', 'A', '清水斷崖以山壁臨海、氣勢壯闊的地形景觀聞名。',
    3, 165, 140, false, 5),
