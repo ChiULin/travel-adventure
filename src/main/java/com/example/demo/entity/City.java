@@ -48,6 +48,9 @@ public class City {
     @Column(name = "boss_option_c", length = 255)
     private String bossOptionC;
 
+    @Column(name = "boss_option_d", length = 255)
+    private String bossOptionD;
+
     @JsonIgnore
     @Column(name = "boss_correct_answer", length = 1)
     private String bossCorrectAnswer;

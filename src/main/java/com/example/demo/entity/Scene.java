@@ -42,6 +42,9 @@ public class Scene {
     @Column(name = "quiz_option_c", length = 255)
     private String quizOptionC;
 
+    @Column(name = "quiz_option_d", length = 255)
+    private String quizOptionD;
+
     @JsonIgnore
     @Column(name = "quiz_correct_answer", length = 1)
     private String quizCorrectAnswer;

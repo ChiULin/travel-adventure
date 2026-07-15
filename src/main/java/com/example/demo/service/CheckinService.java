@@ -111,6 +111,7 @@ public class CheckinService {
             case "A" -> scene.getQuizOptionA();
             case "B" -> scene.getQuizOptionB();
             case "C" -> scene.getQuizOptionC();
+            case "D" -> scene.getQuizOptionD();
             default -> null;
         };
     }

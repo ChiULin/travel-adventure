@@ -115,6 +115,7 @@ public class BossService {
             case "A" -> city.getBossOptionA();
             case "B" -> city.getBossOptionB();
             case "C" -> city.getBossOptionC();
+            case "D" -> city.getBossOptionD();
             default -> null;
         };
     }

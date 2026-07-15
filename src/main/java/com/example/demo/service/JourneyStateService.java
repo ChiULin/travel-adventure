@@ -76,7 +76,7 @@ public class JourneyStateService {
             dto.put("bossName", city.getBossName());
             dto.put("bossPower", city.getBossPower());
             dto.put("bossQuestion", city.getBossQuestion());
-            dto.put("bossOptions", optionsDto(city.getBossOptionA(), city.getBossOptionB(), city.getBossOptionC()));
+            dto.put("bossOptions", optionsDto(city.getBossOptionA(), city.getBossOptionB(), city.getBossOptionC(), city.getBossOptionD()));
             dto.put("unlockOrder", city.getUnlockOrder());
             dto.put("unlocked", cityProgress != null && Boolean.TRUE.equals(cityProgress.getUnlocked()));
             dto.put("bossUnlocked", cityProgress != null && Boolean.TRUE.equals(cityProgress.getBossUnlocked()));
@@ -258,7 +258,7 @@ public class JourneyStateService {
         dto.put("imageUrl", scene.getImageUrl());
         dto.put("rarity", scene.getRarity());
         dto.put("quizQuestion", scene.getQuizQuestion());
-        dto.put("quizOptions", optionsDto(scene.getQuizOptionA(), scene.getQuizOptionB(), scene.getQuizOptionC()));
+        dto.put("quizOptions", optionsDto(scene.getQuizOptionA(), scene.getQuizOptionB(), scene.getQuizOptionC(), scene.getQuizOptionD()));
         dto.put("quizExplanation", scene.getQuizExplanation());
         dto.put("expReward", scene.getExpReward());
         dto.put("coinReward", scene.getCoinReward());
@@ -266,7 +266,7 @@ public class JourneyStateService {
         return dto;
     }
 
-    private Map<String, String> optionsDto(String optionA, String optionB, String optionC) {
+    private Map<String, String> optionsDto(String optionA, String optionB, String optionC, String optionD) {
         List<String> options = new ArrayList<>();
         if (optionA != null && !optionA.isBlank()) {
             options.add(optionA);
@@ -277,10 +277,13 @@ public class JourneyStateService {
         if (optionC != null && !optionC.isBlank()) {
             options.add(optionC);
         }
+        if (optionD != null && !optionD.isBlank()) {
+            options.add(optionD);
+        }
         Collections.shuffle(options);
 
         Map<String, String> dto = new LinkedHashMap<>();
-        String[] labels = {"A", "B", "C"};
+        String[] labels = {"A", "B", "C", "D"};
         for (int i = 0; i < options.size() && i < labels.length; i++) {
             dto.put(labels[i], options.get(i));
         }
