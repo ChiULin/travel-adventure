@@ -266,6 +266,70 @@
       font-weight: 800;
     }
 
+    .mission-list, .achievement-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .mission-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f7faff;
+      font-weight: 900;
+    }
+
+    .mission-item.done {
+      border-color: rgba(40, 168, 90, .42);
+      background: #f5fff8;
+    }
+
+    .mission-item span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .mission-reward {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      color: #74510d;
+      background: #fff6dc;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .achievement-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .achievement-item {
+      min-height: 76px;
+      display: grid;
+      align-content: center;
+      gap: 4px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f7faff;
+      font-weight: 900;
+    }
+
+    .achievement-item.locked {
+      color: #667085;
+      background: #f4f7fb;
+    }
+
+    .achievement-item span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
     .city-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -815,6 +879,7 @@
       .brand-mark { width: 44px; height: 44px; }
       .brand h1 { font-size: 22px; }
       .metric-grid, .city-grid { grid-template-columns: 1fr; }
+      .achievement-grid { grid-template-columns: 1fr; }
       .tutorial-steps { grid-template-columns: 1fr; }
       .summary-layout { grid-template-columns: 52px 1fr; }
       .avatar { width: 52px; height: 52px; font-size: 23px; }
@@ -919,6 +984,8 @@
       <div class="main-stack">
         <section id="player-summary"></section>
         <section id="journey-progress"></section>
+        <section id="daily-missions"></section>
+        <section id="achievements"></section>
         <section id="city-list"></section>
       </div>
       <section id="city-detail"></section>
@@ -930,6 +997,8 @@
     const TUTORIAL_KEY = "tutorialCompleted";
     let session = loadSession();
     let appState = null;
+    let missionsState = null;
+    let achievementsState = null;
     let activeCityId = null;
     let logs = [];
 
@@ -1143,7 +1212,14 @@
 
     async function refreshState() {
       if (!session?.token) return;
-      appState = await api("/api/journey/me");
+      const [journey, missions, achievements] = await Promise.all([
+        api("/api/journey/me"),
+        api("/api/journey/missions").catch(() => null),
+        api("/api/journey/achievements").catch(() => null)
+      ]);
+      appState = journey;
+      missionsState = missions;
+      achievementsState = achievements;
       if (!activeCityId) {
         const firstUnlocked = appState.cities.find(city => city.unlocked) || appState.cities[0];
         activeCityId = firstUnlocked.id;
@@ -1211,6 +1287,93 @@
           <div class="journey-line">
             <span>景點完成率：${doneScenes} / ${totalScenes}</span>
             <div class="progress" aria-label="旅程進度"><span style="--w:${percent}%"></span></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function journeyTotals() {
+      const doneScenes = appState.cities.reduce((sum, city) => sum + (city.done || 0), 0);
+      const completedCities = appState.cities.filter(city => city.defeated).length;
+      const badgeCount = appState.cities.filter(city => city.badgeUnlocked).length;
+      const taipei = appState.cities.find(city => city.name === "台北") || appState.cities[0];
+      return { doneScenes, completedCities, badgeCount, taipeiCompleted: Boolean(taipei?.defeated) };
+    }
+
+    function missionRow(label, current, target) {
+      const capped = Math.min(current, target);
+      const done = capped >= target;
+      return `
+        <div class="mission-item ${done ? "done" : ""}">
+          <div>${done ? "✅" : "□"} ${label}<br><span>${capped} / ${target}</span></div>
+          <strong>${Math.round((capped / target) * 100)}%</strong>
+        </div>
+      `;
+    }
+
+    function missionRowFromApi(mission) {
+      return missionRow(mission.label, Number(mission.current || 0), Number(mission.target || 1));
+    }
+
+    function renderDailyMissions() {
+      const totals = journeyTotals();
+      const fallbackMissions = [
+        { label: "完成景點", current: totals.doneScenes, target: 2 },
+        { label: "答對題目", current: totals.doneScenes, target: 3 },
+        { label: "Boss 挑戰", current: totals.completedCities, target: 1 }
+      ];
+      const missionRows = (missionsState?.missions || fallbackMissions)
+              .map(missionRowFromApi)
+              .join("");
+      const allDone = missionsState?.completed ??
+              fallbackMissions.every(mission => mission.current >= mission.target);
+      const rewardExp = missionsState?.rewardExp ?? 100;
+      const rewardCoins = missionsState?.rewardCoins ?? 50;
+
+      document.getElementById("daily-missions").innerHTML = `
+        <div class="progress-card">
+          <div class="section-head">
+            <h2>今日任務</h2>
+            <strong>${allDone ? "可領取獎勵" : "冒險目標"}</strong>
+          </div>
+          <div class="mission-list">
+            ${missionRows}
+          </div>
+          <div class="mission-reward">完成獎勵：EXP +${rewardExp}　金幣 +${rewardCoins}</div>
+        </div>
+      `;
+    }
+
+    function achievementItem(unlocked, title, description) {
+      return `
+        <div class="achievement-item ${unlocked ? "" : "locked"}">
+          <div>${unlocked ? "✅" : "🔒"} ${title}</div>
+          <span>${description}</span>
+        </div>
+      `;
+    }
+
+    function renderAchievements() {
+      const totals = journeyTotals();
+      const fallbackAchievements = [
+        { title: "初次探索", description: "完成第一次景點打卡", unlocked: totals.doneScenes >= 1 },
+        { title: "台北征服者", description: "完成第一座城市", unlocked: totals.taipeiCompleted },
+        { title: "三題連勝", description: "累積答對 3 題", unlocked: totals.doneScenes >= 3 },
+        { title: "徽章收藏家", description: "收集 3 枚城市徽章", unlocked: totals.badgeCount >= 3 },
+        { title: "台灣冒險王", description: "完成全部 6 座城市", unlocked: totals.completedCities >= 6 }
+      ];
+      const achievements = achievementsState?.achievements || fallbackAchievements;
+      const unlockedCount = achievementsState?.unlockedCount ?? achievements.filter(item => item.unlocked).length;
+      const totalAchievements = achievementsState?.total ?? achievements.length;
+
+      document.getElementById("achievements").innerHTML = `
+        <div class="progress-card">
+          <div class="section-head">
+            <h2>成就</h2>
+            <strong>${unlockedCount} / ${totalAchievements} 已解鎖</strong>
+          </div>
+          <div class="achievement-grid">
+            ${achievements.map(item => achievementItem(item.unlocked, item.title, item.description)).join("")}
           </div>
         </div>
       `;
@@ -1356,6 +1519,8 @@
       if (!appState) return;
       renderPlayerSummary();
       renderJourneyProgress();
+      renderDailyMissions();
+      renderAchievements();
       renderCityCards();
       renderCityDetail(activeCityId);
     }
@@ -1432,6 +1597,8 @@
     document.getElementById("logoutBtn").addEventListener("click", () => {
       saveSession(null);
       appState = null;
+      missionsState = null;
+      achievementsState = null;
       activeCityId = null;
       logs = [];
       document.getElementById("tutorial").classList.add("hidden");

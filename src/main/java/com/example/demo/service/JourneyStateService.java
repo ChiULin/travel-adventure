@@ -12,6 +12,8 @@ import com.example.demo.repository.UserProgressRepository;
 import com.example.demo.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -94,6 +96,74 @@ public class JourneyStateService {
         return result;
     }
 
+    public Map<String, Object> missions(Long userId) {
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        List<Checkin> checkins = checkinRepository.findByUserId(userId);
+        List<UserProgress> progressRows = userProgressRepository.findByUserId(userId);
+
+        int completedScenesToday = (int) checkins.stream()
+                .filter(checkin -> Boolean.TRUE.equals(checkin.getCompleted()))
+                .filter(checkin -> checkin.getCompletedAt() != null && !checkin.getCompletedAt().isBefore(todayStart))
+                .count();
+        int correctAnswersToday = (int) checkins.stream()
+                .filter(checkin -> Boolean.TRUE.equals(checkin.getQuizCorrect()))
+                .filter(checkin -> checkin.getCheckinTime() != null && !checkin.getCheckinTime().isBefore(todayStart))
+                .count();
+        int bossWinsToday = (int) progressRows.stream()
+                .filter(progress -> Boolean.TRUE.equals(progress.getBossCompleted()))
+                .filter(progress -> progress.getCompletedAt() != null && !progress.getCompletedAt().isBefore(todayStart))
+                .count();
+
+        List<Map<String, Object>> missionDtos = List.of(
+                missionDto("complete-scenes", "完成景點", completedScenesToday, 2),
+                missionDto("correct-answers", "答對題目", correctAnswersToday, 3),
+                missionDto("boss-challenge", "Boss 挑戰", bossWinsToday, 1)
+        );
+
+        boolean completed = missionDtos.stream().allMatch(mission -> Boolean.TRUE.equals(mission.get("completed")));
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("date", LocalDate.now().toString());
+        result.put("rewardExp", 100);
+        result.put("rewardCoins", 50);
+        result.put("completed", completed);
+        result.put("missions", missionDtos);
+        return result;
+    }
+
+    public Map<String, Object> achievements(Long userId) {
+        List<Checkin> completedCheckins = checkinRepository.findByUserIdAndCompletedTrue(userId);
+        List<UserProgress> progressRows = userProgressRepository.findByUserId(userId);
+        int completedScenes = completedCheckins.size();
+        int completedCities = (int) progressRows.stream()
+                .filter(progress -> Boolean.TRUE.equals(progress.getBossCompleted()))
+                .count();
+        int badges = (int) progressRows.stream()
+                .filter(progress -> Boolean.TRUE.equals(progress.getBadgeUnlocked()))
+                .count();
+        boolean firstCityCompleted = progressRows.stream()
+                .filter(progress -> progress.getCity() != null && progress.getCity().getUnlockOrder() != null)
+                .filter(progress -> progress.getCity().getUnlockOrder() == 1)
+                .anyMatch(progress -> Boolean.TRUE.equals(progress.getBossCompleted()));
+
+        List<Map<String, Object>> achievementDtos = List.of(
+                achievementDto("first-checkin", "初次探索", "完成第一次景點打卡", completedScenes >= 1),
+                achievementDto("first-city", "台北征服者", "完成第一座城市", firstCityCompleted),
+                achievementDto("three-correct", "三題連勝", "累積答對 3 題", completedScenes >= 3),
+                achievementDto("badge-collector", "徽章收藏家", "收集 3 枚城市徽章", badges >= 3),
+                achievementDto("taiwan-adventurer", "台灣冒險王", "完成全部 6 座城市", completedCities >= 6)
+        );
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("unlockedCount", achievementDtos.stream()
+                .filter(achievement -> Boolean.TRUE.equals(achievement.get("unlocked")))
+                .count());
+        result.put("total", achievementDtos.size());
+        result.put("badgeCount", badges);
+        result.put("completedCities", completedCities);
+        result.put("achievements", achievementDtos);
+        return result;
+    }
+
     public List<UserProgress> progressFor(User user) {
         List<City> cities = cityRepository.findAllByOrderByUnlockOrderAsc();
         List<UserProgress> existing = userProgressRepository.findByUserId(user.getId());
@@ -115,6 +185,27 @@ public class JourneyStateService {
             }
         }
         return existing;
+    }
+
+    private Map<String, Object> missionDto(String id, String label, int current, int target) {
+        Map<String, Object> dto = new LinkedHashMap<>();
+        int capped = Math.min(current, target);
+        dto.put("id", id);
+        dto.put("label", label);
+        dto.put("current", capped);
+        dto.put("target", target);
+        dto.put("completed", capped >= target);
+        dto.put("progressPercent", target == 0 ? 100 : (int) Math.round(capped * 100.0 / target));
+        return dto;
+    }
+
+    private Map<String, Object> achievementDto(String id, String title, String description, boolean unlocked) {
+        Map<String, Object> dto = new LinkedHashMap<>();
+        dto.put("id", id);
+        dto.put("title", title);
+        dto.put("description", description);
+        dto.put("unlocked", unlocked);
+        return dto;
     }
 
     public void updateBossUnlock(Long userId, Long cityId) {

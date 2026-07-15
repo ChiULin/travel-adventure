@@ -138,6 +138,39 @@ class CheckinIntegrationTest {
                 .andExpect(jsonPath("$.cities[0].done").value(1));
     }
 
+    @Test
+    void missionsAndAchievementsShouldUseExistingProgress() throws Exception {
+        String token = registerAndGetToken("missionTester01");
+
+        mockMvc.perform(post("/api/checkins")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "sceneId": 1,
+                                  "answer": "A"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ok").value(true));
+
+        mockMvc.perform(get("/api/journey/missions")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rewardExp").value(100))
+                .andExpect(jsonPath("$.rewardCoins").value(50))
+                .andExpect(jsonPath("$.missions[0].id").value("complete-scenes"))
+                .andExpect(jsonPath("$.missions[0].current").value(1))
+                .andExpect(jsonPath("$.missions[1].id").value("correct-answers"))
+                .andExpect(jsonPath("$.missions[1].current").value(1));
+
+        mockMvc.perform(get("/api/journey/achievements")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.achievements[0].id").value("first-checkin"))
+                .andExpect(jsonPath("$.achievements[0].unlocked").value(true));
+    }
+
     private String registerAndGetToken(String username) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
