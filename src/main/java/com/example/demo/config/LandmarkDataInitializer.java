@@ -2,6 +2,7 @@ package com.example.demo.config;
 
 import com.example.demo.entity.City;
 import com.example.demo.entity.Scene;
+import com.example.demo.repository.CheckinRepository;
 import com.example.demo.repository.CityRepository;
 import com.example.demo.repository.SceneRepository;
 import org.springframework.boot.CommandLineRunner;
@@ -14,10 +15,13 @@ import java.util.Map;
 public class LandmarkDataInitializer implements CommandLineRunner {
     private final CityRepository cityRepository;
     private final SceneRepository sceneRepository;
+    private final CheckinRepository checkinRepository;
 
-    public LandmarkDataInitializer(CityRepository cityRepository, SceneRepository sceneRepository) {
+    public LandmarkDataInitializer(CityRepository cityRepository, SceneRepository sceneRepository,
+                                   CheckinRepository checkinRepository) {
         this.cityRepository = cityRepository;
         this.sceneRepository = sceneRepository;
+        this.checkinRepository = checkinRepository;
     }
 
     @Override
@@ -26,6 +30,9 @@ public class LandmarkDataInitializer implements CommandLineRunner {
         if (cities.size() < 4) {
             return;
         }
+
+        removeScene("台中逢甲夜市");
+        removeScene("逢甲夜市");
 
         migrateJiufenToGaomei(cities.get(1));
         migrateScene(
@@ -59,12 +66,12 @@ public class LandmarkDataInitializer implements CommandLineRunner {
                 new Landmark(1, "高美濕地", "自然景觀",
                         "沿著木棧道走向夕陽與風車，觀察潮間帶生態與壯闊海景。",
                         "/images/landmarks/gaomei-wetlands.webp", 2, 135, 115),
-                new Landmark(2, "安平古堡", "歷史古蹟",
-                        "穿梭紅磚城牆與老樹之間，閱讀臺南數百年的海港歷史。",
-                        "/images/landmarks/anping-fort.webp", 2, 145, 125),
                 new Landmark(2, "赤崁樓", "歷史古蹟",
                         "探訪臺南古城核心，感受亭閣、石碑與廟埕交織出的歷史層次。",
                         "/images/landmarks/chihkan-tower.webp", 2, 140, 120),
+                new Landmark(2, "安平古堡", "歷史古蹟",
+                        "穿梭紅磚城牆與老樹之間，閱讀臺南數百年的海港歷史。",
+                        "/images/landmarks/anping-fort.webp", 2, 145, 125),
                 new Landmark(3, "旗津", "海港風景",
                         "搭渡輪前往高雄港邊沙洲，漫步海岸、燈塔與老街，感受南方海風與港都日常。",
                         "/images/landmarks/cijin.webp", 3, 155, 135),
@@ -133,8 +140,8 @@ public class LandmarkDataInitializer implements CommandLineRunner {
     private void fillMissingImages() {
         Map<String, String> imageBySceneName = Map.ofEntries(
                 Map.entry("淡水老街", "/images/landmarks/tamsui-old-street.webp"),
-                Map.entry("台中逢甲夜市", "/images/landmarks/fengjia-night-market.webp"),
                 Map.entry("台中彩虹眷村", "/images/landmarks/rainbow-village.webp"),
+                Map.entry("安平古堡", "/images/landmarks/anping-fort.webp"),
                 Map.entry("台南神農街", "/images/landmarks/shennong-street.webp"),
                 Map.entry("蓮池潭", "/images/landmarks/dragon-tiger-pagodas.webp"),
                 Map.entry("旗津", "/images/landmarks/cijin.webp"),
@@ -152,6 +159,13 @@ public class LandmarkDataInitializer implements CommandLineRunner {
                         sceneRepository.save(scene);
                     }
                 }));
+    }
+
+    private void removeScene(String sceneName) {
+        sceneRepository.findFirstByName(sceneName).ifPresent(scene -> {
+            checkinRepository.deleteBySceneId(scene.getId());
+            sceneRepository.delete(scene);
+        });
     }
 
     private record Landmark(

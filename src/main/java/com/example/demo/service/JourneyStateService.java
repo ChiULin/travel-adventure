@@ -50,11 +50,15 @@ public class JourneyStateService {
         List<Map<String, Object>> cityDtos = cities.stream().map(city -> {
             List<Scene> scenes = sceneRepository.findByCityId(city.getId());
             long done = scenes.stream().filter(scene -> checkedSceneIds.contains(scene.getId())).count();
+            CityBadge badge = badgeFor(city.getName());
             Map<String, Object> dto = new LinkedHashMap<>();
             dto.put("id", city.getId());
             dto.put("name", city.getName());
             dto.put("code", city.getCode());
             dto.put("intro", city.getIntro());
+            dto.put("badgeIcon", badge.icon());
+            dto.put("badgeName", badge.name());
+            dto.put("badgeUnlocked", defeatedCityIds.contains(city.getId()));
             dto.put("bossName", city.getBossName());
             dto.put("bossPower", city.getBossPower());
             dto.put("unlockOrder", city.getUnlockOrder());
@@ -125,5 +129,20 @@ public class JourneyStateService {
         dto.put("bossPoints", user.getBossPoints());
         dto.put("title", user.getTitle());
         return dto;
+    }
+
+    private CityBadge badgeFor(String cityName) {
+        return switch (cityName) {
+            case "台北" -> new CityBadge("🏙️", "101 徽章");
+            case "台中" -> new CityBadge("🌅", "高美濕地徽章");
+            case "台南" -> new CityBadge("🏯", "古都徽章");
+            case "高雄" -> new CityBadge("🌊", "港都徽章");
+            case "花蓮" -> new CityBadge("⛰️", "山海徽章");
+            case "澎湖" -> new CityBadge("🏝️", "海島徽章");
+            default -> new CityBadge("🎒", cityName + "徽章");
+        };
+    }
+
+    private record CityBadge(String icon, String name) {
     }
 }

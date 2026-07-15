@@ -149,8 +149,33 @@
       height: 42px;
       border-radius: 10px;
       background: rgba(36, 111, 229, .12);
-      font-size: 12px;
+      font-size: 22px;
       font-weight: 900;
+    }
+
+    .badge-note {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-weight: 900;
+    }
+
+    .badge-note span:first-child {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.22);
+      font-size: 20px;
+    }
+
+    .badge-note small {
+      display: block;
+      color: rgba(255,255,255,.82);
+      font-size: 12px;
+      font-weight: 800;
     }
 
     .hero {
@@ -387,6 +412,10 @@
         <div class="hero">
           <h2 id="cityName">載入中</h2>
           <p id="cityIntro"></p>
+          <div class="badge-note">
+            <span id="cityBadgeIcon">🎒</span>
+            <div><strong id="cityBadgeName">城市徽章</strong><small id="cityBadgeStatus">完成城市後取得</small></div>
+          </div>
           <div style="display:flex;justify-content:space-between;font-weight:900;margin-bottom:6px">
             <span id="nextGoal">正在載入旅程</span><span id="cityProgressText">0%</span>
           </div>
@@ -547,8 +576,8 @@
         const active = city.id === activeCityId;
         return `
           <button class="city-btn ${active ? "active" : ""} ${city.unlocked ? "" : "locked"}" type="button" ${city.unlocked ? "" : "disabled"} data-city-id="${city.id}">
-            <span class="city-badge">${city.unlocked ? city.code : "未解鎖"}</span>
-            <span><strong>${city.name}</strong><small>${city.unlocked ? `完成 ${itemProgress.percent}%` : "尚未解鎖"}</small></span>
+            <span class="city-badge">${city.unlocked ? city.badgeIcon : "🔒"}</span>
+            <span><strong>${city.name}</strong><small>${city.unlocked ? `${city.badgeName}｜完成 ${itemProgress.percent}%` : "尚未解鎖"}</small></span>
             <span>${city.defeated ? "已勝利" : city.unlocked ? `${itemProgress.done}/${itemProgress.total}` : ""}</span>
           </button>
         `;
@@ -567,6 +596,9 @@
       const itemProgress = progress(city);
       document.getElementById("cityName").textContent = city.name;
       document.getElementById("cityIntro").textContent = city.intro;
+      document.getElementById("cityBadgeIcon").textContent = city.badgeIcon || "🎒";
+      document.getElementById("cityBadgeName").textContent = city.badgeName || "城市徽章";
+      document.getElementById("cityBadgeStatus").textContent = city.badgeUnlocked ? "已取得徽章，下一座城市已解鎖" : "完成景點並擊敗首領後取得";
       document.getElementById("cityProgressText").textContent = `${itemProgress.percent}%`;
       document.getElementById("cityProgressBar").style.setProperty("--w", `${itemProgress.percent}%`);
       document.getElementById("nextGoal").textContent = nextGoalText(city, itemProgress);
