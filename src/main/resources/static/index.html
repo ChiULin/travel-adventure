@@ -1131,6 +1131,19 @@
     let answerCombo = 0;
     let cityLives = 3;
     let cityFailedPending = false;
+    let cityHadFailedAttempt = false;
+    let cityBattleStats = emptyCityBattleStats();
+
+    function emptyCityBattleStats() {
+      return {
+        correctAnswers: 0,
+        wrongAnswers: 0,
+        timeoutCount: 0,
+        maxCombo: 0,
+        earnedExp: 0,
+        earnedCoins: 0
+      };
+    }
 
     function loadSession() {
       try {
@@ -1262,6 +1275,7 @@
         answerCombo = 0;
         cityLives = 3;
         cityFailedPending = false;
+        resetCityBattleStats({ keepFailedAttempt: true });
         renderPlayerSummary();
       }
       if (appState) {
@@ -1362,6 +1376,7 @@
         const city = activeCity();
         const scene = city?.scenes?.find(item => item.id === target.targetId);
         activeSceneQuizId = null;
+        cityBattleStats.timeoutCount += 1;
         registerWrongAnswer();
         if (cityLives <= 0) {
           showCityFailedResult();
@@ -1375,6 +1390,7 @@
       if (target?.type === "boss") {
         const city = activeCity();
         activeBossQuizCityId = null;
+        cityBattleStats.timeoutCount += 1;
         registerWrongAnswer();
         if (cityLives <= 0) {
           showCityFailedResult();
@@ -1438,6 +1454,10 @@
 
     function registerCorrectAnswer(scene) {
       answerCombo += 1;
+      cityBattleStats.correctAnswers += 1;
+      cityBattleStats.maxCombo = Math.max(cityBattleStats.maxCombo, answerCombo);
+      cityBattleStats.earnedExp += scene?.expReward || 0;
+      cityBattleStats.earnedCoins += scene?.coinReward || 0;
       renderBattleStatus();
       flashCombo();
       flyExpReward(scene);
@@ -1446,15 +1466,39 @@
 
     function registerWrongAnswer() {
       answerCombo = 0;
+      cityBattleStats.wrongAnswers += 1;
       cityLives = Math.max(0, cityLives - 1);
       renderBattleStatus();
       shakeLives();
+    }
+
+    function resetCityBattleStats(options = {}) {
+      cityBattleStats = emptyCityBattleStats();
+      if (!options.keepFailedAttempt) {
+        cityHadFailedAttempt = false;
+      }
+    }
+
+    function calculateBattleRank() {
+      if (
+        !cityHadFailedAttempt &&
+        cityLives === 3 &&
+        cityBattleStats.wrongAnswers === 0 &&
+        cityBattleStats.timeoutCount === 0
+      ) {
+        return "S";
+      }
+      if (cityHadFailedAttempt) return "C";
+      if (cityLives === 2) return "A";
+      if (cityLives === 1) return "B";
+      return "C";
     }
 
     function showCityFailedResult() {
       activeSceneQuizId = null;
       activeBossQuizCityId = null;
       cityFailedPending = true;
+      cityHadFailedAttempt = true;
       stopQuizTimer();
       showResultCard(`
         <h2>城市關卡失敗</h2>
@@ -1499,10 +1543,24 @@
     function showBossResult(city) {
       const badge = badgeParts(city);
       const nextCity = nextCityAfter(city);
+      const itemProgress = progress(city);
+      const rank = calculateBattleRank();
       showResultCard(`
-        <h2>城市守護者挑戰成功！</h2>
+        <h2>城市關卡完成！</h2>
+        <h3>城市：${escapeHtml(city?.name || "城市")}</h3>
+        <div class="result-highlight">評價：${rank}</div>
+        <div class="result-rewards">
+          <div class="result-reward">完成景點：${itemProgress.done} / ${itemProgress.total}</div>
+          <div class="result-reward">最高 Combo：${cityBattleStats.maxCombo}</div>
+          <div class="result-reward">剩餘生命：${cityLives}</div>
+          <div class="result-reward">答對題數：${cityBattleStats.correctAnswers}</div>
+          <div class="result-reward">答錯題數：${cityBattleStats.wrongAnswers}</div>
+          <div class="result-reward">時間到：${cityBattleStats.timeoutCount}</div>
+          <div class="result-reward">本次 EXP：${cityBattleStats.earnedExp}</div>
+          <div class="result-reward">本次金幣：${cityBattleStats.earnedCoins}</div>
+        </div>
         <p>獲得徽章：</p>
-        <div class="result-highlight">${escapeHtml(badge.name)}</div>
+        <div class="result-highlight">${escapeHtml(city.badgeIcon || "🏅")} ${escapeHtml(badge.name)}</div>
         ${badge.quote ? `<p class="result-quote">「${escapeHtml(badge.quote)}」</p>` : ""}
         ${nextCity ? `
           <div class="result-highlight">下一座城市：${escapeHtml(nextCity.name)}<br>已解鎖</div>
@@ -1746,6 +1804,7 @@
           activeBossQuizCityId = null;
           answerCombo = 0;
           cityLives = 3;
+          resetCityBattleStats();
           stopQuizTimer();
           renderCityCards();
           renderPlayerSummary();
@@ -1926,7 +1985,7 @@
           body: JSON.stringify({ answer, answerText })
         });
         if (result.win) {
-          registerCorrectAnswer();
+          registerCorrectAnswer({ expReward: 260, coinReward: 300 });
           showBossResult(city);
           addLog(`成功擊敗 ${city.bossName}。`);
         } else {
