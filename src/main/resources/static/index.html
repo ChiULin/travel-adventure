@@ -243,6 +243,72 @@
       font-weight: 800;
     }
 
+    .battle-status {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .battle-chip {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff8e8;
+      color: var(--ink);
+      font-size: 16px;
+      font-weight: 900;
+    }
+
+    .battle-chip.combo.hot {
+      color: #b63f00;
+      border-color: #ffbf73;
+      background: #fff2d8;
+      animation: flashPop .55s ease;
+    }
+
+    .battle-chip.lives.damaged {
+      border-color: #ff9f9f;
+      background: #fff0f0;
+      animation: lifeShake .42s ease;
+    }
+
+    .battle-chip.lives.empty {
+      color: #9d1f1f;
+      border-color: #ff9f9f;
+      background: #fff0f0;
+    }
+
+    .battle-float {
+      position: fixed;
+      z-index: 60;
+      left: 50%;
+      top: 22%;
+      pointer-events: none;
+      transform: translateX(-50%);
+      padding: 10px 14px;
+      border-radius: 999px;
+      color: white;
+      background: linear-gradient(135deg, #ff8a00, #ff3d57);
+      box-shadow: 0 18px 34px rgba(128, 49, 10, .22);
+      font-size: 18px;
+      font-weight: 900;
+      animation: floatBurst 1s ease forwards;
+    }
+
+    .exp-fly {
+      position: fixed;
+      z-index: 60;
+      pointer-events: none;
+      color: #20723c;
+      font-weight: 900;
+      animation: expFly .85s ease forwards;
+    }
+
     .progress {
       height: 12px;
       border-radius: 999px;
@@ -522,6 +588,31 @@
     @keyframes timerPulse {
       from { transform: scale(1); }
       to { transform: scale(1.04); }
+    }
+
+    @keyframes flashPop {
+      0% { box-shadow: 0 0 0 rgba(255, 190, 80, 0); transform: scale(1); }
+      45% { box-shadow: 0 0 0 8px rgba(255, 190, 80, .22); transform: scale(1.04); }
+      100% { box-shadow: 0 0 0 rgba(255, 190, 80, 0); transform: scale(1); }
+    }
+
+    @keyframes lifeShake {
+      0%, 100% { transform: translateX(0); }
+      22% { transform: translateX(-6px); }
+      48% { transform: translateX(5px); }
+      72% { transform: translateX(-3px); }
+    }
+
+    @keyframes floatBurst {
+      0% { opacity: 0; transform: translate(-50%, 12px) scale(.9); }
+      20% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -46px) scale(1.08); }
+    }
+
+    @keyframes expFly {
+      0% { opacity: 0; transform: translate(0, 14px) scale(.85); }
+      18% { opacity: 1; }
+      100% { opacity: 0; transform: translate(-36px, -86px) scale(1.1); }
     }
 
     .detail-actions {
@@ -1037,6 +1128,9 @@
     let quizTimerTarget = null;
     let activeSceneQuizId = null;
     let activeBossQuizCityId = null;
+    let answerCombo = 0;
+    let cityLives = 3;
+    let cityFailedPending = false;
 
     function loadSession() {
       try {
@@ -1164,6 +1258,12 @@
     function closeResultCard() {
       document.getElementById("resultModal").classList.add("hidden");
       document.getElementById("resultCard").innerHTML = "";
+      if (cityFailedPending) {
+        answerCombo = 0;
+        cityLives = 3;
+        cityFailedPending = false;
+        renderPlayerSummary();
+      }
       if (appState) {
         renderCityDetail(activeCityId);
       }
@@ -1229,12 +1329,20 @@
     }
 
     function startSceneQuiz(sceneId) {
+      if (cityLives <= 0) {
+        showCityFailedResult();
+        return;
+      }
       activeSceneQuizId = sceneId;
       activeBossQuizCityId = null;
       renderCityDetail(activeCityId);
     }
 
     function startBossQuiz(cityId) {
+      if (cityLives <= 0) {
+        showCityFailedResult();
+        return;
+      }
       activeBossQuizCityId = cityId;
       activeSceneQuizId = null;
       renderCityDetail(activeCityId);
@@ -1254,6 +1362,12 @@
         const city = activeCity();
         const scene = city?.scenes?.find(item => item.id === target.targetId);
         activeSceneQuizId = null;
+        registerWrongAnswer();
+        if (cityLives <= 0) {
+          showCityFailedResult();
+          addLog(`${city?.name || "城市"}生命歸零，關卡失敗。`);
+          return;
+        }
         showWrongAnswerResult(scene, "時間到！");
         addLog(`${scene?.name || "題目"}時間到，探索失敗。`);
         return;
@@ -1261,9 +1375,93 @@
       if (target?.type === "boss") {
         const city = activeCity();
         activeBossQuizCityId = null;
+        registerWrongAnswer();
+        if (cityLives <= 0) {
+          showCityFailedResult();
+          addLog(`${city?.name || "城市"}生命歸零，關卡失敗。`);
+          return;
+        }
         showBossFailedResult(city, "時間到！");
         addLog(`${city?.bossName || "守護者"}時間到，挑戰失敗。`);
       }
+    }
+
+    function renderBattleStatus() {
+      const comboElement = document.getElementById("combo-display");
+      const livesElement = document.getElementById("lives-display");
+      if (comboElement) {
+        comboElement.textContent = `🔥 Combo ×${answerCombo}`;
+        comboElement.classList.toggle("hot", answerCombo > 0);
+      }
+      if (livesElement) {
+        livesElement.textContent = cityLives > 0 ? "❤️".repeat(cityLives) : "💔 生命歸零";
+        livesElement.classList.toggle("empty", cityLives <= 0);
+      }
+    }
+
+    function showBattleFloat(text) {
+      const float = document.createElement("div");
+      float.className = "battle-float";
+      float.textContent = text;
+      document.body.appendChild(float);
+      setTimeout(() => float.remove(), 1000);
+    }
+
+    function flashCombo() {
+      const comboElement = document.getElementById("combo-display");
+      if (!comboElement) return;
+      comboElement.classList.remove("hot");
+      void comboElement.offsetWidth;
+      comboElement.classList.add("hot");
+    }
+
+    function shakeLives() {
+      const livesElement = document.getElementById("lives-display");
+      if (!livesElement) return;
+      livesElement.classList.remove("damaged");
+      void livesElement.offsetWidth;
+      livesElement.classList.add("damaged");
+    }
+
+    function flyExpReward(scene) {
+      const summary = document.getElementById("player-summary");
+      if (!summary || !scene) return;
+      const rect = summary.getBoundingClientRect();
+      const fly = document.createElement("div");
+      fly.className = "exp-fly";
+      fly.textContent = `EXP +${scene.expReward || 0}`;
+      fly.style.left = `${rect.left + rect.width - 86}px`;
+      fly.style.top = `${rect.top + 56}px`;
+      document.body.appendChild(fly);
+      setTimeout(() => fly.remove(), 900);
+    }
+
+    function registerCorrectAnswer(scene) {
+      answerCombo += 1;
+      renderBattleStatus();
+      flashCombo();
+      flyExpReward(scene);
+      showBattleFloat(answerCombo >= 3 ? "🔥 PERFECT COMBO" : "Combo +1");
+    }
+
+    function registerWrongAnswer() {
+      answerCombo = 0;
+      cityLives = Math.max(0, cityLives - 1);
+      renderBattleStatus();
+      shakeLives();
+    }
+
+    function showCityFailedResult() {
+      activeSceneQuizId = null;
+      activeBossQuizCityId = null;
+      cityFailedPending = true;
+      stopQuizTimer();
+      showResultCard(`
+        <h2>城市關卡失敗</h2>
+        <h3>${escapeHtml(activeCity()?.name || "城市")}生命歸零</h3>
+        <div class="result-highlight failed">Combo 已重置，請重新整備後再挑戰。</div>
+        <p>回到城市頁後生命會恢復為 3 點，再次選擇景點開始挑戰。</p>
+      `, "failed");
     }
 
     function showWrongAnswerResult(scene, title = "答題失敗") {
@@ -1385,9 +1583,14 @@
             <div class="metric"><strong>${badgeCount}</strong><span>已取得徽章</span></div>
             <div class="metric"><strong>${unlocked} / ${appState.cities.length}</strong><span>城市總進度</span></div>
           </div>
+          <div class="battle-status">
+            <div class="battle-chip combo" id="combo-display">🔥 Combo ×0</div>
+            <div class="battle-chip lives" id="lives-display">❤️❤️❤️</div>
+          </div>
         </div>
       `;
       renderPlayerLevel(user);
+      renderBattleStatus();
     }
 
     function renderPlayerLevel(data) {
@@ -1541,8 +1744,11 @@
           activeCityId = Number(button.dataset.cityId);
           activeSceneQuizId = null;
           activeBossQuizCityId = null;
+          answerCombo = 0;
+          cityLives = 3;
           stopQuizTimer();
           renderCityCards();
+          renderPlayerSummary();
           renderCityDetail(activeCityId);
         });
       });
@@ -1604,7 +1810,7 @@
                       </div>
                     </div>
                   ` : `
-                    <button class="btn full" type="button" data-start-scene-id="${scene.id}">開始答題</button>
+                    <button class="btn full" type="button" data-start-scene-id="${scene.id}" ${cityLives <= 0 ? "disabled" : ""}>開始答題</button>
                   `}
                 </div>
               </article>
@@ -1653,7 +1859,7 @@
       if (activeBossQuizCityId !== city.id) {
         return `
           <div class="detail-actions">
-            <button class="btn red full" type="button" data-start-boss-city-id="${city.id}">開始挑戰守護者</button>
+            <button class="btn red full" type="button" data-start-boss-city-id="${city.id}" ${cityLives <= 0 ? "disabled" : ""}>開始挑戰守護者</button>
           </div>
         `;
       }
@@ -1689,10 +1895,17 @@
           body: JSON.stringify({ sceneId, answer, answerText })
         });
         if (!result.ok) {
+          registerWrongAnswer();
+          if (cityLives <= 0) {
+            showCityFailedResult();
+            addLog(`${city?.name || "城市"}生命歸零，關卡失敗。`);
+            return;
+          }
           showWrongAnswerResult(scene);
           addLog("答錯了，再想想看。");
           return;
         }
+        registerCorrectAnswer(scene);
         if (city && scene) {
           showSceneResult(city, scene);
         }
@@ -1713,9 +1926,16 @@
           body: JSON.stringify({ answer, answerText })
         });
         if (result.win) {
+          registerCorrectAnswer();
           showBossResult(city);
           addLog(`成功擊敗 ${city.bossName}。`);
         } else {
+          registerWrongAnswer();
+          if (cityLives <= 0) {
+            showCityFailedResult();
+            addLog(`${city?.name || "城市"}生命歸零，關卡失敗。`);
+            return;
+          }
           showBossFailedResult(city);
           addLog(`${city.bossName} 太強了，請提升實力後再挑戰。`);
         }
