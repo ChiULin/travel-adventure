@@ -2,6 +2,7 @@ package com.example.demo.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "cities")
@@ -14,16 +15,43 @@ public class City {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 50)
+    @Column(name = "city_name", length = 50)
     private String name;
 
     @Column(length = 10)
     private String code;
 
-    @Column(length = 255)
+    @Column(name = "description", length = 500)
     private String intro;
 
+    @Column(name = "image_url", length = 255)
+    private String imageUrl;
+
+    @Column(name = "city_order")
     private Integer unlockOrder = 0;
+
     private String bossName;
     private Integer bossPower = 0;
+
+    @Column(name = "boss_question", length = 500)
+    private String bossQuestion;
+
+    @Column(name = "boss_option_a", length = 255)
+    private String bossOptionA;
+
+    @Column(name = "boss_option_b", length = 255)
+    private String bossOptionB;
+
+    @Column(name = "boss_option_c", length = 255)
+    private String bossOptionC;
+
+    @JsonIgnore
+    @Column(name = "boss_correct_answer", length = 1)
+    private String bossCorrectAnswer;
+
+    @Column(name = "badge_icon", length = 255)
+    private String badgeIcon;
+
+    @Column(name = "badge_name", length = 100)
+    private String badgeName;
 }

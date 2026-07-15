@@ -25,7 +25,13 @@ public class CheckinController {
     @PostMapping
     public ResponseEntity<?> checkin(@RequestBody CheckinRequest req, Authentication authentication) {
         try {
-            checkinService.checkin(userService.userIdFor(authentication.getName()), req.getSceneId());
+            var checkin = checkinService.checkin(userService.userIdFor(authentication.getName()), req.getSceneId(), req.getAnswer());
+            if (!Boolean.TRUE.equals(checkin.getCompleted())) {
+                return ResponseEntity.ok(java.util.Map.of(
+                        "ok", false,
+                        "correct", false
+                ));
+            }
             return ResponseEntity.ok(java.util.Map.of("ok", true));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(ex.getMessage());

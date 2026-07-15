@@ -11,7 +11,6 @@ import com.example.demo.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
-import java.util.Set;
 
 @Service
 public class BossService {
@@ -31,6 +30,10 @@ public class BossService {
     }
 
     public boolean challenge(Long userId, Long cityId) {
+        return challenge(userId, cityId, null);
+    }
+
+    public boolean challenge(Long userId, Long cityId, String selectedAnswer) {
         Optional<User> optionalUser = userRepository.findById(userId);
         Optional<City> optionalCity = cityRepository.findById(cityId);
         if (optionalUser.isEmpty() || optionalCity.isEmpty()) {
@@ -39,7 +42,13 @@ public class BossService {
 
         User user = optionalUser.get();
         City city = optionalCity.get();
-        long cityDone = checkinRepository.countByUserIdAndSceneCityId(userId, cityId);
+        UserProgress progress = userProgressRepository.findByUserIdAndCityId(userId, cityId)
+                .orElseThrow(() -> new IllegalArgumentException("city not unlocked"));
+        if (!Boolean.TRUE.equals(progress.getUnlocked())) {
+            throw new IllegalArgumentException("city not unlocked");
+        }
+
+        long cityDone = checkinRepository.countByUserIdAndSceneCityIdAndCompletedTrue(userId, cityId);
         long cityTotal = sceneRepository.countByCityId(cityId);
         if (cityTotal == 0 || cityDone < cityTotal) {
             throw new IllegalArgumentException("complete all city scenes first");
@@ -48,27 +57,25 @@ public class BossService {
         int userPower = (user.getLevel() == null ? 1 : user.getLevel()) * 10
                 + ((user.getExp() == null ? 0 : user.getExp()) / 10);
         int bossPower = city.getBossPower() == null ? 0 : city.getBossPower();
-        boolean win = userPower >= bossPower;
+        boolean answerCorrect = bossAnswerCorrect(city, selectedAnswer);
+        boolean win = answerCorrect && userPower >= bossPower;
 
         if (win) {
-            UserProgress progress = userProgressRepository.findByUserId(userId).orElseGet(() -> UserProgress.builder()
-                    .user(user)
-                    .unlockedCityIdsJson("1")
-                    .defeatedBossCityIdsJson("")
-                    .discoveredHiddenSceneIdsJson("")
-                    .build());
-            Set<Long> defeated = JourneyStateService.csvToLongSet(progress.getDefeatedBossCityIdsJson());
-            defeated.add(cityId);
-            progress.setDefeatedBossCityIdsJson(JourneyStateService.longSetToCsv(defeated));
+            progress.setBossUnlocked(true);
+            progress.setBossCompleted(true);
+            progress.setBadgeUnlocked(true);
+            progress.setCompletedAt(java.time.LocalDateTime.now());
+            userProgressRepository.save(progress);
 
-            Set<Long> unlocked = JourneyStateService.csvToLongSet(progress.getUnlockedCityIdsJson());
             cityRepository.findAllByOrderByUnlockOrderAsc().stream()
                     .filter(next -> next.getUnlockOrder() != null && city.getUnlockOrder() != null)
                     .filter(next -> next.getUnlockOrder().equals(city.getUnlockOrder() + 1))
                     .findFirst()
-                    .ifPresent(next -> unlocked.add(next.getId()));
-            progress.setUnlockedCityIdsJson(JourneyStateService.longSetToCsv(unlocked));
-            userProgressRepository.save(progress);
+                    .ifPresent(next -> userProgressRepository.findByUserIdAndCityId(userId, next.getId())
+                            .ifPresent(nextProgress -> {
+                                nextProgress.setUnlocked(true);
+                                userProgressRepository.save(nextProgress);
+                            }));
 
             user.setCoins((user.getCoins() == null ? 0 : user.getCoins()) + 300);
             user.setExp((user.getExp() == null ? 0 : user.getExp()) + 260);
@@ -80,5 +87,24 @@ public class BossService {
         }
 
         return win;
+    }
+
+    private boolean bossAnswerCorrect(City city, String selectedAnswer) {
+        String correctAnswer = normalizeAnswer(city.getBossCorrectAnswer());
+        String answer = normalizeAnswer(selectedAnswer);
+        if (correctAnswer == null || correctAnswer.isBlank()) {
+            return true;
+        }
+        if (answer == null || answer.isBlank()) {
+            return true;
+        }
+        return correctAnswer.equals(answer);
+    }
+
+    private String normalizeAnswer(String answer) {
+        if (answer == null) {
+            return null;
+        }
+        return answer.trim().toUpperCase();
     }
 }

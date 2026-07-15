@@ -62,7 +62,8 @@ class CheckinIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "sceneId": 1
+                                  "sceneId": 1,
+                                  "answer": "A"
                                 }
                                 """))
                 .andExpect(status().isOk());
@@ -75,6 +76,42 @@ class CheckinIntegrationTest {
                 .andExpect(jsonPath("$.user.currentLevelExp").value(25))
                 .andExpect(jsonPath("$.user.nextLevelExp").value(200))
                 .andExpect(jsonPath("$.user.levelProgressPercent").value(12));
+    }
+
+    @Test
+    void wrongAnswerShouldNotCompleteCheckinOrGrantReward() throws Exception {
+        String token = registerAndGetToken("quizTester01");
+
+        mockMvc.perform(post("/api/checkins")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "sceneId": 1,
+                                  "answer": "B"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ok").value(false))
+                .andExpect(jsonPath("$.correct").value(false));
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.experience").value(0))
+                .andExpect(jsonPath("$.cities[0].done").value(0));
+
+        mockMvc.perform(post("/api/checkins")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "sceneId": 1,
+                                  "answer": "A"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ok").value(true));
     }
 
     private String registerAndGetToken(String username) throws Exception {

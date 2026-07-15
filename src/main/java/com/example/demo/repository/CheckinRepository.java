@@ -11,8 +11,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Repository
 public interface CheckinRepository extends JpaRepository<Checkin, Long> {
 	java.util.List<Checkin> findByUserId(Long userId);
+	java.util.List<Checkin> findByUserIdAndCompletedTrue(Long userId);
 	boolean existsByUserIdAndSceneId(Long userId, Long sceneId);
+	java.util.Optional<Checkin> findByUserIdAndSceneId(Long userId, Long sceneId);
 	long countByUserIdAndSceneCityId(Long userId, Long cityId);
+	long countByUserIdAndSceneCityIdAndCompletedTrue(Long userId, Long cityId);
 
 	@Transactional
 	@Modifying

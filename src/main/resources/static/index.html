@@ -346,6 +346,39 @@
       font-weight: 900;
     }
 
+    .quiz-box {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .quiz-box strong {
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    .quiz-options {
+      display: grid;
+      gap: 6px;
+    }
+
+    .quiz-option {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: #123b78;
+      background: #f7faff;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .quiz-option:hover {
+      border-color: var(--blue);
+      background: #edf4ff;
+    }
+
     .detail-actions {
       display: grid;
       gap: 8px;
@@ -527,7 +560,7 @@
       const itemProgress = progress(city);
       if (!city.unlocked) return { key: "locked", text: "尚未解鎖", note: "完成上一座城市後解鎖" };
       if (city.defeated) return { key: "completed", text: "已完成", note: "城市徽章已取得" };
-      if (itemProgress.total > 0 && itemProgress.done >= itemProgress.total) {
+      if (city.bossUnlocked || (itemProgress.total > 0 && itemProgress.done >= itemProgress.total)) {
         return { key: "challenge", text: "可挑戰", note: `可以挑戰 ${city.bossName}` };
       }
       return { key: "active", text: "探索中", note: `還有 ${itemProgress.total - itemProgress.done} 個景點` };
@@ -542,6 +575,17 @@
       logs.unshift({ time, text });
       logs = logs.slice(0, 4);
       renderCityDetail(activeCityId);
+    }
+
+    function renderOptionButtons(options, dataAttribute, targetId) {
+      if (!options) return "";
+      return Object.entries(options)
+        .filter(([, value]) => value)
+        .map(([key, value]) => `
+          <button class="quiz-option" type="button" ${dataAttribute}="${targetId}" data-answer="${key}">
+            ${key}. ${escapeHtml(value)}
+          </button>
+        `).join("");
     }
 
     async function authenticate(path, username, password) {
@@ -723,27 +767,57 @@
                   <h3>${scene.checked ? "✓ " : ""}${escapeHtml(scene.name)}</h3>
                   <p>${escapeHtml(scene.desc)}</p>
                   <div class="reward-row"><span>EXP +${scene.expReward}</span><span>金幣 +${scene.coinReward}</span></div>
-                  <button class="btn full" type="button" ${scene.checked ? "disabled" : ""} data-scene-id="${scene.id}">
-                    ${scene.checked ? "已打卡" : "打卡"}
-                  </button>
+                  ${scene.checked ? `
+                    <button class="btn full" type="button" disabled>已打卡</button>
+                  ` : `
+                    <div class="quiz-box">
+                      <strong>${escapeHtml(scene.quizQuestion || "回答景點問題後完成打卡")}</strong>
+                      <div class="quiz-options">
+                        ${renderOptionButtons(scene.quizOptions, "data-scene-id", scene.id)}
+                      </div>
+                    </div>
+                  `}
                 </div>
               </article>
             `).join("")}
           </div>
-          <div class="detail-actions">
-            <button class="btn red full" id="bossBtn" type="button" ${city.defeated || itemProgress.done < itemProgress.total ? "disabled" : ""}>
-              ${city.defeated ? "首領已擊敗" : itemProgress.done >= itemProgress.total ? `挑戰 ${escapeHtml(city.bossName)}` : `還差 ${itemProgress.total - itemProgress.done} 個景點`}
-            </button>
-          </div>
+          ${renderBossChallenge(city, itemProgress)}
           <div class="log-list">${logsMarkup}</div>
         </div>
       `;
 
       document.querySelectorAll("[data-scene-id]").forEach(button => {
-        button.addEventListener("click", () => checkin(Number(button.dataset.sceneId)));
+        button.addEventListener("click", () => checkin(Number(button.dataset.sceneId), button.dataset.answer));
       });
 
-      document.getElementById("bossBtn").addEventListener("click", challengeBoss);
+      document.querySelectorAll("[data-boss-city-id]").forEach(button => {
+        button.addEventListener("click", () => challengeBoss(button.dataset.answer));
+      });
+    }
+
+    function renderBossChallenge(city, itemProgress) {
+      if (city.defeated) {
+        return `
+          <div class="detail-actions">
+            <button class="btn red full" type="button" disabled>首領已擊敗，徽章已取得</button>
+          </div>
+        `;
+      }
+      if (itemProgress.done < itemProgress.total) {
+        return `
+          <div class="detail-actions">
+            <button class="btn red full" type="button" disabled>還差 ${itemProgress.total - itemProgress.done} 個景點</button>
+          </div>
+        `;
+      }
+      return `
+        <div class="detail-actions quiz-box">
+          <strong>${escapeHtml(city.bossName)}：${escapeHtml(city.bossQuestion || "回答首領問題")}</strong>
+          <div class="quiz-options">
+            ${renderOptionButtons(city.bossOptions, "data-boss-city-id", city.id)}
+          </div>
+        </div>
+      `;
     }
 
     function renderAll() {
@@ -754,24 +828,29 @@
       renderCityDetail(activeCityId);
     }
 
-    async function checkin(sceneId) {
+    async function checkin(sceneId, answer) {
       try {
-        await api("/api/checkins", {
+        const result = await api("/api/checkins", {
           method: "POST",
-          body: JSON.stringify({ sceneId })
+          body: JSON.stringify({ sceneId, answer })
         });
-        addLog("景點打卡完成。");
+        if (!result.ok) {
+          addLog("答錯了，再想想看。");
+          return;
+        }
+        addLog("答對了，景點打卡完成。");
         await refreshState();
       } catch (error) {
         addLog(error.message);
       }
     }
 
-    async function challengeBoss() {
+    async function challengeBoss(answer) {
       const city = activeCity();
       try {
         const result = await api(`/api/cities/${city.id}/boss/challenge`, {
-          method: "POST"
+          method: "POST",
+          body: JSON.stringify({ answer })
         });
         addLog(result.win ? `成功擊敗 ${city.bossName}。` : `${city.bossName} 太強了，請提升實力後再挑戰。`);
         await refreshState();

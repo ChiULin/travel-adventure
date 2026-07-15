@@ -2,9 +2,10 @@ package com.example.demo.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
-@Table(name = "scenes")
+@Table(name = "landmarks")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -14,7 +15,7 @@ public class Scene {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 100)
+    @Column(name = "landmark_name", length = 100)
     private String name;
 
     @Column(length = 50)
@@ -25,6 +26,25 @@ public class Scene {
 
     @Column(length = 255)
     private String imageUrl;
+
+    @Column(name = "quiz_question", length = 500)
+    private String quizQuestion;
+
+    @Column(name = "quiz_option_a", length = 255)
+    private String quizOptionA;
+
+    @Column(name = "quiz_option_b", length = 255)
+    private String quizOptionB;
+
+    @Column(name = "quiz_option_c", length = 255)
+    private String quizOptionC;
+
+    @JsonIgnore
+    @Column(name = "quiz_correct_answer", length = 1)
+    private String quizCorrectAnswer;
+
+    @Column(name = "quiz_explanation", length = 500)
+    private String quizExplanation;
 
     private Integer rarity = 1;
 

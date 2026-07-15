@@ -27,6 +27,7 @@ public class User {
     private String password;
 
     private Integer level = 1;
+    @Column(name = "total_exp")
     private Integer exp = 0;
     private Integer coins = 0;
     private Integer bossPoints = 0;

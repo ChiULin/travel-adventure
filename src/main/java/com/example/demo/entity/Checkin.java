@@ -6,7 +6,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "checkins")
+@Table(name = "check_ins", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "landmark_id"}))
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,8 +21,22 @@ public class Checkin {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "scene_id")
+    @JoinColumn(name = "landmark_id")
     private Scene scene;
+
+    @Column(name = "selected_answer", length = 1)
+    private String selectedAnswer;
+
+    @Column(name = "quiz_correct")
+    private Boolean quizCorrect = false;
+
+    private Boolean completed = false;
+
+    private Integer earnedExp = 0;
+    private Integer earnedCoins = 0;
+
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
 
     private LocalDateTime checkinTime;
 }

@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "user_progress")
+@Table(name = "player_progress", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "city_id"}))
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -14,16 +14,18 @@ public class UserProgress {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Column(length = 255)
-    private String unlockedCityIdsJson;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "city_id")
+    private City city;
 
-    @Column(length = 255)
-    private String defeatedBossCityIdsJson;
+    private Boolean unlocked = false;
+    private Boolean bossUnlocked = false;
+    private Boolean bossCompleted = false;
+    private Boolean badgeUnlocked = false;
 
-    @Column(length = 255)
-    private String discoveredHiddenSceneIdsJson;
+    private java.time.LocalDateTime completedAt;
 }
