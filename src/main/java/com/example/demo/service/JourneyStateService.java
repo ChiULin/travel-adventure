@@ -105,6 +105,21 @@ public class JourneyStateService {
         return ids.stream().map(String::valueOf).collect(Collectors.joining(","));
     }
 
+    public static LevelInfo calculateLevelInfo(int totalExp) {
+        int level = 1;
+        int remainingExp = Math.max(totalExp, 0);
+        int requiredExp = 100;
+
+        while (remainingExp >= requiredExp) {
+            remainingExp -= requiredExp;
+            level++;
+            requiredExp = level * 100;
+        }
+
+        int progressPercent = (int) ((remainingExp * 100.0) / requiredExp);
+        return new LevelInfo(level, remainingExp, requiredExp, progressPercent);
+    }
+
     private Map<String, Object> sceneDto(Scene scene, boolean checked) {
         Map<String, Object> dto = new LinkedHashMap<>();
         dto.put("id", scene.getId());
@@ -120,11 +135,17 @@ public class JourneyStateService {
     }
 
     private Map<String, Object> userDto(User user) {
+        int totalExp = user.getExp() == null ? 0 : user.getExp();
+        LevelInfo levelInfo = calculateLevelInfo(totalExp);
         Map<String, Object> dto = new LinkedHashMap<>();
         dto.put("id", user.getId());
         dto.put("username", user.getUsername());
-        dto.put("level", user.getLevel());
-        dto.put("exp", user.getExp());
+        dto.put("level", levelInfo.level());
+        dto.put("experience", totalExp);
+        dto.put("exp", totalExp);
+        dto.put("currentLevelExp", levelInfo.currentLevelExp());
+        dto.put("nextLevelExp", levelInfo.nextLevelExp());
+        dto.put("levelProgressPercent", levelInfo.levelProgressPercent());
         dto.put("coins", user.getCoins());
         dto.put("bossPoints", user.getBossPoints());
         dto.put("title", user.getTitle());
@@ -144,5 +165,8 @@ public class JourneyStateService {
     }
 
     private record CityBadge(String icon, String name) {
+    }
+
+    public record LevelInfo(int level, int currentLevelExp, int nextLevelExp, int levelProgressPercent) {
     }
 }

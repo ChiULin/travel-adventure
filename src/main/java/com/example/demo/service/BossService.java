@@ -73,7 +73,7 @@ public class BossService {
             user.setCoins((user.getCoins() == null ? 0 : user.getCoins()) + 300);
             user.setExp((user.getExp() == null ? 0 : user.getExp()) + 260);
             user.setBossPoints((user.getBossPoints() == null ? 0 : user.getBossPoints()) + 1);
-            int level = (user.getExp() == null ? 0 : user.getExp()) / 220 + 1;
+            int level = JourneyStateService.calculateLevelInfo(user.getExp() == null ? 0 : user.getExp()).level();
             user.setLevel(level);
             user.setTitle(level >= 4 ? "City Explorer" : "New Traveler");
             userRepository.save(user);

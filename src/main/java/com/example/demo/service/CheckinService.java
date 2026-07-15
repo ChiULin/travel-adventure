@@ -50,7 +50,7 @@ public class CheckinService {
 
         user.setExp((user.getExp() == null ? 0 : user.getExp()) + (scene.getExpReward() == null ? 0 : scene.getExpReward()));
         user.setCoins((user.getCoins() == null ? 0 : user.getCoins()) + (scene.getCoinReward() == null ? 0 : scene.getCoinReward()));
-        int level = (user.getExp() == null ? 0 : user.getExp()) / 220 + 1;
+        int level = JourneyStateService.calculateLevelInfo(user.getExp() == null ? 0 : user.getExp()).level();
         user.setLevel(level);
         user.setTitle(level >= 4 ? "City Explorer" : "New Traveler");
         userRepository.save(user);

@@ -1,5 +1,6 @@
 package com.example.demo;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -50,6 +51,30 @@ class CheckinIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void checkinShouldUpdateLevelProgress() throws Exception {
+        String token = registerAndGetToken("levelTester01");
+
+        mockMvc.perform(post("/api/checkins")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "sceneId": 1
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.level").value(2))
+                .andExpect(jsonPath("$.user.experience").value(125))
+                .andExpect(jsonPath("$.user.currentLevelExp").value(25))
+                .andExpect(jsonPath("$.user.nextLevelExp").value(200))
+                .andExpect(jsonPath("$.user.levelProgressPercent").value(12));
     }
 
     private String registerAndGetToken(String username) throws Exception {
