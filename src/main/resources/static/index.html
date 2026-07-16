@@ -983,6 +983,125 @@
       font-size: 18px;
     }
 
+    .final-ending {
+      position: fixed;
+      inset: 0;
+      z-index: 12;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background:
+        linear-gradient(180deg, rgba(8, 22, 55, .82), rgba(8, 22, 55, .72)),
+        url('/images/landmarks/taipei-101.webp') center / cover;
+      backdrop-filter: blur(10px);
+    }
+
+    .final-ending.hidden { display: none; }
+
+    .final-card {
+      width: min(100%, 920px);
+      max-height: min(94vh, 860px);
+      overflow: auto;
+      padding: 24px;
+      border: 1px solid rgba(255,255,255,.28);
+      border-radius: 8px;
+      background: rgba(255,255,255,.96);
+      box-shadow: 0 28px 82px rgba(0, 0, 0, .34);
+    }
+
+    .final-section {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--line);
+      animation: loginRise .55s ease both;
+    }
+
+    .final-section:last-child { border-bottom: 0; }
+
+    .final-hero { text-align: center; }
+
+    .final-hero h2 {
+      color: var(--ink);
+      font-size: 34px;
+      line-height: 1.18;
+    }
+
+    .final-hero p {
+      color: var(--muted);
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .final-checks, .final-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .final-check, .final-stat {
+      min-height: 58px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f7faff;
+      color: var(--ink);
+      font-weight: 900;
+    }
+
+    .final-stat span {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .final-route {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .final-city {
+      display: grid;
+      justify-items: center;
+      gap: 6px;
+      padding: 10px 6px;
+      border: 1px solid rgba(40, 168, 90, .34);
+      border-radius: 8px;
+      background: #f5fff8;
+      color: #126236;
+      font-weight: 900;
+      animation: badgePulse 1.8s ease-in-out infinite;
+      animation-delay: var(--d, 0s);
+    }
+
+    .final-title {
+      display: grid;
+      justify-items: center;
+      gap: 8px;
+      text-align: center;
+    }
+
+    .final-title strong {
+      color: var(--ink);
+      font-size: 28px;
+    }
+
+    .final-title p {
+      max-width: 620px;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.55;
+      font-weight: 900;
+    }
+
+    .final-actions {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
     @keyframes ambientSweep {
       from { background-position: -260px 0, 0 0; }
       to { background-position: 260px 0, 0 0; }
@@ -1023,6 +1142,8 @@
       .metric-grid, .city-grid { grid-template-columns: 1fr; }
       .achievement-grid { grid-template-columns: 1fr; }
       .tutorial-steps { grid-template-columns: 1fr; }
+      .final-checks, .final-stats, .final-actions { grid-template-columns: 1fr; }
+      .final-route { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .summary-layout { grid-template-columns: 52px 1fr; }
       .avatar { width: 52px; height: 52px; font-size: 23px; }
       .scene-card { grid-template-columns: 72px minmax(0, 1fr); }
@@ -1110,6 +1231,10 @@
     <div class="result-card" id="resultCard"></div>
   </div>
 
+  <div id="finalEnding" class="final-ending hidden" role="dialog" aria-modal="true" aria-live="polite">
+    <div class="final-card" id="finalEndingCard"></div>
+  </div>
+
   <main class="app">
     <header class="topbar">
       <div class="brand">
@@ -1152,6 +1277,7 @@
     let cityFailedPending = false;
     let cityHadFailedAttempt = false;
     let cityBattleStats = emptyCityBattleStats();
+    let finalEndingShown = false;
 
     function emptyCityBattleStats() {
       return {
@@ -1196,6 +1322,7 @@
       localStorage.setItem(TUTORIAL_KEY, "true");
       document.getElementById("tutorial").classList.add("hidden");
       addLog("新手教學完成，開始你的台灣探索旅程。");
+      setTimeout(maybeShowFinalEnding, 0);
     }
 
     async function api(path, options = {}) {
@@ -1299,6 +1426,7 @@
       }
       if (appState) {
         renderCityDetail(activeCityId);
+        setTimeout(maybeShowFinalEnding, 0);
       }
     }
 
@@ -1316,7 +1444,8 @@
 
     function overlayIsOpen() {
       return !document.getElementById("resultModal").classList.contains("hidden")
-        || !document.getElementById("tutorial").classList.contains("hidden");
+        || !document.getElementById("tutorial").classList.contains("hidden")
+        || !document.getElementById("finalEnding").classList.contains("hidden");
     }
 
     function stopQuizTimer() {
@@ -1616,6 +1745,134 @@
       });
     }
 
+    function finalEndingStats() {
+      const user = appState.user || {};
+      const cities = appState.cities || [];
+      const completedCities = cities.filter(city => city.defeated).length;
+      const totalScenes = cities.reduce((sum, city) => sum + Number(city.total || 0), 0);
+      const doneScenes = cities.reduce((sum, city) => sum + Number(city.done || 0), 0);
+      const badgeCount = cities.filter(city => city.badgeUnlocked).length;
+      const bestCombo = cities.reduce((max, city) => Math.max(max, Number(city.bestCombo || 0)), 0);
+      const sRankCount = cities.filter(city => city.bestRank === "S").length;
+      return {
+        user,
+        cities,
+        completedCities,
+        totalCities: cities.length,
+        totalScenes,
+        doneScenes,
+        badgeCount,
+        bestCombo,
+        sRankCount
+      };
+    }
+
+    function shouldShowFinalEnding() {
+      const stats = finalEndingStats();
+      return stats.totalCities > 0 && stats.completedCities >= stats.totalCities;
+    }
+
+    function maybeShowFinalEnding() {
+      if (!appState || finalEndingShown || !tutorialIsCompleted() || overlayIsOpen()) return;
+      if (shouldShowFinalEnding()) {
+        showFinalEnding();
+      }
+    }
+
+    function showFinalEnding() {
+      const stats = finalEndingStats();
+      finalEndingShown = true;
+      stopQuizTimer();
+      const cityRoute = stats.cities.map((city, index) => `
+        <div class="final-city" style="--d:${index * 0.16}s">
+          <span>${escapeHtml(city.badgeIcon || "✓")}</span>
+          <strong>${escapeHtml(city.name)}</strong>
+          <span>✓</span>
+        </div>
+      `).join("");
+
+      document.getElementById("finalEndingCard").innerHTML = `
+        <section class="final-section final-hero">
+          <h2>🏆 台灣旅行冒險<br>Congratulations！</h2>
+          <p>你已完成台灣六座城市探索之旅。</p>
+          <div class="final-checks">
+            <div class="final-check">✓ 六座城市</div>
+            <div class="final-check">✓ ${stats.totalScenes} 個景點</div>
+            <div class="final-check">✓ 六位城市守護者</div>
+            <div class="final-check">✓ ${stats.badgeCount} / 6 枚城市徽章</div>
+          </div>
+        </section>
+
+        <section class="final-section">
+          <div class="section-head">
+            <h2>台灣旅程</h2>
+            <strong>六城完成</strong>
+          </div>
+          <div class="final-route">${cityRoute}</div>
+        </section>
+
+        <section class="final-section">
+          <div class="section-head">
+            <h2>玩家統計</h2>
+            <strong>${escapeHtml(stats.user.username || "旅行者")}</strong>
+          </div>
+          <div class="final-stats">
+            <div class="final-stat"><span>等級</span>Lv.${stats.user.level || 1}</div>
+            <div class="final-stat"><span>總 EXP</span>${formatNumber(stats.user.experience || stats.user.exp || 0)}</div>
+            <div class="final-stat"><span>總金幣</span>${formatNumber(stats.user.coins || 0)}</div>
+            <div class="final-stat"><span>最高 Combo</span>${stats.bestCombo}</div>
+            <div class="final-stat"><span>S 評價</span>${stats.sRankCount} 座</div>
+            <div class="final-stat"><span>徽章</span>${stats.badgeCount} / 6</div>
+          </div>
+        </section>
+
+        <section class="final-section final-title">
+          <span style="font-size:44px">🏅</span>
+          <strong>最終稱號：台灣文化冒險家</strong>
+          <p>「旅行的終點，不是抵達，而是更了解腳下的土地。」</p>
+        </section>
+
+        <section class="final-section">
+          <div class="final-actions">
+            <button class="btn full" id="finalChallengeBtn" type="button">重新挑戰</button>
+            <button class="btn ghost full" id="finalHomeBtn" type="button">返回首頁</button>
+            <button class="btn red full" id="finalRestartBtn" type="button">重新開始旅程</button>
+          </div>
+        </section>
+      `;
+
+      document.getElementById("finalEnding").classList.remove("hidden");
+      document.getElementById("finalChallengeBtn").addEventListener("click", closeFinalEnding);
+      document.getElementById("finalHomeBtn").addEventListener("click", () => {
+        closeFinalEnding();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+      document.getElementById("finalRestartBtn").addEventListener("click", restartCompletedJourney);
+    }
+
+    function closeFinalEnding() {
+      document.getElementById("finalEnding").classList.add("hidden");
+      document.getElementById("finalEndingCard").innerHTML = "";
+      renderCityDetail(activeCityId);
+    }
+
+    async function restartCompletedJourney() {
+      const completedCities = (appState?.cities || []).filter(city => city.defeated);
+      try {
+        for (const city of completedCities) {
+          await api(`/api/cities/${city.id}/restart`, { method: "POST" });
+        }
+        resetLocalBattleState();
+        activeCityId = appState?.cities?.[0]?.id || activeCityId;
+        finalEndingShown = false;
+        closeFinalEnding();
+        addLog("台灣旅行冒險已重新開始，歷史最佳紀錄會保留。");
+        await refreshState();
+      } catch (error) {
+        addLog(error.message);
+      }
+    }
+
     async function authenticate(path, username, password) {
       const auth = await api(path, {
         method: "POST",
@@ -1653,6 +1910,7 @@
         activeCityId = firstUnlocked.id;
       }
       renderAll();
+      setTimeout(maybeShowFinalEnding, 0);
     }
 
     function renderPlayerSummary() {
@@ -2107,8 +2365,11 @@
       missionsState = null;
       achievementsState = null;
       activeCityId = null;
+      finalEndingShown = false;
       logs = [];
       document.getElementById("tutorial").classList.add("hidden");
+      document.getElementById("finalEnding").classList.add("hidden");
+      document.getElementById("finalEndingCard").innerHTML = "";
       closeResultCard();
       document.getElementById("login").classList.remove("hidden");
     });
