@@ -1284,6 +1284,42 @@
       .route-map { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .route-map::before { display: none; }
     }
+    .difficulty-picker {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin: 0 0 16px;
+    }
+
+    .difficulty-option {
+      min-height: 68px;
+      padding: 10px;
+      border: 1px solid #c7d6ea;
+      border-radius: 8px;
+      background: #fff;
+      color: #17345d;
+      cursor: pointer;
+      display: grid;
+      gap: 4px;
+      text-align: left;
+    }
+
+    .difficulty-option span {
+      color: #60738e;
+      font-size: 12px;
+    }
+
+    .difficulty-option.active {
+      border-color: #17804b;
+      background: #edf9f2;
+      box-shadow: inset 0 0 0 1px #17804b;
+    }
+
+    @media (max-width: 640px) {
+      .difficulty-picker {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1415,6 +1451,14 @@
   <script>
     const SESSION_KEY = "travelAdventureApiSession";
     const TUTORIAL_KEY = "tutorialCompleted";
+    const DIFFICULTIES = {
+      CASUAL: { label: "休閒", seconds: 10, lives: 5, multiplier: 1 },
+      NORMAL: { label: "一般", seconds: 5, lives: 3, multiplier: 1.2 },
+      EXTREME: { label: "極限挑戰", seconds: 3, lives: 1, multiplier: 1.5 }
+    };
+    let selectedDifficulty = "NORMAL";
+    let difficultyLocked = false;
+    let activeQuizQuestion = null;
     let session = loadSession();
     let appState = null;
     let missionsState = null;
@@ -1426,7 +1470,7 @@
     let activeSceneQuizId = null;
     let activeBossQuizCityId = null;
     let answerCombo = 0;
-    let cityLives = 3;
+    let cityLives = DIFFICULTIES[selectedDifficulty].lives;
     let cityFailedPending = false;
     let cityHadFailedAttempt = false;
     let cityBattleStats = emptyCityBattleStats();
@@ -1444,6 +1488,14 @@
         earnedExp: 0,
         earnedCoins: 0
       };
+    }
+
+    function difficultyConfig() {
+      return DIFFICULTIES[selectedDifficulty];
+    }
+
+    function scaledReward(value) {
+      return Math.round(Number(value || 0) * difficultyConfig().multiplier);
     }
 
     function loadSession() {
@@ -1575,8 +1627,9 @@
       document.getElementById("resultCard").innerHTML = "";
       if (cityFailedPending) {
         answerCombo = 0;
-        cityLives = 3;
+        cityLives = difficultyConfig().lives;
         cityFailedPending = false;
+        difficultyLocked = false;
         resetCityBattleStats({ keepFailedAttempt: true });
         renderPlayerSummary();
       }
@@ -1624,7 +1677,7 @@
       stopQuizTimer();
       if (overlayIsOpen()) return;
       quizTimerTarget = { type, targetId };
-      let seconds = 5;
+      let seconds = difficultyConfig().seconds;
       updateQuizTimers(seconds);
       quizTimerId = setInterval(() => {
         seconds -= 1;
@@ -1647,24 +1700,36 @@
       stopQuizTimer();
     }
 
-    function startSceneQuiz(sceneId) {
+    async function startSceneQuiz(sceneId) {
       if (cityLives <= 0) {
         showCityFailedResult();
         return;
       }
-      activeSceneQuizId = sceneId;
-      activeBossQuizCityId = null;
-      renderCityDetail(activeCityId);
+      try {
+        activeQuizQuestion = await api(`/api/quizzes/landmarks/${sceneId}/random?difficulty=${selectedDifficulty}`);
+        difficultyLocked = true;
+        activeSceneQuizId = sceneId;
+        activeBossQuizCityId = null;
+        renderCityDetail(activeCityId);
+      } catch (error) {
+        addLog(error.message);
+      }
     }
 
-    function startBossQuiz(cityId) {
+    async function startBossQuiz(cityId) {
       if (cityLives <= 0) {
         showCityFailedResult();
         return;
       }
-      activeBossQuizCityId = cityId;
-      activeSceneQuizId = null;
-      renderCityDetail(activeCityId);
+      try {
+        activeQuizQuestion = await api(`/api/quizzes/cities/${cityId}/boss/random?difficulty=${selectedDifficulty}`);
+        difficultyLocked = true;
+        activeBossQuizCityId = cityId;
+        activeSceneQuizId = null;
+        renderCityDetail(activeCityId);
+      } catch (error) {
+        addLog(error.message);
+      }
     }
 
     function disableVisibleQuizOptions() {
@@ -1681,6 +1746,7 @@
         const city = activeCity();
         const scene = city?.scenes?.find(item => item.id === target.targetId);
         activeSceneQuizId = null;
+        activeQuizQuestion = null;
         cityBattleStats.timeoutCount += 1;
         registerWrongAnswer();
         if (cityLives <= 0) {
@@ -1695,6 +1761,7 @@
       if (target?.type === "boss") {
         const city = activeCity();
         activeBossQuizCityId = null;
+        activeQuizQuestion = null;
         cityBattleStats.timeoutCount += 1;
         registerWrongAnswer();
         if (cityLives <= 0) {
@@ -1787,8 +1854,10 @@
     function resetLocalBattleState() {
       activeSceneQuizId = null;
       activeBossQuizCityId = null;
+      activeQuizQuestion = null;
+      difficultyLocked = false;
       answerCombo = 0;
-      cityLives = 3;
+      cityLives = difficultyConfig().lives;
       resetCityBattleStats();
       stopQuizTimer();
     }
@@ -1796,15 +1865,15 @@
     function calculateBattleRank() {
       if (
         !cityHadFailedAttempt &&
-        cityLives === 3 &&
+        cityLives === difficultyConfig().lives &&
         cityBattleStats.wrongAnswers === 0 &&
         cityBattleStats.timeoutCount === 0
       ) {
         return "S";
       }
       if (cityHadFailedAttempt) return "C";
-      if (cityLives === 2) return "A";
-      if (cityLives === 1) return "B";
+      if (cityLives >= Math.max(2, Math.ceil(difficultyConfig().lives * 0.66))) return "A";
+      if (cityLives >= 1) return "B";
       return "C";
     }
 
@@ -1897,7 +1966,8 @@
           wrongAnswers: cityBattleStats.wrongAnswers,
           timeoutCount: cityBattleStats.timeoutCount,
           earnedExp: cityBattleStats.earnedExp,
-          earnedCoins: cityBattleStats.earnedCoins
+          earnedCoins: cityBattleStats.earnedCoins,
+          difficulty: selectedDifficulty
         })
       });
     }
@@ -2476,6 +2546,15 @@
           </div>
           <p class="city-copy">城市進度：${itemProgress.done} / ${itemProgress.total}，完成率 ${itemProgress.percent}%</p>
           <div class="progress" style="margin:10px 0 14px"><span style="--w:${itemProgress.percent}%"></span></div>
+          <div class="difficulty-picker" aria-label="挑戰難度">
+            ${Object.entries(DIFFICULTIES).map(([key, mode]) => `
+              <button type="button" class="difficulty-option ${selectedDifficulty === key ? "active" : ""}"
+                      data-difficulty="${key}" ${difficultyLocked ? "disabled" : ""}>
+                <strong>${mode.label}</strong>
+                <span>${mode.seconds} 秒 · ${mode.lives} 生命 · ${Math.round(mode.multiplier * 100)}% 獎勵</span>
+              </button>
+            `).join("")}
+          </div>
           <div class="scene-list">
             ${city.scenes.map(scene => {
               const sceneActive = activeSceneQuizId === scene.id;
@@ -2485,15 +2564,15 @@
                 <div>
                   <h3>${scene.checked ? "✓ " : ""}${escapeHtml(scene.name)}</h3>
                   <p class="story-text">${escapeHtml(scene.story || scene.desc)}</p>
-                  <div class="reward-row"><span>EXP +${scene.expReward}</span><span>金幣 +${scene.coinReward}</span></div>
+                  <div class="reward-row"><span>EXP +${scaledReward(scene.expReward)}</span><span>金幣 +${scaledReward(scene.coinReward)}</span></div>
                   ${scene.checked ? `
                     <button class="btn full" type="button" disabled>已打卡</button>
                   ` : sceneActive ? `
                     <div class="quiz-box">
-                      <strong>${escapeHtml(scene.quizQuestion || "回答景點問題後完成打卡")}</strong>
-                      <div class="quiz-timer" data-quiz-timer>剩餘 5 秒</div>
+                      <strong>${escapeHtml(activeQuizQuestion?.question || scene.quizQuestion || "回答景點問題後完成打卡")}</strong>
+                      <div class="quiz-timer" data-quiz-timer>剩餘 ${difficultyConfig().seconds} 秒</div>
                       <div class="quiz-options">
-                        ${renderOptionButtons(scene.quizOptions, "data-scene-id", scene.id)}
+                        ${renderOptionButtons(activeQuizQuestion?.options || scene.quizOptions, "data-scene-id", scene.id)}
                       </div>
                     </div>
                   ` : `
@@ -2511,6 +2590,15 @@
 
       document.querySelectorAll("[data-start-scene-id]").forEach(button => {
         button.addEventListener("click", () => startSceneQuiz(Number(button.dataset.startSceneId)));
+      });
+
+      document.querySelectorAll("[data-difficulty]").forEach(button => {
+        button.addEventListener("click", () => {
+          selectedDifficulty = button.dataset.difficulty;
+          resetLocalBattleState();
+          renderPlayerSummary();
+          renderCityDetail(activeCityId);
+        });
       });
 
       document.querySelectorAll("[data-scene-id]").forEach(button => {
@@ -2557,10 +2645,10 @@
       }
       return `
         <div class="detail-actions quiz-box">
-          <strong>${escapeHtml(city.bossName)}：${escapeHtml(city.bossQuestion || "回答首領問題")}</strong>
-          <div class="quiz-timer" data-quiz-timer>剩餘 5 秒</div>
+          <strong>${escapeHtml(city.bossName)}：${escapeHtml(activeQuizQuestion?.question || city.bossQuestion || "回答首領問題")}</strong>
+          <div class="quiz-timer" data-quiz-timer>剩餘 ${difficultyConfig().seconds} 秒</div>
           <div class="quiz-options">
-            ${renderOptionButtons(city.bossOptions, "data-boss-city-id", city.id)}
+            ${renderOptionButtons(activeQuizQuestion?.options || city.bossOptions, "data-boss-city-id", city.id)}
           </div>
         </div>
       `;
@@ -2579,12 +2667,14 @@
     async function checkin(sceneId, answer, answerText) {
       stopQuizTimer();
       activeSceneQuizId = null;
+      const questionId = activeQuizQuestion?.questionId;
+      activeQuizQuestion = null;
       const city = activeCity();
       const scene = city?.scenes?.find(item => item.id === sceneId);
       try {
         const result = await api("/api/checkins", {
           method: "POST",
-          body: JSON.stringify({ sceneId, answer, answerText })
+          body: JSON.stringify({ sceneId, answer, answerText, questionId, difficulty: selectedDifficulty })
         });
         if (!result.ok) {
           registerWrongAnswer();
@@ -2597,9 +2687,14 @@
           addLog("答錯了，再想想看。");
           return;
         }
-        registerCorrectAnswer(scene);
+        const rewardedScene = {
+          ...scene,
+          expReward: result.earnedExp ?? scaledReward(scene?.expReward),
+          coinReward: result.earnedCoins ?? scaledReward(scene?.coinReward)
+        };
+        registerCorrectAnswer(rewardedScene);
         if (city && scene) {
-          showSceneResult(city, scene);
+          showSceneResult(city, rewardedScene);
         }
         addLog(`${scene?.name || "景點"}探索完成。`);
         await refreshState();
@@ -2611,14 +2706,16 @@
     async function challengeBoss(answer, answerText) {
       stopQuizTimer();
       activeBossQuizCityId = null;
+      const questionId = activeQuizQuestion?.questionId;
+      activeQuizQuestion = null;
       const city = activeCity();
       try {
         const result = await api(`/api/cities/${city.id}/boss/challenge`, {
           method: "POST",
-          body: JSON.stringify({ answer, answerText })
+          body: JSON.stringify({ answer, answerText, questionId, difficulty: selectedDifficulty })
         });
         if (result.win) {
-          registerCorrectAnswer({ expReward: 260, coinReward: 300 });
+          registerCorrectAnswer({ expReward: result.earnedExp || 0, coinReward: result.earnedCoins || 0 });
           const rank = calculateBattleRank();
           let recordResult = null;
           try {

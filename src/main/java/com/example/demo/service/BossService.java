@@ -25,14 +25,17 @@ public class BossService {
     private final UserProgressRepository userProgressRepository;
     private final CheckinRepository checkinRepository;
     private final SceneRepository sceneRepository;
+    private final QuizQuestionService quizQuestionService;
 
     public BossService(CityRepository cityRepository, UserRepository userRepository, UserProgressRepository userProgressRepository,
-                       CheckinRepository checkinRepository, SceneRepository sceneRepository) {
+                       CheckinRepository checkinRepository, SceneRepository sceneRepository,
+                       QuizQuestionService quizQuestionService) {
         this.cityRepository = cityRepository;
         this.userRepository = userRepository;
         this.userProgressRepository = userProgressRepository;
         this.checkinRepository = checkinRepository;
         this.sceneRepository = sceneRepository;
+        this.quizQuestionService = quizQuestionService;
     }
 
     public boolean challenge(Long userId, Long cityId) {
@@ -45,6 +48,12 @@ public class BossService {
 
     @Transactional
     public boolean challenge(Long userId, Long cityId, String selectedAnswer, String selectedAnswerText) {
+        return Boolean.TRUE.equals(challengeResult(userId, cityId, selectedAnswer, selectedAnswerText, null, null).get("win"));
+    }
+
+    @Transactional
+    public Map<String, Object> challengeResult(Long userId, Long cityId, String selectedAnswer, String selectedAnswerText,
+                                               String questionId, String difficultyName) {
         Optional<User> optionalUser = userRepository.findById(userId);
         Optional<City> optionalCity = cityRepository.findById(cityId);
         if (optionalUser.isEmpty() || optionalCity.isEmpty()) {
@@ -68,8 +77,13 @@ public class BossService {
         int userPower = (user.getLevel() == null ? 1 : user.getLevel()) * 10
                 + ((user.getExp() == null ? 0 : user.getExp()) / 10);
         int bossPower = city.getBossPower() == null ? 0 : city.getBossPower();
-        boolean answerCorrect = bossAnswerCorrect(city, selectedAnswer, selectedAnswerText);
+        boolean answerCorrect = questionId == null || questionId.isBlank()
+                ? bossAnswerCorrect(city, selectedAnswer, selectedAnswerText)
+                : quizQuestionService.bossAnswerCorrect(userId, city, questionId, selectedAnswerText, difficultyName);
         boolean win = answerCorrect && userPower >= bossPower;
+        GameDifficulty difficulty = GameDifficulty.from(difficultyName);
+        int earnedExp = 0;
+        int earnedCoins = 0;
 
         if (win) {
             boolean firstClear = !Boolean.TRUE.equals(progress.getBadgeUnlocked());
@@ -81,11 +95,17 @@ public class BossService {
 
             if (firstClear) {
                 unlockNextCity(userId, city);
-                grantFirstClearRewards(user);
+                earnedExp = difficulty.reward(260);
+                earnedCoins = difficulty.reward(300);
+                grantFirstClearRewards(user, earnedExp, earnedCoins);
             }
         }
 
-        return win;
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("win", win);
+        result.put("earnedExp", earnedExp);
+        result.put("earnedCoins", earnedCoins);
+        return result;
     }
 
     private boolean bossAnswerCorrect(City city, String selectedAnswer, String selectedAnswerText) {
@@ -151,7 +171,8 @@ public class BossService {
         int oldBestLives = progress.getBestRemainingLives() == null ? 0 : progress.getBestRemainingLives();
         String newRank = calculateRank(request);
         int maxCombo = valueOrZero(request.getMaxCombo());
-        int remainingLives = Math.max(0, Math.min(3, valueOrZero(request.getRemainingLives())));
+        GameDifficulty difficulty = GameDifficulty.from(request.getDifficulty());
+        int remainingLives = Math.max(0, Math.min(difficulty.lives(), valueOrZero(request.getRemainingLives())));
 
         boolean newRecord = false;
         if (rankScore(newRank) > rankScore(oldRank)) {
@@ -206,13 +227,14 @@ public class BossService {
     }
 
     private String calculateRank(BattleResultRequest request) {
-        int remainingLives = Math.max(0, Math.min(3, valueOrZero(request.getRemainingLives())));
+        GameDifficulty difficulty = GameDifficulty.from(request.getDifficulty());
+        int remainingLives = Math.max(0, Math.min(difficulty.lives(), valueOrZero(request.getRemainingLives())));
         int wrongAnswers = Math.max(0, valueOrZero(request.getWrongAnswers()));
         int timeoutCount = Math.max(0, valueOrZero(request.getTimeoutCount()));
-        if (remainingLives == 3 && wrongAnswers == 0 && timeoutCount == 0) {
+        if (remainingLives == difficulty.lives() && wrongAnswers == 0 && timeoutCount == 0) {
             return "S";
         }
-        if (remainingLives == 2) {
+        if (remainingLives >= Math.max(2, (int) Math.ceil(difficulty.lives() * 0.66))) {
             return "A";
         }
         if (remainingLives == 1) {
@@ -231,6 +253,7 @@ public class BossService {
             throw new IllegalArgumentException("invalid battle rank");
         }
 
+        GameDifficulty difficulty = GameDifficulty.from(request.getDifficulty());
         int maxQuestions = Math.toIntExact(cityTotal) + 1;
         int maxCombo = valueOrZero(request.getMaxCombo());
         int remainingLives = valueOrZero(request.getRemainingLives());
@@ -240,10 +263,10 @@ public class BossService {
         int failures = wrongAnswers + timeoutCount;
 
         if (maxCombo < 0 || maxCombo > maxQuestions
-                || remainingLives < 0 || remainingLives > 3
+                || remainingLives < 0 || remainingLives > difficulty.lives()
                 || correctAnswers < 0 || correctAnswers > maxQuestions
-                || wrongAnswers < 0 || timeoutCount < 0 || failures > 3
-                || remainingLives != Math.max(0, 3 - failures)) {
+                || wrongAnswers < 0 || timeoutCount < 0 || failures > difficulty.lives()
+                || remainingLives != Math.max(0, difficulty.lives() - failures)) {
             throw new IllegalArgumentException("invalid battle statistics");
         }
 
@@ -252,8 +275,10 @@ public class BossService {
             throw new IllegalArgumentException("battle rank does not match statistics");
         }
 
-        int maximumExp = scenes.stream().mapToInt(scene -> valueOrZero(scene.getExpReward())).sum() + 260;
-        int maximumCoins = scenes.stream().mapToInt(scene -> valueOrZero(scene.getCoinReward())).sum() + 300;
+        int maximumExp = scenes.stream().mapToInt(scene -> difficulty.reward(valueOrZero(scene.getExpReward()))).sum()
+                + difficulty.reward(260);
+        int maximumCoins = scenes.stream().mapToInt(scene -> difficulty.reward(valueOrZero(scene.getCoinReward()))).sum()
+                + difficulty.reward(300);
         int claimedExp = valueOrZero(request.getEarnedExp());
         int claimedCoins = valueOrZero(request.getEarnedCoins());
         if (claimedExp < 0 || claimedExp > maximumExp || claimedCoins < 0 || claimedCoins > maximumCoins) {
@@ -273,9 +298,9 @@ public class BossService {
                         }));
     }
 
-    private void grantFirstClearRewards(User user) {
-        user.setCoins((user.getCoins() == null ? 0 : user.getCoins()) + 300);
-        user.setExp((user.getExp() == null ? 0 : user.getExp()) + 260);
+    private void grantFirstClearRewards(User user, int expReward, int coinReward) {
+        user.setCoins((user.getCoins() == null ? 0 : user.getCoins()) + coinReward);
+        user.setExp((user.getExp() == null ? 0 : user.getExp()) + expReward);
         user.setBossPoints((user.getBossPoints() == null ? 0 : user.getBossPoints()) + 1);
         int level = JourneyStateService.calculateLevelInfo(user.getExp() == null ? 0 : user.getExp()).level();
         user.setLevel(level);

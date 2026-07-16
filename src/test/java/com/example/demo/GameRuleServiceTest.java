@@ -14,6 +14,7 @@ import com.example.demo.repository.UserRepository;
 import com.example.demo.service.BossService;
 import com.example.demo.service.CheckinService;
 import com.example.demo.service.JourneyStateService;
+import com.example.demo.service.QuizQuestionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,8 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class GameRuleServiceTest {
@@ -45,6 +46,8 @@ class GameRuleServiceTest {
     private CityRepository cityRepository;
     @Mock
     private JourneyStateService journeyStateService;
+    @Mock
+    private QuizQuestionService quizQuestionService;
 
     private CheckinService checkinService;
     private BossService bossService;
@@ -52,9 +55,9 @@ class GameRuleServiceTest {
     @BeforeEach
     void setUp() {
         checkinService = new CheckinService(checkinRepository, userRepository, sceneRepository,
-                userProgressRepository, journeyStateService);
+                userProgressRepository, journeyStateService, quizQuestionService);
         bossService = new BossService(cityRepository, userRepository, userProgressRepository,
-                checkinRepository, sceneRepository);
+                checkinRepository, sceneRepository, quizQuestionService);
     }
 
     @Test
@@ -151,6 +154,25 @@ class GameRuleServiceTest {
                 () -> bossService.recordBattleResult(1L, 1L, forgedRewards));
 
         verify(userProgressRepository, never()).save(any(UserProgress.class));
+    }
+
+    @Test
+    void normalDifficultyAppliesServerSideRewardMultiplier() {
+        User user = user();
+        Scene scene = scene(city());
+        UserProgress progress = progress(user, scene.getCity(), true, false);
+        stubCheckinContext(user, scene, progress);
+        when(checkinRepository.findByUserIdAndSceneId(1L, 10L)).thenReturn(Optional.empty());
+        when(quizQuestionService.sceneAnswerCorrect(1L, scene, "scene-10-city", "correct", "NORMAL")).thenReturn(true);
+        when(checkinRepository.save(any(Checkin.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Checkin result = checkinService.checkin(1L, 10L, "A", "correct", "scene-10-city", "NORMAL");
+
+        assertEquals(120, result.getEarnedExp());
+        assertEquals(60, result.getEarnedCoins());
+        assertEquals(120, user.getExp());
+        assertEquals(60, user.getCoins());
+        verify(userRepository).save(user);
     }
 
     private void stubCheckinContext(User user, Scene scene, UserProgress progress) {

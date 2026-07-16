@@ -31,8 +31,10 @@ public class BossController {
         try {
             String answer = body == null ? null : body.get("answer");
             String answerText = body == null ? null : body.get("answerText");
-            boolean win = bossService.challenge(userService.userIdFor(authentication.getName()), cityId, answer, answerText);
-            return ResponseEntity.ok(java.util.Map.of("win", win));
+            String questionId = body == null ? null : body.get("questionId");
+            String difficulty = body == null ? null : body.get("difficulty");
+            return ResponseEntity.ok(bossService.challengeResult(userService.userIdFor(authentication.getName()), cityId,
+                    answer, answerText, questionId, difficulty));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(ex.getMessage());
         }

@@ -26,14 +26,18 @@ public class CheckinController {
     public ResponseEntity<?> checkin(@RequestBody CheckinRequest req, Authentication authentication) {
         try {
             var checkin = checkinService.checkin(userService.userIdFor(authentication.getName()), req.getSceneId(),
-                    req.getAnswer(), req.getAnswerText());
+                    req.getAnswer(), req.getAnswerText(), req.getQuestionId(), req.getDifficulty());
             if (!Boolean.TRUE.equals(checkin.getCompleted())) {
                 return ResponseEntity.ok(java.util.Map.of(
                         "ok", false,
                         "correct", false
                 ));
             }
-            return ResponseEntity.ok(java.util.Map.of("ok", true));
+            return ResponseEntity.ok(java.util.Map.of(
+                    "ok", true,
+                    "earnedExp", checkin.getEarnedExp(),
+                    "earnedCoins", checkin.getEarnedCoins()
+            ));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(ex.getMessage());
         }

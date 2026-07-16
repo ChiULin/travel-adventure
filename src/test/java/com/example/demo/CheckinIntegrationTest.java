@@ -4,6 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -169,6 +170,31 @@ class CheckinIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.achievements[0].id").value("first-checkin"))
                 .andExpect(jsonPath("$.achievements[0].unlocked").value(true));
+    }
+
+    @Test
+    void randomLandmarkQuestionShouldReturnQuestionIdAndFourOptions() throws Exception {
+        String token = registerAndGetToken("randomQuizTester01");
+
+        MvcResult first = mockMvc.perform(get("/api/quizzes/landmarks/1/random")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.questionId").isString())
+                .andExpect(jsonPath("$.question").isString())
+                .andExpect(jsonPath("$.options.A").isString())
+                .andExpect(jsonPath("$.options.B").isString())
+                .andExpect(jsonPath("$.options.C").isString())
+                .andExpect(jsonPath("$.options.D").isString())
+                .andReturn();
+
+        MvcResult second = mockMvc.perform(get("/api/quizzes/landmarks/1/random")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String firstQuestionId = objectMapper.readTree(first.getResponse().getContentAsString()).get("questionId").asText();
+        String secondQuestionId = objectMapper.readTree(second.getResponse().getContentAsString()).get("questionId").asText();
+        assertNotEquals(firstQuestionId, secondQuestionId);
     }
 
     private String registerAndGetToken(String username) throws Exception {

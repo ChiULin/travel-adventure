@@ -12,4 +12,5 @@ public class BattleResultRequest {
     private Integer timeoutCount;
     private Integer earnedExp;
     private Integer earnedCoins;
+    private String difficulty;
 }

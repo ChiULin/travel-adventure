@@ -22,14 +22,17 @@ public class CheckinService {
     private final SceneRepository sceneRepository;
     private final UserProgressRepository userProgressRepository;
     private final JourneyStateService journeyStateService;
+    private final QuizQuestionService quizQuestionService;
 
     public CheckinService(CheckinRepository checkinRepository, UserRepository userRepository, SceneRepository sceneRepository,
-                          UserProgressRepository userProgressRepository, JourneyStateService journeyStateService) {
+                          UserProgressRepository userProgressRepository, JourneyStateService journeyStateService,
+                          QuizQuestionService quizQuestionService) {
         this.checkinRepository = checkinRepository;
         this.userRepository = userRepository;
         this.sceneRepository = sceneRepository;
         this.userProgressRepository = userProgressRepository;
         this.journeyStateService = journeyStateService;
+        this.quizQuestionService = quizQuestionService;
     }
 
     public Checkin checkin(Long userId, Long sceneId) {
@@ -42,6 +45,12 @@ public class CheckinService {
 
     @Transactional
     public Checkin checkin(Long userId, Long sceneId, String selectedAnswer, String selectedAnswerText) {
+        return checkin(userId, sceneId, selectedAnswer, selectedAnswerText, null, null);
+    }
+
+    @Transactional
+    public Checkin checkin(Long userId, Long sceneId, String selectedAnswer, String selectedAnswerText,
+                           String questionId, String difficultyName) {
         Optional<User> ou = userRepository.findById(userId);
         Optional<Scene> os = sceneRepository.findById(sceneId);
         if (ou.isEmpty()) {
@@ -75,14 +84,17 @@ public class CheckinService {
         c.setCheckinTime(LocalDateTime.now());
         c.setSelectedAnswer(normalizeAnswer(selectedAnswer));
 
-        boolean correct = isCorrect(scene, selectedAnswer, selectedAnswerText);
+        boolean correct = questionId == null || questionId.isBlank()
+                ? isCorrect(scene, selectedAnswer, selectedAnswerText)
+                : quizQuestionService.sceneAnswerCorrect(userId, scene, questionId, selectedAnswerText, difficultyName);
         c.setQuizCorrect(correct);
         if (!correct) {
             return checkinRepository.save(c);
         }
 
-        int expReward = scene.getExpReward() == null ? 0 : scene.getExpReward();
-        int coinReward = scene.getCoinReward() == null ? 0 : scene.getCoinReward();
+        GameDifficulty difficulty = GameDifficulty.from(difficultyName);
+        int expReward = difficulty.reward(scene.getExpReward() == null ? 0 : scene.getExpReward());
+        int coinReward = difficulty.reward(scene.getCoinReward() == null ? 0 : scene.getCoinReward());
         c.setCompleted(true);
         c.setEarnedExp(expReward);
         c.setEarnedCoins(coinReward);
