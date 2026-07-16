@@ -24,6 +24,6 @@ public interface CheckinRepository extends JpaRepository<Checkin, Long> {
 
 	@Transactional
 	@Modifying
-	@Query("delete from Checkin c where c.user.id = :userId and c.scene.city.id = :cityId")
-	void deleteByUserIdAndCityId(@Param("userId") Long userId, @Param("cityId") Long cityId);
+	@Query("delete from Checkin c where c.user.id = :userId and c.scene.city.id = :cityId and c.completed = false")
+	void deleteIncompleteByUserIdAndCityId(@Param("userId") Long userId, @Param("cityId") Long cityId);
 }

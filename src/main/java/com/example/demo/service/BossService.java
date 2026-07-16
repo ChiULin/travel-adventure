@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.entity.City;
+import com.example.demo.entity.Scene;
 import com.example.demo.entity.User;
 import com.example.demo.entity.UserProgress;
 import com.example.demo.dto.BattleResultRequest;
@@ -10,6 +11,7 @@ import com.example.demo.repository.SceneRepository;
 import com.example.demo.repository.UserProgressRepository;
 import com.example.demo.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -41,6 +43,7 @@ public class BossService {
         return challenge(userId, cityId, selectedAnswer, null);
     }
 
+    @Transactional
     public boolean challenge(Long userId, Long cityId, String selectedAnswer, String selectedAnswerText) {
         Optional<User> optionalUser = userRepository.findById(userId);
         Optional<City> optionalCity = cityRepository.findById(cityId);
@@ -69,29 +72,17 @@ public class BossService {
         boolean win = answerCorrect && userPower >= bossPower;
 
         if (win) {
+            boolean firstClear = !Boolean.TRUE.equals(progress.getBadgeUnlocked());
             progress.setBossUnlocked(true);
             progress.setBossCompleted(true);
             progress.setBadgeUnlocked(true);
             progress.setCompletedAt(java.time.LocalDateTime.now());
             userProgressRepository.save(progress);
 
-            cityRepository.findAllByOrderByUnlockOrderAsc().stream()
-                    .filter(next -> next.getUnlockOrder() != null && city.getUnlockOrder() != null)
-                    .filter(next -> next.getUnlockOrder().equals(city.getUnlockOrder() + 1))
-                    .findFirst()
-                    .ifPresent(next -> userProgressRepository.findByUserIdAndCityId(userId, next.getId())
-                            .ifPresent(nextProgress -> {
-                                nextProgress.setUnlocked(true);
-                                userProgressRepository.save(nextProgress);
-                            }));
-
-            user.setCoins((user.getCoins() == null ? 0 : user.getCoins()) + 300);
-            user.setExp((user.getExp() == null ? 0 : user.getExp()) + 260);
-            user.setBossPoints((user.getBossPoints() == null ? 0 : user.getBossPoints()) + 1);
-            int level = JourneyStateService.calculateLevelInfo(user.getExp() == null ? 0 : user.getExp()).level();
-            user.setLevel(level);
-            user.setTitle(level >= 4 ? "City Explorer" : "New Traveler");
-            userRepository.save(user);
+            if (firstClear) {
+                unlockNextCity(userId, city);
+                grantFirstClearRewards(user);
+            }
         }
 
         return win;
@@ -109,7 +100,7 @@ public class BossService {
             return answerText.equals(normalizeText(correctText));
         }
         if (answer == null || answer.isBlank()) {
-            return true;
+            return false;
         }
         return correctAnswer.equals(answer);
     }
@@ -153,11 +144,13 @@ public class BossService {
             throw new IllegalArgumentException("complete all city scenes first");
         }
 
+        validateBattleResult(request, cityTotal, sceneRepository.findByCityId(cityId));
+
         String oldRank = progress.getBestRank();
         int oldBestCombo = progress.getBestCombo() == null ? 0 : progress.getBestCombo();
         int oldBestLives = progress.getBestRemainingLives() == null ? 0 : progress.getBestRemainingLives();
         String newRank = calculateRank(request);
-        int maxCombo = Math.max(0, valueOrZero(request.getMaxCombo()));
+        int maxCombo = valueOrZero(request.getMaxCombo());
         int remainingLives = Math.max(0, Math.min(3, valueOrZero(request.getRemainingLives())));
 
         boolean newRecord = false;
@@ -198,8 +191,7 @@ public class BossService {
             throw new IllegalArgumentException("city not unlocked");
         }
 
-        checkinRepository.deleteByUserIdAndCityId(userId, cityId);
-        progress.setBossUnlocked(false);
+        checkinRepository.deleteIncompleteByUserIdAndCityId(userId, cityId);
         progress.setBossCompleted(false);
         progress.setCompletedAt(null);
         userProgressRepository.save(progress);
@@ -227,6 +219,68 @@ public class BossService {
             return "B";
         }
         return "C";
+    }
+
+    private void validateBattleResult(BattleResultRequest request, long cityTotal, java.util.List<Scene> scenes) {
+        if (request == null) {
+            throw new IllegalArgumentException("battle result is required");
+        }
+
+        String requestedRank = request.getRank() == null ? "" : request.getRank().trim().toUpperCase();
+        if (rankScore(requestedRank) == 0) {
+            throw new IllegalArgumentException("invalid battle rank");
+        }
+
+        int maxQuestions = Math.toIntExact(cityTotal) + 1;
+        int maxCombo = valueOrZero(request.getMaxCombo());
+        int remainingLives = valueOrZero(request.getRemainingLives());
+        int correctAnswers = valueOrZero(request.getCorrectAnswers());
+        int wrongAnswers = valueOrZero(request.getWrongAnswers());
+        int timeoutCount = valueOrZero(request.getTimeoutCount());
+        int failures = wrongAnswers + timeoutCount;
+
+        if (maxCombo < 0 || maxCombo > maxQuestions
+                || remainingLives < 0 || remainingLives > 3
+                || correctAnswers < 0 || correctAnswers > maxQuestions
+                || wrongAnswers < 0 || timeoutCount < 0 || failures > 3
+                || remainingLives != Math.max(0, 3 - failures)) {
+            throw new IllegalArgumentException("invalid battle statistics");
+        }
+
+        String calculatedRank = calculateRank(request);
+        if (!requestedRank.equals(calculatedRank)) {
+            throw new IllegalArgumentException("battle rank does not match statistics");
+        }
+
+        int maximumExp = scenes.stream().mapToInt(scene -> valueOrZero(scene.getExpReward())).sum() + 260;
+        int maximumCoins = scenes.stream().mapToInt(scene -> valueOrZero(scene.getCoinReward())).sum() + 300;
+        int claimedExp = valueOrZero(request.getEarnedExp());
+        int claimedCoins = valueOrZero(request.getEarnedCoins());
+        if (claimedExp < 0 || claimedExp > maximumExp || claimedCoins < 0 || claimedCoins > maximumCoins) {
+            throw new IllegalArgumentException("invalid claimed rewards");
+        }
+    }
+
+    private void unlockNextCity(Long userId, City city) {
+        cityRepository.findAllByOrderByUnlockOrderAsc().stream()
+                .filter(next -> next.getUnlockOrder() != null && city.getUnlockOrder() != null)
+                .filter(next -> next.getUnlockOrder().equals(city.getUnlockOrder() + 1))
+                .findFirst()
+                .ifPresent(next -> userProgressRepository.findByUserIdAndCityId(userId, next.getId())
+                        .ifPresent(nextProgress -> {
+                            nextProgress.setUnlocked(true);
+                            userProgressRepository.save(nextProgress);
+                        }));
+    }
+
+    private void grantFirstClearRewards(User user) {
+        user.setCoins((user.getCoins() == null ? 0 : user.getCoins()) + 300);
+        user.setExp((user.getExp() == null ? 0 : user.getExp()) + 260);
+        user.setBossPoints((user.getBossPoints() == null ? 0 : user.getBossPoints()) + 1);
+        int level = JourneyStateService.calculateLevelInfo(user.getExp() == null ? 0 : user.getExp()).level();
+        user.setLevel(level);
+        user.setTitle(level >= 4 ? "City Explorer" : "New Traveler");
+        userRepository.save(user);
     }
 
     private int rankScore(String rank) {

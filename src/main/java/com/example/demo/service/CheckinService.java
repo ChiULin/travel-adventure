@@ -5,9 +5,11 @@ import com.example.demo.entity.Scene;
 import com.example.demo.entity.User;
 import com.example.demo.repository.CheckinRepository;
 import com.example.demo.repository.SceneRepository;
+import com.example.demo.repository.UserProgressRepository;
 import com.example.demo.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -18,13 +20,15 @@ public class CheckinService {
     private final CheckinRepository checkinRepository;
     private final UserRepository userRepository;
     private final SceneRepository sceneRepository;
+    private final UserProgressRepository userProgressRepository;
     private final JourneyStateService journeyStateService;
 
     public CheckinService(CheckinRepository checkinRepository, UserRepository userRepository, SceneRepository sceneRepository,
-                          JourneyStateService journeyStateService) {
+                          UserProgressRepository userProgressRepository, JourneyStateService journeyStateService) {
         this.checkinRepository = checkinRepository;
         this.userRepository = userRepository;
         this.sceneRepository = sceneRepository;
+        this.userProgressRepository = userProgressRepository;
         this.journeyStateService = journeyStateService;
     }
 
@@ -36,6 +40,7 @@ public class CheckinService {
         return checkin(userId, sceneId, selectedAnswer, null);
     }
 
+    @Transactional
     public Checkin checkin(Long userId, Long sceneId, String selectedAnswer, String selectedAnswerText) {
         Optional<User> ou = userRepository.findById(userId);
         Optional<Scene> os = sceneRepository.findById(sceneId);
@@ -48,6 +53,12 @@ public class CheckinService {
 
         User user = ou.get();
         Scene scene = os.get();
+        boolean cityUnlocked = userProgressRepository.findByUserIdAndCityId(userId, scene.getCity().getId())
+                .map(progress -> Boolean.TRUE.equals(progress.getUnlocked()))
+                .orElse(false);
+        if (!cityUnlocked) {
+            throw new IllegalArgumentException("city not unlocked");
+        }
         Optional<Checkin> existing = checkinRepository.findByUserIdAndSceneId(userId, sceneId);
         if (existing.isPresent() && Boolean.TRUE.equals(existing.get().getCompleted())) {
             throw new IllegalArgumentException("scene already checked in");
@@ -101,7 +112,7 @@ public class CheckinService {
             return answerText.equals(normalizeText(correctText));
         }
         if (answer == null || answer.isBlank()) {
-            return true;
+            return false;
         }
         return correctAnswer.equals(answer);
     }
