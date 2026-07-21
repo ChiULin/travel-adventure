@@ -27,6 +27,11 @@ const SESSION_KEY = "travelAdventureApiSession";
     let collectionState = null;
     let collectionTab = "landmarks";
     let selectedCollectionId = null;
+    let explorationMission = null;
+    let explorationResult = null;
+    let explorationError = null;
+    let explorationLoading = false;
+    let explorationSubmitting = false;
 
     function emptyCityBattleStats() {
       return {

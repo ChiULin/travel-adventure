@@ -112,6 +112,9 @@ async function refreshState() {
         activeCityId = firstUnlocked.id;
       }
       renderAll();
+      if (!explorationMission && !explorationLoading && !explorationError) {
+        loadExplorationMission();
+      }
       setTimeout(maybeShowFinalEnding, 0);
     }
 
@@ -380,6 +383,7 @@ function renderCityCards() {
       if (!appState) return;
       renderPlayerSummary();
       renderJourneyProgress();
+      renderExplorationMission();
       renderDailyMissions();
       renderAchievements();
       renderCityCards();

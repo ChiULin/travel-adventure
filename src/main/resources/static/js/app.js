@@ -41,6 +41,11 @@ document.getElementById("loginForm").addEventListener("submit", async event => {
       achievementsState = null;
       collectionState = null;
       selectedCollectionId = null;
+      explorationMission = null;
+      explorationResult = null;
+      explorationError = null;
+      explorationLoading = false;
+      explorationSubmitting = false;
       activeCityId = null;
       finalEndingShown = false;
       logs = [];
@@ -50,6 +55,7 @@ document.getElementById("loginForm").addEventListener("submit", async event => {
       document.getElementById("collectionOverlay").classList.add("hidden");
       document.getElementById("collectionGrid").innerHTML = "";
       document.getElementById("collectionDetail").innerHTML = "";
+      document.getElementById("exploration-mission").innerHTML = "";
       closeResultCard();
       document.getElementById("login").classList.remove("hidden");
     });

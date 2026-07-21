@@ -578,6 +578,101 @@
       font-weight: 900;
     }
 
+    .exploration-card {
+      padding: 20px;
+      border: 1px solid #efc56d;
+      border-radius: 12px;
+      background:
+        linear-gradient(135deg, rgba(255, 250, 231, .98), rgba(255, 255, 255, .98)),
+        white;
+      box-shadow: 0 14px 34px rgba(120, 78, 12, .12);
+    }
+
+    .exploration-card h2 {
+      margin-top: 6px;
+      color: #51350d;
+    }
+
+    .exploration-card p {
+      color: #715b38;
+      font-weight: 800;
+    }
+
+    .exploration-kicker {
+      display: inline-block;
+      padding: 5px 9px;
+      border-radius: 999px;
+      color: #69420a;
+      background: #ffe5a7;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: .04em;
+    }
+
+    .exploration-clues {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin: 16px 0;
+    }
+
+    .exploration-clue {
+      min-height: 108px;
+      padding: 12px;
+      border: 1px dashed #d8ad58;
+      border-radius: 10px;
+      background: rgba(255, 247, 222, .72);
+    }
+
+    .exploration-clue span,
+    .exploration-result span {
+      display: block;
+      margin-bottom: 7px;
+      color: #8a651f;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .exploration-clue strong {
+      color: #40301a;
+      line-height: 1.55;
+    }
+
+    .exploration-guess h3 {
+      margin-bottom: 10px;
+      color: var(--ink);
+    }
+
+    .exploration-candidates {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .exploration-result {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: 900;
+    }
+
+    .exploration-result.correct {
+      color: #176738;
+      background: #e8f8ee;
+      border: 1px solid #91d3aa;
+    }
+
+    .exploration-result.wrong {
+      color: #9a2f38;
+      background: #fff0f1;
+      border: 1px solid #efafb4;
+    }
+
+    .exploration-result span {
+      margin: 5px 0 0;
+      color: inherit;
+    }
+
     @keyframes ambientSweep {
       from { background-position: -260px 0, 0 0; }
       to { background-position: 260px 0, 0 0; }
@@ -621,6 +716,7 @@
       .final-checks, .final-stats, .final-actions { grid-template-columns: 1fr; }
       .final-route { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .collection-layout, .collection-grid { grid-template-columns: 1fr; }
+      .exploration-clues, .exploration-candidates { grid-template-columns: 1fr; }
       .summary-layout { grid-template-columns: 52px 1fr; }
       .avatar { width: 52px; height: 52px; font-size: 23px; }
       .scene-card { grid-template-columns: 72px minmax(0, 1fr); }
