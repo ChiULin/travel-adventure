@@ -27,16 +27,24 @@ public record ExplorationMissionDefinition(
         cultureOptions = List.copyOf(cultureOptions);
         Objects.requireNonNull(cultureAnswer, "cultureAnswer");
 
+        if (missionKey.isBlank()) {
+            throw new IllegalArgumentException("探索任務代碼不可為空");
+        }
+
         if (investigations.size() != ClueType.values().length
                 || investigations.stream().map(InvestigationDefinition::type).distinct().count()
                 != ClueType.values().length) {
             throw new IllegalArgumentException("每個探索任務必須包含三種不同的調查方式");
         }
-        if (candidateSceneIds.size() != 3 || !candidateSceneIds.contains(targetSceneId)) {
-            throw new IllegalArgumentException("每個探索任務必須包含目標景點與三個候選景點");
+        if (candidateSceneIds.size() < 3
+                || candidateSceneIds.stream().distinct().count() != candidateSceneIds.size()
+                || !candidateSceneIds.contains(targetSceneId)) {
+            throw new IllegalArgumentException("每個探索任務必須包含目標景點與至少三個不同候選景點");
         }
-        if (cultureOptions.size() < 2 || !cultureOptions.contains(cultureAnswer)) {
-            throw new IllegalArgumentException("文化挑戰選項必須包含正確答案");
+        if (cultureOptions.size() < 4
+                || cultureOptions.stream().distinct().count() != cultureOptions.size()
+                || !cultureOptions.contains(cultureAnswer)) {
+            throw new IllegalArgumentException("文化挑戰必須包含正確答案與至少四個不同選項");
         }
     }
 }

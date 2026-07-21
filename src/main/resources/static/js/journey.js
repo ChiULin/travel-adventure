@@ -113,7 +113,9 @@ async function refreshState() {
       }
       renderAll();
       const explorationCity = appState.cities.find(city => city.id === activeCityId);
-      const supportsExploration = [1, 3, 5].includes(Number(explorationCity?.id));
+      const supportsExploration = explorationCity?.scenes?.some(scene =>
+        scene.interactionType === "EXPLORATION" && !scene.checked
+      );
       if (supportsExploration && explorationCity.unlocked && !explorationState.mission && !explorationState.loading
           && !explorationState.error && !explorationState.completion) {
         loadExplorationMission(explorationCity.id);
@@ -286,7 +288,7 @@ function renderCityCards() {
           <div class="scene-list">
             ${city.scenes.map(scene => {
               const sceneActive = activeSceneQuizId === scene.id;
-              const usesExploration = [1, 8, 13].includes(Number(scene.id));
+              const usesExploration = scene.interactionType === "EXPLORATION";
               return `
               <article class="scene-card ${scene.checked ? "done" : ""} ${sceneActive ? "active" : ""}">
                 <div class="scene-image" ${scene.imageUrl ? `style="background-image: linear-gradient(180deg, rgba(255,255,255,.08), rgba(11,35,71,.18)), url('${escapeHtml(scene.imageUrl)}')"` : ""}></div>
@@ -295,9 +297,13 @@ function renderCityCards() {
                   <p class="story-text">${escapeHtml(scene.story || scene.desc)}</p>
                   <div class="reward-row"><span>EXP +${scaledReward(scene.expReward)}</span><span>金幣 +${scaledReward(scene.coinReward)}</span></div>
                   ${scene.checked ? `
-                    <button class="btn full" type="button" disabled>已打卡</button>
+                    <button class="btn full" type="button" data-view-scene-story="${scene.id}">
+                      ${escapeHtml(scene.actionLabel || "查看景點故事")}
+                    </button>
                   ` : usesExploration ? `
-                    <button class="btn full" type="button" data-open-exploration>接旅行委託</button>
+                    <button class="btn full" type="button" data-open-exploration>
+                      ${escapeHtml(scene.actionLabel || "接旅行委託")}
+                    </button>
                   ` : sceneActive ? `
                     <div class="quiz-box">
                       <strong>${escapeHtml(activeQuizQuestion?.question || scene.quizQuestion || "回答景點問題後完成打卡")}</strong>
@@ -307,7 +313,9 @@ function renderCityCards() {
                       </div>
                     </div>
                   ` : `
-                    <button class="btn full" type="button" data-start-scene-id="${scene.id}" ${cityLives <= 0 ? "disabled" : ""}>開始答題</button>
+                    <button class="btn full" type="button" data-start-scene-id="${scene.id}" ${cityLives <= 0 ? "disabled" : ""}>
+                      ${escapeHtml(scene.actionLabel || "開始答題")}
+                    </button>
                   `}
                 </div>
               </article>
@@ -330,6 +338,14 @@ function renderCityCards() {
             await loadExplorationMission(city.id);
           }
           document.getElementById("exploration-mission")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      });
+
+      document.querySelectorAll("[data-view-scene-story]").forEach(button => {
+        button.addEventListener("click", async () => {
+          await openCollection();
+          selectedCollectionId = `landmark-${button.dataset.viewSceneStory}`;
+          renderCollection();
         });
       });
 

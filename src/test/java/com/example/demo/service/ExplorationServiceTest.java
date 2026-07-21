@@ -128,15 +128,18 @@ class ExplorationServiceTest {
     }
 
     @Test
-    void registryProvidesThreeCompleteCitySpecificMissions() {
+    void registryProvidesSixCompleteCitySpecificMissions() {
         ExplorationMissionRegistry registry = new ExplorationMissionRegistry();
 
         assertEquals("TAIPEI-101-01", registry.findByCityId(1L).getFirst().missionKey());
+        assertEquals("TAICHUNG-GAOMEI-01", registry.findByCityId(2L).getFirst().missionKey());
         assertEquals("TAINAN-ANPING-01", registry.findByCityId(3L).getFirst().missionKey());
+        assertEquals("KAOHSIUNG-PIER2-01", registry.findByCityId(4L).getFirst().missionKey());
         assertEquals("HUALIEN-TAROKO-01", registry.findByCityId(5L).getFirst().missionKey());
-        assertTrue(registry.findByCityId(2L).isEmpty());
+        assertEquals("PENGHU-DOUBLE-HEART-01", registry.findByCityId(6L).getFirst().missionKey());
+        assertEquals(6, registry.findAll().size());
 
-        List.of(1L, 3L, 5L).forEach(cityId -> {
+        List.of(1L, 2L, 3L, 4L, 5L, 6L).forEach(cityId -> {
             ExplorationMissionDefinition mission = registry.findByCityId(cityId).getFirst();
             assertEquals(3, mission.investigations().size());
             assertEquals(3, mission.investigations().stream()
@@ -148,13 +151,23 @@ class ExplorationServiceTest {
     }
 
     @Test
+    void duplicateMissionKeyFailsDuringRegistryCreation() {
+        ExplorationMissionDefinition mission = new ExplorationMissionRegistry().findByCityId(1L).getFirst();
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> new ExplorationMissionRegistry(List.of(mission, mission)));
+
+        assertEquals("探索任務代碼重複：TAIPEI-101-01", exception.getMessage());
+    }
+
+    @Test
     void unsupportedCityDoesNotReturnAnotherCityMission() {
         ExplorationService service = new ExplorationService(
                 mock(CheckinRepository.class), mock(UserProgressRepository.class), mock(CheckinService.class),
                 new ExplorationMissionRegistry(), sceneRepository(), Clock.systemUTC());
 
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> service.randomMission(1L, 2L));
+                () -> service.randomMission(1L, 99L));
 
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
         assertEquals("這座城市目前沒有探索任務", exception.getReason());
@@ -222,10 +235,16 @@ class ExplorationServiceTest {
         SceneRepository sceneRepository = mock(SceneRepository.class);
         when(sceneRepository.findAllById(any())).thenAnswer(invocation -> {
             Iterable<Long> ids = invocation.getArgument(0);
-            java.util.Map<Long, String> names = java.util.Map.of(
-                    1L, "台北101", 2L, "國立故宮博物院", 3L, "西門町",
-                    7L, "赤崁樓", 8L, "安平古堡", 9L, "台南孔廟",
-                    13L, "太魯閣", 14L, "七星潭", 15L, "清水斷崖");
+            java.util.Map<Long, String> names = java.util.Map.ofEntries(
+                    java.util.Map.entry(1L, "台北101"), java.util.Map.entry(2L, "國立故宮博物院"),
+                    java.util.Map.entry(3L, "西門町"), java.util.Map.entry(4L, "高美濕地"),
+                    java.util.Map.entry(5L, "國家歌劇院"), java.util.Map.entry(6L, "彩虹眷村"),
+                    java.util.Map.entry(7L, "赤崁樓"), java.util.Map.entry(8L, "安平古堡"),
+                    java.util.Map.entry(9L, "台南孔廟"), java.util.Map.entry(10L, "駁二藝術特區"),
+                    java.util.Map.entry(11L, "愛河"), java.util.Map.entry(12L, "龍虎塔"),
+                    java.util.Map.entry(13L, "太魯閣"), java.util.Map.entry(14L, "七星潭"),
+                    java.util.Map.entry(15L, "清水斷崖"), java.util.Map.entry(16L, "雙心石滬"),
+                    java.util.Map.entry(17L, "澎湖跨海大橋"), java.util.Map.entry(18L, "澎湖花火節"));
             java.util.ArrayList<com.example.demo.entity.Scene> scenes = new java.util.ArrayList<>();
             ids.forEach(id -> scenes.add(com.example.demo.entity.Scene.builder().id(id).name(names.get(id)).build()));
             return scenes;

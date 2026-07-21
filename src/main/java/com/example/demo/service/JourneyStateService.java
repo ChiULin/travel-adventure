@@ -30,14 +30,17 @@ public class JourneyStateService {
     private final SceneRepository sceneRepository;
     private final CheckinRepository checkinRepository;
     private final UserProgressRepository userProgressRepository;
+    private final ExplorationMissionRegistry explorationMissionRegistry;
 
     public JourneyStateService(UserRepository userRepository, CityRepository cityRepository, SceneRepository sceneRepository,
-                               CheckinRepository checkinRepository, UserProgressRepository userProgressRepository) {
+                               CheckinRepository checkinRepository, UserProgressRepository userProgressRepository,
+                               ExplorationMissionRegistry explorationMissionRegistry) {
         this.userRepository = userRepository;
         this.cityRepository = cityRepository;
         this.sceneRepository = sceneRepository;
         this.checkinRepository = checkinRepository;
         this.userProgressRepository = userProgressRepository;
+        this.explorationMissionRegistry = explorationMissionRegistry;
     }
 
     public Map<String, Object> state(Long userId) {
@@ -268,6 +271,13 @@ public class JourneyStateService {
         dto.put("expReward", scene.getExpReward());
         dto.put("coinReward", scene.getCoinReward());
         dto.put("checked", checked);
+        SceneInteractionType interactionType = explorationMissionRegistry.findByTargetSceneId(scene.getId()).isPresent()
+                ? SceneInteractionType.EXPLORATION
+                : SceneInteractionType.QUIZ;
+        dto.put("interactionType", interactionType.name());
+        dto.put("actionLabel", checked
+                ? "查看景點故事"
+                : interactionType == SceneInteractionType.EXPLORATION ? "接旅行委託" : "開始答題");
         return dto;
     }
 

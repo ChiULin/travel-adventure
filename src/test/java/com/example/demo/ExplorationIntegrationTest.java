@@ -3,8 +3,10 @@ package com.example.demo;
 import com.example.demo.entity.User;
 import com.example.demo.entity.UserProgress;
 import com.example.demo.repository.CheckinRepository;
+import com.example.demo.repository.SceneRepository;
 import com.example.demo.repository.UserProgressRepository;
 import com.example.demo.repository.UserRepository;
+import com.example.demo.service.ExplorationMissionRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -38,6 +40,12 @@ class ExplorationIntegrationTest {
 
     @Autowired
     private CheckinRepository checkinRepository;
+
+    @Autowired
+    private SceneRepository sceneRepository;
+
+    @Autowired
+    private ExplorationMissionRegistry missionRegistry;
 
     @Test
     void cultureChallengeCreatesCheckinOnlyAfterValidOneTimeAnswer() throws Exception {
@@ -240,6 +248,117 @@ class ExplorationIntegrationTest {
                 || !checkinRepository.existsByUserIdAndSceneId(user.getId(), 13L)) {
             throw new AssertionError("Each mission must create a checkin for its own target scene");
         }
+
+        for (Long cityId : java.util.List.of(1L, 5L)) {
+            mockMvc.perform(get("/api/explorations/cities/" + cityId + "/random")
+                            .header("Authorization", "Bearer " + token))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("目前沒有未完成的探索委託"));
+        }
+    }
+
+    @Test
+    void taichungKaohsiungAndPenghuMissionsCompleteTheirOwnScenes() throws Exception {
+        String token = registerAndGetToken("remaining-cities");
+        User user = userRepository.findByUsername("remaining-cities").orElseThrow();
+        unlockCity(user.getId(), 2L);
+        unlockCity(user.getId(), 4L);
+        unlockCity(user.getId(), 6L);
+
+        mockMvc.perform(get("/api/journey/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[0].scenes[0].interactionType").value("EXPLORATION"))
+                .andExpect(jsonPath("$.data.cities[1].scenes[0].interactionType").value("EXPLORATION"))
+                .andExpect(jsonPath("$.data.cities[1].scenes[0].actionLabel").value("接旅行委託"))
+                .andExpect(jsonPath("$.data.cities[1].scenes[1].interactionType").value("QUIZ"))
+                .andExpect(jsonPath("$.data.cities[1].scenes[1].actionLabel").value("開始答題"))
+                .andExpect(jsonPath("$.data.cities[2].scenes[1].interactionType").value("EXPLORATION"))
+                .andExpect(jsonPath("$.data.cities[3].scenes[0].interactionType").value("EXPLORATION"))
+                .andExpect(jsonPath("$.data.cities[4].scenes[0].interactionType").value("EXPLORATION"))
+                .andExpect(jsonPath("$.data.cities[5].scenes[0].interactionType").value("EXPLORATION"));
+
+        assertMission(token, 2L, "TAICHUNG-GAOMEI-01", 4L, "高美濕地");
+        assertMission(token, 4L, "KAOHSIUNG-PIER2-01", 10L, "駁二藝術特區");
+        assertMission(token, 6L, "PENGHU-DOUBLE-HEART-01", 16L, "雙心石滬");
+
+        String gaomeiChallenge = submitCorrectGuess(token, "TAICHUNG-GAOMEI-01", 4L, "高美濕地");
+        String pier2Challenge = submitCorrectGuess(token, "KAOHSIUNG-PIER2-01", 10L, "駁二藝術特區");
+        String stoneWeirChallenge = submitCorrectGuess(token, "PENGHU-DOUBLE-HEART-01", 16L, "雙心石滬");
+        String gaomeiQuestionId = extract(gaomeiChallenge, "questionId");
+        String pier2QuestionId = extract(pier2Challenge, "questionId");
+        String stoneWeirQuestionId = extract(stoneWeirChallenge, "questionId");
+
+        mockMvc.perform(post("/api/explorations/KAOHSIUNG-PIER2-01/complete")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(completeRequest(stoneWeirQuestionId, "港口倉庫")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("文化挑戰題目無效"));
+
+        completeMission(token, "TAICHUNG-GAOMEI-01", gaomeiQuestionId, "潮間帶", 4L, "高美濕地");
+        completeMission(token, "KAOHSIUNG-PIER2-01", pier2QuestionId, "港口倉庫", 10L, "駁二藝術特區");
+        completeMission(token, "PENGHU-DOUBLE-HEART-01", stoneWeirQuestionId, "潮汐", 16L, "雙心石滬");
+
+        for (Long sceneId : java.util.List.of(4L, 10L, 16L)) {
+            if (!checkinRepository.existsByUserIdAndSceneId(user.getId(), sceneId)) {
+                throw new AssertionError("Mission did not create checkin for scene " + sceneId);
+            }
+        }
+
+        mockMvc.perform(get("/api/journey/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[1].scenes[0].actionLabel").value("查看景點故事"))
+                .andExpect(jsonPath("$.data.cities[3].scenes[0].actionLabel").value("查看景點故事"))
+                .andExpect(jsonPath("$.data.cities[5].scenes[0].actionLabel").value("查看景點故事"));
+
+        for (Long cityId : java.util.List.of(2L, 4L, 6L)) {
+            mockMvc.perform(get("/api/explorations/cities/" + cityId + "/random")
+                            .header("Authorization", "Bearer " + token))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("目前沒有未完成的探索委託"));
+        }
+    }
+
+    @Test
+    void everyMissionTargetAndCandidateBelongsToDeclaredCity() {
+        missionRegistry.findAll().forEach(mission -> {
+            java.util.Set<Long> citySceneIds = sceneRepository.findByCityId(mission.cityId()).stream()
+                    .map(com.example.demo.entity.Scene::getId)
+                    .collect(java.util.stream.Collectors.toSet());
+            mission.candidateSceneIds().forEach(sceneId -> {
+                if (!citySceneIds.contains(sceneId)) {
+                    throw new AssertionError(mission.missionKey() + " contains a scene from another city");
+                }
+            });
+        });
+    }
+
+    private void assertMission(String token, Long cityId, String missionId,
+                               Long targetSceneId, String targetSceneName) throws Exception {
+        mockMvc.perform(get("/api/explorations/cities/" + cityId + "/random")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.missionId").value(missionId))
+                .andExpect(jsonPath("$.data.cityId").value(cityId))
+                .andExpect(jsonPath("$.data.availableInvestigations", hasSize(3)))
+                .andExpect(jsonPath("$.data.candidates", hasSize(3)))
+                .andExpect(jsonPath("$.data.candidates[0].sceneId").value(targetSceneId))
+                .andExpect(jsonPath("$.data.candidates[0].name").value(targetSceneName))
+                .andExpect(jsonPath("$.data.correctSceneId").doesNotExist())
+                .andExpect(jsonPath("$.data.cultureAnswer").doesNotExist());
+    }
+
+    private void completeMission(String token, String missionId, String questionId,
+                                 String answer, Long sceneId, String sceneName) throws Exception {
+        mockMvc.perform(post("/api/explorations/" + missionId + "/complete")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(completeRequest(questionId, answer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.correct").value(true))
+                .andExpect(jsonPath("$.data.completed").value(true))
+                .andExpect(jsonPath("$.data.sceneId").value(sceneId))
+                .andExpect(jsonPath("$.data.sceneName").value(sceneName));
     }
 
     private String submitCorrectGuess(String token, String missionId, Long sceneId, String sceneName) throws Exception {
