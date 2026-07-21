@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.BattleResultRequest;
 import com.example.demo.service.BossService;
 import com.example.demo.service.UserService;
@@ -26,36 +27,47 @@ public class BossController {
     }
 
     @PostMapping("/{cityId}/boss/challenge")
-    public ResponseEntity<?> challenge(@PathVariable Long cityId, @RequestBody(required = false) Map<String, String> body,
-                                       Authentication authentication) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> challenge(
+            @PathVariable Long cityId,
+            @RequestBody(required = false) Map<String, String> body,
+            Authentication authentication) {
         try {
             String answer = body == null ? null : body.get("answer");
             String answerText = body == null ? null : body.get("answerText");
             String questionId = body == null ? null : body.get("questionId");
             String difficulty = body == null ? null : body.get("difficulty");
-            return ResponseEntity.ok(bossService.challengeResult(userService.userIdFor(authentication.getName()), cityId,
-                    answer, answerText, questionId, difficulty));
+            Map<String, Object> result = bossService.challengeResult(
+                    userService.userIdFor(authentication.getName()), cityId,
+                    answer, answerText, questionId, difficulty);
+            String message = Boolean.TRUE.equals(result.get("win")) ? "守護者挑戰成功" : "守護者挑戰失敗";
+            return ResponseEntity.ok(ApiResponse.success(message, result));
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.badRequest().body(ex.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(ex.getMessage()));
         }
     }
 
     @PostMapping("/{cityId}/battle-result")
-    public ResponseEntity<?> battleResult(@PathVariable Long cityId, @RequestBody BattleResultRequest request,
-                                          Authentication authentication) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> battleResult(
+            @PathVariable Long cityId,
+            @RequestBody BattleResultRequest request,
+            Authentication authentication) {
         try {
-            return ResponseEntity.ok(bossService.recordBattleResult(userService.userIdFor(authentication.getName()), cityId, request));
+            return ResponseEntity.ok(ApiResponse.success("戰鬥結果已記錄",
+                    bossService.recordBattleResult(
+                            userService.userIdFor(authentication.getName()), cityId, request)));
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.badRequest().body(ex.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(ex.getMessage()));
         }
     }
 
     @PostMapping("/{cityId}/restart")
-    public ResponseEntity<?> restart(@PathVariable Long cityId, Authentication authentication) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> restart(
+            @PathVariable Long cityId, Authentication authentication) {
         try {
-            return ResponseEntity.ok(bossService.restartCity(userService.userIdFor(authentication.getName()), cityId));
+            return ResponseEntity.ok(ApiResponse.success("城市挑戰已重設",
+                    bossService.restartCity(userService.userIdFor(authentication.getName()), cityId)));
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.badRequest().body(ex.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(ex.getMessage()));
         }
     }
 }

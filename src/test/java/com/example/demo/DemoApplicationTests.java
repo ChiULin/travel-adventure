@@ -31,7 +31,10 @@ class DemoApplicationTests {
 	@Test
 	void journeyRequiresValidJwt() throws Exception {
 		mockMvc.perform(get("/api/journey/me"))
-				.andExpect(status().isForbidden());
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.success").value(false))
+				.andExpect(jsonPath("$.message").value("請先登入"))
+				.andExpect(jsonPath("$.data").isEmpty());
 
 		String registration = "{\"username\":\"security-test\",\"password\":\"correct-password\"}";
 		String body = mockMvc.perform(post("/api/auth/register")
@@ -48,17 +51,25 @@ class DemoApplicationTests {
 
 		mockMvc.perform(get("/api/journey/me")
 						.header("Authorization", "Bearer " + tokenMatch.group(1)))
-				.andExpect(status().isOk());
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.data.user.username").value("security-test"));
 
 		mockMvc.perform(post("/api/auth/login")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"username\":\"security-test\",\"password\":\"wrong-password\"}"))
-				.andExpect(status().isUnauthorized());
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.success").value(false))
+				.andExpect(jsonPath("$.message").isString())
+				.andExpect(jsonPath("$.data").isEmpty());
 
 		mockMvc.perform(post("/api/auth/login")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(registration))
-				.andExpect(status().isOk());
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.message").value("登入成功"))
+				.andExpect(jsonPath("$.data.token").isString());
 	}
 
 	@Test
@@ -67,17 +78,23 @@ class DemoApplicationTests {
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"username\":\"x\",\"password\":\"short\"}"))
 				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.message").isString());
+				.andExpect(jsonPath("$.success").value(false))
+				.andExpect(jsonPath("$.message").isString())
+				.andExpect(jsonPath("$.data").isEmpty());
 
 		String registration = "{\"username\":\"duplicate-test\",\"password\":\"correct-password\"}";
 		mockMvc.perform(post("/api/auth/register")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(registration))
-				.andExpect(status().isCreated());
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.data.token").isString());
 		mockMvc.perform(post("/api/auth/register")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(registration))
-				.andExpect(status().isConflict());
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.success").value(false))
+				.andExpect(jsonPath("$.data").isEmpty());
 	}
 
 }

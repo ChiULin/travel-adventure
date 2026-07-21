@@ -5,12 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface SceneRepository extends JpaRepository<Scene, Long> {
     List<Scene> findByCityId(Long cityId);
-    Optional<Scene> findFirstByName(String name);
-    boolean existsByNameAndCityId(String name, Long cityId);
     long countByCityId(Long cityId);
 }

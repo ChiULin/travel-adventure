@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.AuthRequest;
 import com.example.demo.dto.AuthResponse;
 import com.example.demo.entity.User;
@@ -23,21 +24,23 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody AuthRequest req) {
+    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody AuthRequest req) {
         try {
-            return ResponseEntity.ok(authResponse(userService.login(req.getUsername(), req.getPassword())));
+            return ResponseEntity.ok(ApiResponse.success("登入成功",
+                    authResponse(userService.login(req.getUsername(), req.getPassword()))));
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.status(401).body(ex.getMessage());
+            return ResponseEntity.status(401).body(ApiResponse.error(ex.getMessage()));
         }
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody AuthRequest req) {
+    public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody AuthRequest req) {
         try {
             return ResponseEntity.status(201)
-                    .body(authResponse(userService.register(req.getUsername(), req.getPassword())));
+                    .body(ApiResponse.success("註冊成功",
+                            authResponse(userService.register(req.getUsername(), req.getPassword()))));
         } catch (IllegalStateException ex) {
-            return ResponseEntity.status(409).body(ex.getMessage());
+            return ResponseEntity.status(409).body(ApiResponse.error(ex.getMessage()));
         }
     }
 

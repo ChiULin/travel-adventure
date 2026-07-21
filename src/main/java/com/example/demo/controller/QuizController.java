@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.ApiResponse;
 import com.example.demo.service.QuizQuestionService;
 import com.example.demo.service.UserService;
 import org.springframework.security.core.Authentication;
@@ -24,18 +25,22 @@ public class QuizController {
     }
 
     @GetMapping("/landmarks/{sceneId}/random")
-    public ResponseEntity<Map<String, Object>> randomLandmark(@PathVariable Long sceneId,
-                                                               @RequestParam(defaultValue = "CASUAL") String difficulty,
-                                                               Authentication authentication) {
-        return ResponseEntity.ok(quizQuestionService.randomSceneQuestion(
-                userService.userIdFor(authentication.getName()), sceneId, difficulty));
+    public ResponseEntity<ApiResponse<Map<String, Object>>> randomLandmark(
+            @PathVariable Long sceneId,
+            @RequestParam(defaultValue = "CASUAL") String difficulty,
+            Authentication authentication) {
+        return ResponseEntity.ok(ApiResponse.success("取得景點題目成功",
+                quizQuestionService.randomSceneQuestion(
+                        userService.userIdFor(authentication.getName()), sceneId, difficulty)));
     }
 
     @GetMapping("/cities/{cityId}/boss/random")
-    public ResponseEntity<Map<String, Object>> randomBoss(@PathVariable Long cityId,
-                                                           @RequestParam(defaultValue = "CASUAL") String difficulty,
-                                                           Authentication authentication) {
-        return ResponseEntity.ok(quizQuestionService.randomBossQuestion(
-                userService.userIdFor(authentication.getName()), cityId, difficulty));
+    public ResponseEntity<ApiResponse<Map<String, Object>>> randomBoss(
+            @PathVariable Long cityId,
+            @RequestParam(defaultValue = "CASUAL") String difficulty,
+            Authentication authentication) {
+        return ResponseEntity.ok(ApiResponse.success("取得守護者題目成功",
+                quizQuestionService.randomBossQuestion(
+                        userService.userIdFor(authentication.getName()), cityId, difficulty)));
     }
 }

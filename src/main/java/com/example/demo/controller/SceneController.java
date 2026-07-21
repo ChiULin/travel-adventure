@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.ApiResponse;
 import com.example.demo.entity.Scene;
 import com.example.demo.service.SceneService;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +22,7 @@ public class SceneController {
     }
 
     @GetMapping("/{cityId}/scenes")
-    public ResponseEntity<List<Scene>> listByCity(@PathVariable Long cityId) {
-        return ResponseEntity.ok(sceneService.listByCity(cityId));
+    public ResponseEntity<ApiResponse<List<Scene>>> listByCity(@PathVariable Long cityId) {
+        return ResponseEntity.ok(ApiResponse.success("取得景點列表成功", sceneService.listByCity(cityId)));
     }
 }

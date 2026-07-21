@@ -1,0 +1,633 @@
+.login {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background:
+        linear-gradient(120deg, rgba(14, 31, 68, .72), rgba(20, 81, 105, .56)),
+        radial-gradient(circle at 18% 20%, rgba(243, 180, 63, .28), transparent 24%),
+        radial-gradient(circle at 78% 68%, rgba(42, 174, 107, .22), transparent 28%),
+        rgba(14, 31, 68, .58);
+      backdrop-filter: blur(10px);
+    }
+
+    .login.hidden { display: none; }
+
+    .login-shell {
+      width: min(100%, 980px);
+      display: grid;
+      grid-template-columns: 420px minmax(0, 1fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .login-card {
+      width: 100%;
+      padding: 22px;
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+      animation: loginRise .36s ease both;
+    }
+
+    .login-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 4px;
+      background: linear-gradient(90deg, var(--blue), var(--green), var(--gold));
+      background-size: 180% 100%;
+      animation: routeGlow 4s ease-in-out infinite;
+    }
+
+    .login-card h2 { margin-bottom: 8px; color: var(--ink); font-size: 28px; }
+    .login-card p { color: var(--muted); line-height: 1.55; font-weight: 700; }
+    .login-card input {
+      width: 100%;
+      height: 44px;
+      margin-bottom: 10px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      outline: none;
+      transition: border-color .18s ease, box-shadow .18s ease;
+    }
+
+    .login-card input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(36, 111, 229, .13);
+    }
+
+    .login-banner {
+      min-height: 370px;
+      display: grid;
+      align-content: space-between;
+      gap: 18px;
+      padding: 22px;
+      border: 1px solid rgba(216, 229, 251, .46);
+      border-radius: 8px;
+      color: white;
+      background:
+        linear-gradient(180deg, rgba(8, 37, 72, .08), rgba(8, 37, 72, .72)),
+        linear-gradient(135deg, rgba(36, 111, 229, .88), rgba(26, 126, 103, .9)),
+        url("/images/landmarks/taipei-101.webp");
+      background-position: center;
+      background-size: cover;
+      box-shadow: 0 24px 70px rgba(7, 25, 58, .28);
+      overflow: hidden;
+      position: relative;
+      animation: loginRise .48s ease both;
+    }
+
+    .login-banner::after {
+      content: "";
+      position: absolute;
+      inset: 18px;
+      border: 1px solid rgba(255, 255, 255, .28);
+      border-radius: 8px;
+      pointer-events: none;
+    }
+
+    .login-banner h3 {
+      margin-bottom: 8px;
+      color: white;
+      font-size: 28px;
+      line-height: 1.25;
+      max-width: 12em;
+    }
+
+    .login-banner p {
+      margin-bottom: 0;
+      max-width: 28em;
+      color: rgba(255,255,255,.86);
+      font-weight: 800;
+      line-height: 1.55;
+    }
+
+    .route-map {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .route-map::before {
+      content: "";
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      top: 20px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--gold), white, var(--green));
+      opacity: .72;
+    }
+
+    .route-node {
+      display: grid;
+      justify-items: center;
+      gap: 8px;
+      color: white;
+      font-size: 12px;
+      font-weight: 900;
+      position: relative;
+      z-index: 1;
+    }
+
+    .route-dot {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 2px solid rgba(255,255,255,.76);
+      border-radius: 999px;
+      background: rgba(255,255,255,.16);
+      box-shadow: 0 8px 18px rgba(0,0,0,.18);
+    }
+
+    .login-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .login-tag {
+      padding: 7px 9px;
+      border: 1px solid rgba(255,255,255,.28);
+      border-radius: 999px;
+      background: rgba(255,255,255,.14);
+      color: white;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .error {
+      min-height: 20px;
+      margin-bottom: 8px;
+      color: var(--red);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .tutorial {
+      position: fixed;
+      inset: 0;
+      z-index: 9;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(14, 31, 68, .66);
+      backdrop-filter: blur(12px);
+    }
+
+    .tutorial.hidden { display: none; }
+
+    .tutorial-card {
+      width: min(100%, 760px);
+      max-height: min(92vh, 760px);
+      overflow: auto;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .96);
+      box-shadow: 0 24px 70px rgba(7, 25, 58, .28);
+    }
+
+    .tutorial-card h2 {
+      margin-bottom: 8px;
+      color: var(--ink);
+      font-size: 26px;
+    }
+
+    .tutorial-card > p {
+      margin-bottom: 16px;
+      color: var(--muted);
+      font-weight: 800;
+      line-height: 1.55;
+    }
+
+    .tutorial-steps {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .tutorial-step {
+      min-height: 156px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f7faff;
+    }
+
+    .tutorial-step strong {
+      display: block;
+      margin-bottom: 8px;
+      color: #123b78;
+      font-size: 14px;
+    }
+
+    .tutorial-step h3 {
+      margin-bottom: 8px;
+      color: var(--ink);
+      font-size: 18px;
+    }
+
+    .tutorial-step p {
+      margin-bottom: 0;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.55;
+      white-space: pre-line;
+    }
+
+    .result-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 11;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(14, 31, 68, .62);
+      backdrop-filter: blur(12px);
+    }
+
+    .result-modal.hidden { display: none; }
+
+    .result-card {
+      width: min(100%, 520px);
+      padding: 22px;
+      border: 1px solid rgba(243, 180, 63, .72);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.98), rgba(247,250,255,.98)),
+        white;
+      box-shadow: 0 24px 70px rgba(7, 25, 58, .32);
+      text-align: center;
+    }
+
+    .result-card.failed {
+      border-color: rgba(217, 67, 78, .68);
+    }
+
+    .result-card h2 {
+      margin-bottom: 8px;
+      color: var(--ink);
+      font-size: 26px;
+    }
+
+    .result-card h3 {
+      margin-bottom: 14px;
+      color: #123b78;
+      font-size: 20px;
+    }
+
+    .result-rewards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    .result-reward {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f7faff;
+      font-weight: 900;
+    }
+
+    .result-highlight {
+      margin: 12px 0;
+      padding: 12px;
+      border-radius: 8px;
+      color: #74510d;
+      background: #fff6dc;
+      font-weight: 900;
+      line-height: 1.5;
+    }
+
+    .result-highlight.failed {
+      color: #8a1f2a;
+      background: #ffe5e8;
+    }
+
+    .result-card p {
+      margin-bottom: 10px;
+      color: var(--text);
+      font-weight: 800;
+      line-height: 1.55;
+    }
+
+    .result-quote {
+      color: var(--ink);
+      font-size: 18px;
+    }
+
+    .final-ending {
+      position: fixed;
+      inset: 0;
+      z-index: 12;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background:
+        linear-gradient(180deg, rgba(8, 22, 55, .82), rgba(8, 22, 55, .72)),
+        url('/images/landmarks/taipei-101.webp') center / cover;
+      backdrop-filter: blur(10px);
+    }
+
+    .final-ending.hidden { display: none; }
+
+    .final-card {
+      width: min(100%, 920px);
+      max-height: min(94vh, 860px);
+      overflow: auto;
+      padding: 24px;
+      border: 1px solid rgba(255,255,255,.28);
+      border-radius: 8px;
+      background: rgba(255,255,255,.96);
+      box-shadow: 0 28px 82px rgba(0, 0, 0, .34);
+    }
+
+    .final-section {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--line);
+      animation: loginRise .55s ease both;
+    }
+
+    .final-section:last-child { border-bottom: 0; }
+
+    .final-hero { text-align: center; }
+
+    .final-hero h2 {
+      color: var(--ink);
+      font-size: 34px;
+      line-height: 1.18;
+    }
+
+    .final-hero p {
+      color: var(--muted);
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .final-checks, .final-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .final-check, .final-stat {
+      min-height: 58px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f7faff;
+      color: var(--ink);
+      font-weight: 900;
+    }
+
+    .final-stat span {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .final-route {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .final-city {
+      display: grid;
+      justify-items: center;
+      gap: 6px;
+      padding: 10px 6px;
+      border: 1px solid rgba(40, 168, 90, .34);
+      border-radius: 8px;
+      background: #f5fff8;
+      color: #126236;
+      font-weight: 900;
+      animation: badgePulse 1.8s ease-in-out infinite;
+      animation-delay: var(--d, 0s);
+    }
+
+    .final-title {
+      display: grid;
+      justify-items: center;
+      gap: 8px;
+      text-align: center;
+    }
+
+    .final-title strong {
+      color: var(--ink);
+      font-size: 28px;
+    }
+
+    .final-title p {
+      max-width: 620px;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.55;
+      font-weight: 900;
+    }
+
+    .final-actions {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .collection-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 11;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(14, 31, 68, .66);
+      backdrop-filter: blur(12px);
+    }
+
+    .collection-overlay.hidden { display: none; }
+
+    .collection-panel {
+      width: min(100%, 1080px);
+      max-height: min(94vh, 860px);
+      overflow: auto;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255,255,255,.97);
+      box-shadow: 0 26px 78px rgba(7, 25, 58, .32);
+    }
+
+    .collection-tabs {
+      display: flex;
+      gap: 8px;
+      margin: 14px 0;
+    }
+
+    .collection-tab {
+      min-height: 38px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f7faff;
+      color: #123b78;
+      font-weight: 900;
+    }
+
+    .collection-tab.active {
+      color: white;
+      background: linear-gradient(180deg, #246fe5, #164d9b);
+    }
+
+    .collection-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr);
+      gap: 14px;
+    }
+
+    .collection-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .collection-card {
+      min-height: 104px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f7faff;
+      text-align: left;
+      font-weight: 900;
+    }
+
+    .collection-card.locked {
+      color: #667085;
+      background: #f4f7fb;
+    }
+
+    .collection-card.active {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(36,111,229,.13);
+    }
+
+    .collection-card span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .collection-detail {
+      min-height: 360px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+    }
+
+    .collection-detail-image {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      margin-bottom: 12px;
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.08), rgba(11,35,71,.2)),
+        linear-gradient(135deg, #59baff, #4db56a);
+      background-position: center;
+      background-size: cover;
+    }
+
+    .collection-detail h3 {
+      color: var(--ink);
+      font-size: 22px;
+    }
+
+    .collection-detail p {
+      color: var(--muted);
+      font-weight: 800;
+      line-height: 1.55;
+    }
+
+    .collection-meta {
+      display: grid;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .collection-meta div {
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f7faff;
+      font-weight: 900;
+    }
+
+    @keyframes ambientSweep {
+      from { background-position: -260px 0, 0 0; }
+      to { background-position: 260px 0, 0 0; }
+    }
+
+    @keyframes routeGlow {
+      0%, 100% { background-position: 0% 50%; opacity: .72; }
+      50% { background-position: 100% 50%; opacity: 1; }
+    }
+
+    @keyframes badgePulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(36, 111, 229, .28); transform: translateY(0); }
+      50% { box-shadow: 0 0 0 8px rgba(36, 111, 229, 0); transform: translateY(-1px); }
+    }
+
+    @keyframes progressShine {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    @keyframes loginRise {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 980px) {
+      .city-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .login-shell { grid-template-columns: 1fr; }
+      .login-banner { min-height: 280px; }
+    }
+
+    @media (max-width: 640px) {
+      .app { padding: 12px; }
+      .topbar, .section-head { align-items: stretch; flex-direction: column; }
+      .brand { grid-template-columns: 44px 1fr; }
+      .brand-mark { width: 44px; height: 44px; }
+      .brand h1 { font-size: 22px; }
+      .metric-grid, .city-grid { grid-template-columns: 1fr; }
+      .achievement-grid { grid-template-columns: 1fr; }
+      .tutorial-steps { grid-template-columns: 1fr; }
+      .final-checks, .final-stats, .final-actions { grid-template-columns: 1fr; }
+      .final-route { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .collection-layout, .collection-grid { grid-template-columns: 1fr; }
+      .summary-layout { grid-template-columns: 52px 1fr; }
+      .avatar { width: 52px; height: 52px; font-size: 23px; }
+      .scene-card { grid-template-columns: 72px minmax(0, 1fr); }
+      .scene-image { width: 72px; }
+      .login { padding: 12px; align-items: start; overflow: auto; }
+      .login-shell { gap: 12px; }
+      .login-banner { min-height: 250px; padding: 18px; }
+      .route-map { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .route-map::before { display: none; }
+    }

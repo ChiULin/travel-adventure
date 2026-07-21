@@ -4,41 +4,65 @@ import com.example.demo.entity.City;
 import com.example.demo.entity.Scene;
 import com.example.demo.repository.CityRepository;
 import com.example.demo.repository.SceneRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ConcurrentHashMap;
-import java.time.Instant;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class QuizQuestionService {
+    private static final Duration LAST_QUESTION_RETENTION = Duration.ofMinutes(10);
+
     private final SceneRepository sceneRepository;
     private final CityRepository cityRepository;
     private final Map<String, IssuedQuestion> issuedQuestions = new ConcurrentHashMap<>();
-    private final Map<String, String> lastQuestionIds = new ConcurrentHashMap<>();
+    private final Map<String, LastQuestion> lastQuestionIds = new ConcurrentHashMap<>();
+    private final int maxPendingQuestionsPerPlayer;
+    private final Clock clock;
+    private final Object issuanceMonitor = new Object();
 
-    public QuizQuestionService(SceneRepository sceneRepository, CityRepository cityRepository) {
+    @Autowired
+    public QuizQuestionService(
+            SceneRepository sceneRepository,
+            CityRepository cityRepository,
+            @Value("${game.quiz.max-pending-per-player:5}") int maxPendingQuestionsPerPlayer) {
+        this(sceneRepository, cityRepository, maxPendingQuestionsPerPlayer, Clock.systemUTC());
+    }
+
+    QuizQuestionService(SceneRepository sceneRepository, CityRepository cityRepository,
+                        int maxPendingQuestionsPerPlayer, Clock clock) {
+        if (maxPendingQuestionsPerPlayer < 1) {
+            throw new IllegalArgumentException("max pending questions per player must be positive");
+        }
         this.sceneRepository = sceneRepository;
         this.cityRepository = cityRepository;
+        this.maxPendingQuestionsPerPlayer = maxPendingQuestionsPerPlayer;
+        this.clock = clock;
     }
 
     public Map<String, Object> randomSceneQuestion(Long userId, Long sceneId, String difficultyName) {
         Scene scene = sceneRepository.findById(sceneId)
                 .orElseThrow(() -> new IllegalArgumentException("scene not found"));
         List<Question> questions = sceneQuestions(scene);
-        return issueQuestion(sceneKey(userId, sceneId), questions, difficultyName);
+        return issueQuestion(userId, sceneKey(userId, sceneId), questions, difficultyName);
     }
 
     public Map<String, Object> randomBossQuestion(Long userId, Long cityId, String difficultyName) {
         City city = cityRepository.findById(cityId)
                 .orElseThrow(() -> new IllegalArgumentException("city not found"));
         List<Question> questions = bossQuestions(city);
-        return issueQuestion(bossKey(userId, cityId), questions, difficultyName);
+        return issueQuestion(userId, bossKey(userId, cityId), questions, difficultyName);
     }
 
     public boolean sceneAnswerCorrect(Long userId, Scene scene, String questionId, String answerText, String difficultyName) {
@@ -51,22 +75,40 @@ public class QuizQuestionService {
         return answerCorrect(bossQuestions(city), questionId, answerText);
     }
 
-    private Map<String, Object> issueQuestion(String key, List<Question> questions, String difficultyName) {
+    private Map<String, Object> issueQuestion(Long userId, String key, List<Question> questions, String difficultyName) {
         if (questions.isEmpty()) {
             throw new IllegalArgumentException("question bank is empty");
         }
         GameDifficulty difficulty = GameDifficulty.from(difficultyName);
-        String previousId = lastQuestionIds.get(key);
-        List<Question> candidates = questions.size() < 2 ? questions : questions.stream()
-                .filter(question -> !question.id().equals(previousId)).toList();
-        Question question = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
-        lastQuestionIds.put(key, question.id());
-        issuedQuestions.put(key, new IssuedQuestion(question.id(), difficulty, Instant.now()));
-        Map<String, Object> dto = questionDto(question);
+        Instant now = clock.instant();
+        IssuedQuestion issued;
+        Question selected;
+
+        synchronized (issuanceMonitor) {
+            removeExpiredState(now);
+            if (!issuedQuestions.containsKey(key) && pendingQuestionCount(userId) >= maxPendingQuestionsPerPlayer) {
+                throw new IllegalArgumentException("too many pending questions");
+            }
+
+            LastQuestion previous = lastQuestionIds.get(key);
+            String previousId = previous == null ? null : previous.questionId();
+            List<Question> candidates = questions.size() < 2 ? questions : questions.stream()
+                    .filter(question -> !question.id().equals(previousId)).toList();
+            selected = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
+
+            Instant expiresAt = now.plusSeconds(difficulty.seconds() + 2L);
+            issued = new IssuedQuestion(selected.id(), userId, difficulty, now, expiresAt);
+            issuedQuestions.put(key, issued);
+            lastQuestionIds.put(key, new LastQuestion(selected.id(), now.plus(LAST_QUESTION_RETENTION)));
+        }
+
+        Map<String, Object> dto = questionDto(selected);
         dto.put("difficulty", difficulty.name());
         dto.put("seconds", difficulty.seconds());
         dto.put("lives", difficulty.lives());
         dto.put("rewardPercent", difficulty.rewardPercent());
+        dto.put("issuedAt", issued.issuedAt());
+        dto.put("expiresAt", issued.expiresAt());
         return dto;
     }
 
@@ -76,9 +118,35 @@ public class QuizQuestionService {
         if (issued == null || !issued.questionId().equals(questionId) || issued.difficulty() != difficulty) {
             throw new IllegalArgumentException("question challenge does not match");
         }
-        if (Instant.now().isAfter(issued.issuedAt().plusSeconds(difficulty.seconds() + 2L))) {
+        if (!clock.instant().isBefore(issued.expiresAt())) {
             throw new IllegalArgumentException("question time expired");
         }
+    }
+
+    @Scheduled(fixedDelayString = "${game.quiz.cleanup-interval-ms:60000}")
+    public void removeExpiredQuestions() {
+        synchronized (issuanceMonitor) {
+            removeExpiredState(clock.instant());
+        }
+    }
+
+    private void removeExpiredState(Instant now) {
+        issuedQuestions.forEach((key, issued) -> {
+            if (!now.isBefore(issued.expiresAt())) {
+                issuedQuestions.remove(key, issued);
+            }
+        });
+        lastQuestionIds.forEach((key, previous) -> {
+            if (!now.isBefore(previous.expiresAt())) {
+                lastQuestionIds.remove(key, previous);
+            }
+        });
+    }
+
+    private long pendingQuestionCount(Long userId) {
+        return issuedQuestions.values().stream()
+                .filter(question -> question.userId().equals(userId))
+                .count();
     }
 
     private String sceneKey(Long userId, Long sceneId) {
@@ -219,6 +287,10 @@ public class QuizQuestionService {
         }
     }
 
-    private record IssuedQuestion(String questionId, GameDifficulty difficulty, Instant issuedAt) {
+    private record IssuedQuestion(String questionId, Long userId, GameDifficulty difficulty,
+                                  Instant issuedAt, Instant expiresAt) {
+    }
+
+    private record LastQuestion(String questionId, Instant expiresAt) {
     }
 }

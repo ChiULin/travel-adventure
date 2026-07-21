@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.ApiResponse;
 import com.example.demo.entity.City;
 import com.example.demo.service.CityService;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +21,7 @@ public class CityController {
     }
 
     @GetMapping
-    public ResponseEntity<List<City>> list() {
-        return ResponseEntity.ok(cityService.listAll());
+    public ResponseEntity<ApiResponse<List<City>>> list() {
+        return ResponseEntity.ok(ApiResponse.success("取得城市列表成功", cityService.listAll()));
     }
 }
