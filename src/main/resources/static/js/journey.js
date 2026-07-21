@@ -112,7 +112,9 @@ async function refreshState() {
         activeCityId = firstUnlocked.id;
       }
       renderAll();
-      if (!explorationMission && !explorationLoading && !explorationError) {
+      const tainanUnlocked = appState.cities.some(city => city.id === 3 && city.unlocked);
+      if (tainanUnlocked && !explorationState.mission && !explorationState.loading
+          && !explorationState.error && !explorationState.completion) {
         loadExplorationMission();
       }
       setTimeout(maybeShowFinalEnding, 0);
@@ -283,6 +285,7 @@ function renderCityCards() {
           <div class="scene-list">
             ${city.scenes.map(scene => {
               const sceneActive = activeSceneQuizId === scene.id;
+              const usesExploration = city.id === 3 && scene.id === 8;
               return `
               <article class="scene-card ${scene.checked ? "done" : ""} ${sceneActive ? "active" : ""}">
                 <div class="scene-image" ${scene.imageUrl ? `style="background-image: linear-gradient(180deg, rgba(255,255,255,.08), rgba(11,35,71,.18)), url('${escapeHtml(scene.imageUrl)}')"` : ""}></div>
@@ -292,6 +295,8 @@ function renderCityCards() {
                   <div class="reward-row"><span>EXP +${scaledReward(scene.expReward)}</span><span>金幣 +${scaledReward(scene.coinReward)}</span></div>
                   ${scene.checked ? `
                     <button class="btn full" type="button" disabled>已打卡</button>
+                  ` : usesExploration ? `
+                    <button class="btn full" type="button" data-open-exploration>接旅行委託</button>
                   ` : sceneActive ? `
                     <div class="quiz-box">
                       <strong>${escapeHtml(activeQuizQuestion?.question || scene.quizQuestion || "回答景點問題後完成打卡")}</strong>
@@ -315,6 +320,15 @@ function renderCityCards() {
 
       document.querySelectorAll("[data-start-scene-id]").forEach(button => {
         button.addEventListener("click", () => startSceneQuiz(Number(button.dataset.startSceneId)));
+      });
+
+      document.querySelectorAll("[data-open-exploration]").forEach(button => {
+        button.addEventListener("click", async () => {
+          if (!explorationState.mission && !explorationState.loading) {
+            await loadExplorationMission();
+          }
+          document.getElementById("exploration-mission")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
       });
 
       document.querySelectorAll("[data-difficulty]").forEach(button => {

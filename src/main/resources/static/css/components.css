@@ -673,6 +673,66 @@
       color: inherit;
     }
 
+    .exploration-stage {
+      margin-top: 16px;
+      padding: 18px;
+      border: 1px solid #d8ad58;
+      border-radius: 12px;
+      background: rgba(255, 247, 222, .72);
+    }
+
+    .exploration-stage.correct {
+      border-color: #91d3aa;
+      background: #eefaf2;
+    }
+
+    .exploration-stage.culture h3 {
+      margin: 12px 0;
+      color: #40301a;
+      line-height: 1.5;
+    }
+
+    .exploration-expiry {
+      margin: 12px 0 0;
+      font-size: 13px;
+    }
+
+    .exploration-complete {
+      border-color: #91d3aa;
+      background: linear-gradient(135deg, #eefaf2, #ffffff);
+    }
+
+    .exploration-rewards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin: 16px 0;
+    }
+
+    .exploration-rewards div {
+      padding: 14px;
+      border: 1px solid #a8dab9;
+      border-radius: 10px;
+      background: white;
+    }
+
+    .exploration-rewards span,
+    .exploration-rewards strong {
+      display: block;
+    }
+
+    .exploration-rewards span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .exploration-rewards strong {
+      margin-top: 5px;
+      color: #176738;
+      font-size: 18px;
+    }
+
     @keyframes ambientSweep {
       from { background-position: -260px 0, 0 0; }
       to { background-position: 260px 0, 0 0; }
@@ -716,7 +776,7 @@
       .final-checks, .final-stats, .final-actions { grid-template-columns: 1fr; }
       .final-route { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .collection-layout, .collection-grid { grid-template-columns: 1fr; }
-      .exploration-clues, .exploration-candidates { grid-template-columns: 1fr; }
+      .exploration-clues, .exploration-candidates, .exploration-rewards { grid-template-columns: 1fr; }
       .summary-layout { grid-template-columns: 52px 1fr; }
       .avatar { width: 52px; height: 52px; font-size: 23px; }
       .scene-card { grid-template-columns: 72px minmax(0, 1fr); }

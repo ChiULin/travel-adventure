@@ -51,6 +51,47 @@ public class CheckinService {
     @Transactional
     public Checkin checkin(Long userId, Long sceneId, String selectedAnswer, String selectedAnswerText,
                            String questionId, String difficultyName) {
+        CheckinContext context = prepareCheckin(userId, sceneId);
+        Checkin checkin = context.checkin();
+        Scene scene = context.scene();
+        checkin.setCheckinTime(LocalDateTime.now());
+        checkin.setSelectedAnswer(normalizeAnswer(selectedAnswer));
+
+        boolean correct = questionId == null || questionId.isBlank()
+                ? isCorrect(scene, selectedAnswer, selectedAnswerText)
+                : quizQuestionService.sceneAnswerCorrect(userId, scene, questionId, selectedAnswerText, difficultyName);
+        checkin.setQuizCorrect(correct);
+        if (!correct) {
+            return checkinRepository.save(checkin);
+        }
+
+        return completeCheckin(userId, context, GameDifficulty.from(difficultyName));
+    }
+
+    @Transactional
+    public ExplorationCheckinResult completeExploration(Long userId, Long sceneId, String difficultyName) {
+        CheckinContext context = prepareCheckin(userId, sceneId);
+        int previousLevel = context.user().getLevel() == null ? 1 : context.user().getLevel();
+        context.checkin().setCheckinTime(LocalDateTime.now());
+        context.checkin().setSelectedAnswer(null);
+        context.checkin().setQuizCorrect(true);
+
+        Checkin completed = completeCheckin(userId, context, GameDifficulty.from(difficultyName));
+        boolean bossUnlocked = userProgressRepository.findByUserIdAndCityId(userId, context.scene().getCity().getId())
+                .map(progress -> Boolean.TRUE.equals(progress.getBossUnlocked()))
+                .orElse(false);
+        int currentLevel = context.user().getLevel() == null ? previousLevel : context.user().getLevel();
+        return new ExplorationCheckinResult(
+                context.scene().getId(),
+                context.scene().getName(),
+                completed.getEarnedExp() == null ? 0 : completed.getEarnedExp(),
+                completed.getEarnedCoins() == null ? 0 : completed.getEarnedCoins(),
+                currentLevel > previousLevel,
+                bossUnlocked
+        );
+    }
+
+    private CheckinContext prepareCheckin(Long userId, Long sceneId) {
         Optional<User> ou = userRepository.findById(userId);
         Optional<Scene> os = sceneRepository.findById(sceneId);
         if (ou.isEmpty()) {
@@ -73,7 +114,7 @@ public class CheckinService {
             throw new IllegalArgumentException("scene already checked in");
         }
 
-        Checkin c = existing.orElseGet(() -> Checkin.builder()
+        Checkin checkin = existing.orElseGet(() -> Checkin.builder()
                 .user(user)
                 .scene(scene)
                 .quizCorrect(false)
@@ -81,25 +122,20 @@ public class CheckinService {
                 .earnedExp(0)
                 .earnedCoins(0)
                 .build());
-        c.setCheckinTime(LocalDateTime.now());
-        c.setSelectedAnswer(normalizeAnswer(selectedAnswer));
+        return new CheckinContext(user, scene, checkin);
+    }
 
-        boolean correct = questionId == null || questionId.isBlank()
-                ? isCorrect(scene, selectedAnswer, selectedAnswerText)
-                : quizQuestionService.sceneAnswerCorrect(userId, scene, questionId, selectedAnswerText, difficultyName);
-        c.setQuizCorrect(correct);
-        if (!correct) {
-            return checkinRepository.save(c);
-        }
-
-        GameDifficulty difficulty = GameDifficulty.from(difficultyName);
+    private Checkin completeCheckin(Long userId, CheckinContext context, GameDifficulty difficulty) {
+        User user = context.user();
+        Scene scene = context.scene();
+        Checkin checkin = context.checkin();
         int expReward = difficulty.reward(scene.getExpReward() == null ? 0 : scene.getExpReward());
         int coinReward = difficulty.reward(scene.getCoinReward() == null ? 0 : scene.getCoinReward());
-        c.setCompleted(true);
-        c.setEarnedExp(expReward);
-        c.setEarnedCoins(coinReward);
-        c.setCompletedAt(LocalDateTime.now());
-        checkinRepository.save(c);
+        checkin.setCompleted(true);
+        checkin.setEarnedExp(expReward);
+        checkin.setEarnedCoins(coinReward);
+        checkin.setCompletedAt(LocalDateTime.now());
+        checkinRepository.save(checkin);
 
         user.setExp((user.getExp() == null ? 0 : user.getExp()) + expReward);
         user.setCoins((user.getCoins() == null ? 0 : user.getCoins()) + coinReward);
@@ -109,7 +145,7 @@ public class CheckinService {
         userRepository.save(user);
         journeyStateService.updateBossUnlock(userId, scene.getCity().getId());
 
-        return c;
+        return checkin;
     }
 
     private boolean isCorrect(Scene scene, String selectedAnswer, String selectedAnswerText) {
@@ -151,5 +187,18 @@ public class CheckinService {
             return null;
         }
         return answerText.trim();
+    }
+
+    private record CheckinContext(User user, Scene scene, Checkin checkin) {
+    }
+
+    public record ExplorationCheckinResult(
+            Long sceneId,
+            String sceneName,
+            int experienceGained,
+            int coinsGained,
+            boolean levelUp,
+            boolean cityBossUnlocked
+    ) {
     }
 }
