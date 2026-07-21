@@ -4,11 +4,25 @@ async function loadExplorationMission(cityId = 3) {
       renderExplorationMission();
       try {
         explorationState.mission = await api(`/api/explorations/cities/${cityId}/random`);
+        applyExplorationProgress(explorationState.mission);
       } catch (error) {
         explorationState.error = error.message;
       } finally {
         explorationState.loading = false;
         renderExplorationMission();
+      }
+    }
+
+    function applyExplorationProgress(data) {
+      if (!data) return;
+      if (Number.isFinite(Number(data.remainingActions))) {
+        explorationState.remainingActions = Number(data.remainingActions);
+      }
+      if (Array.isArray(data.discoveredClues)) {
+        explorationState.discoveredClues = data.discoveredClues;
+      }
+      if (Number.isFinite(Number(data.wrongGuesses))) {
+        explorationState.wrongGuesses = Number(data.wrongGuesses);
       }
     }
 
@@ -71,45 +85,84 @@ async function loadExplorationMission(cityId = 3) {
               <p>${escapeHtml(mission.description)}</p>
             </div>
             <span class="status-pill ${explorationState.guessCorrect ? "challenge" : "active"}">
-              ${explorationState.guessCorrect ? "文化確認" : "調查中"}
+              ${explorationState.guessCorrect ? "文化確認" : "探索中"}
             </span>
           </div>
-          ${explorationState.guessCorrect ? renderCultureChallengeStage() : renderGuessStage(mission)}
+          ${explorationState.guessCorrect ? renderCultureChallengeStage() : renderInvestigationStage(mission)}
           ${feedback}
         </article>
       `;
 
-      document.querySelectorAll("[data-exploration-scene-id]").forEach(button => {
-        button.addEventListener("click", () => submitExplorationGuess(Number(button.dataset.explorationSceneId)));
-      });
-      document.querySelectorAll("[data-culture-answer]").forEach(button => {
-        button.addEventListener("click", () => submitCultureChallenge(button.dataset.cultureAnswer));
-      });
-      document.getElementById("startCultureChallengeBtn")?.addEventListener("click", startCultureChallenge);
-      document.getElementById("retryCultureChallengeBtn")?.addEventListener("click", retryCultureChallenge);
+      bindExplorationEvents();
     }
 
-    function renderGuessStage(mission) {
+    function renderInvestigationStage(mission) {
+      const actionDots = Array.from({ length: 4 }, (_, index) =>
+        `<span class="action-dot ${index < explorationState.remainingActions ? "available" : "used"}"></span>`
+      ).join("");
       return `
-        <div class="exploration-clues">
-          ${mission.clues.map((clue, index) => `
-            <div class="exploration-clue">
-              <span>線索 ${index + 1}</span>
-              <strong>${escapeHtml(clue)}</strong>
-            </div>
-          `).join("")}
+        <div class="exploration-action-bar">
+          <strong>剩餘探索行動：${explorationState.remainingActions}</strong>
+          <div class="action-dots" aria-label="剩餘 ${explorationState.remainingActions} 次探索行動">${actionDots}</div>
+          <span>錯誤推理：${explorationState.wrongGuesses}</span>
         </div>
-        <div class="exploration-guess">
-          <h3>你認為是哪裡？</h3>
-          <div class="exploration-candidates">
-            ${mission.candidates.map(candidate => `
-              <button class="btn ghost" type="button" data-exploration-scene-id="${candidate.sceneId}"
-                      ${explorationState.submitting ? "disabled" : ""}>
-                ${escapeHtml(candidate.name)}
-              </button>
-            `).join("")}
+
+        <section class="exploration-panel" id="investigationActions">
+          <div class="section-head">
+            <h3>選擇調查方式</h3>
+            <span>每項新調查消耗 1 次行動</span>
           </div>
+          <div class="investigation-actions">
+            ${mission.availableInvestigations.map(investigation => {
+              const discovered = discoveredClue(investigation.type);
+              return `
+                <button class="investigation-button ${discovered ? "done" : ""}" type="button"
+                        data-investigation-action="${investigation.type}"
+                        ${discovered || explorationState.submitting ? "disabled" : ""}>
+                  <strong>${discovered ? "✓ 已完成" : escapeHtml(investigation.name)}</strong>
+                  <span>${investigationHint(investigation.type)}</span>
+                </button>
+              `;
+            }).join("")}
+          </div>
+        </section>
+
+        <section class="exploration-panel traveler-notes">
+          <div class="section-head">
+            <h3>旅人筆記</h3>
+            <span>${explorationState.discoveredClues.length} / 3 條線索</span>
+          </div>
+          <div class="note-list">
+            ${mission.availableInvestigations.map(investigation => {
+              const clue = discoveredClue(investigation.type);
+              return `
+                <div class="note-item ${clue ? "discovered" : "pending"}">
+                  <span>${clue ? "✓" : "□"}</span>
+                  <strong>${escapeHtml(clue?.text || undiscoveredLabel(investigation.type))}</strong>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        </section>
+
+        <div class="exploration-decision">
+          <button class="btn ghost" id="continueInvestigatingBtn" type="button">繼續調查</button>
+          <button class="btn full" id="startReasoningBtn" type="button">開始推理</button>
         </div>
+
+        ${explorationState.reasoningStarted ? `
+          <section class="exploration-panel exploration-guess">
+            <h3>根據目前筆記，你認為是哪裡？</h3>
+            <div class="exploration-candidates">
+              ${mission.candidates.map(candidate => `
+                <button class="btn ghost" type="button" data-exploration-scene-id="${candidate.sceneId}"
+                        ${explorationState.submitting ? "disabled" : ""}>
+                  ${escapeHtml(candidate.name)}
+                </button>
+              `).join("")}
+            </div>
+          </section>
+        ` : ""}
       `;
     }
 
@@ -159,6 +212,11 @@ async function loadExplorationMission(cityId = 3) {
           <span class="exploration-kicker">旅行委託完成</span>
           <h2>探索完成！</h2>
           <p>你通過文化挑戰，已正式打卡「${escapeHtml(completion.sceneName)}」。</p>
+          <div class="exploration-grade grade-${escapeHtml(completion.explorationGrade || "c").toLowerCase()}">
+            <span>探索評價</span>
+            <strong>${escapeHtml(completion.explorationGrade || "C")}</strong>
+            <small>使用 ${completion.cluesUsed} 條線索 · 錯誤推理 ${completion.wrongGuesses} 次</small>
+          </div>
           <div class="exploration-rewards">
             <div><span>獲得 EXP</span><strong>+${formatNumber(completion.experienceGained)}</strong></div>
             <div><span>獲得金幣</span><strong>+${formatNumber(completion.coinsGained)}</strong></div>
@@ -175,22 +233,85 @@ async function loadExplorationMission(cityId = 3) {
       document.getElementById("returnTainanMapBtn").addEventListener("click", () => focusTainan("city-list"));
     }
 
-    function startCultureChallenge() {
-      explorationState.challengeStarted = true;
-      explorationState.feedback = null;
-      renderExplorationMission();
+    function bindExplorationEvents() {
+      document.querySelectorAll("[data-investigation-action]").forEach(button => {
+        button.addEventListener("click", () => submitInvestigation(button.dataset.investigationAction));
+      });
+      document.querySelectorAll("[data-exploration-scene-id]").forEach(button => {
+        button.addEventListener("click", () => submitExplorationGuess(Number(button.dataset.explorationSceneId)));
+      });
+      document.querySelectorAll("[data-culture-answer]").forEach(button => {
+        button.addEventListener("click", () => submitCultureChallenge(button.dataset.cultureAnswer));
+      });
+      document.getElementById("continueInvestigatingBtn")?.addEventListener("click", () => {
+        explorationState.reasoningStarted = false;
+        explorationState.feedback = null;
+        renderExplorationMission();
+        document.getElementById("investigationActions")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+      document.getElementById("startReasoningBtn")?.addEventListener("click", () => {
+        explorationState.reasoningStarted = true;
+        explorationState.feedback = null;
+        renderExplorationMission();
+      });
+      document.getElementById("startCultureChallengeBtn")?.addEventListener("click", () => {
+        explorationState.challengeStarted = true;
+        explorationState.feedback = null;
+        renderExplorationMission();
+      });
+      document.getElementById("retryCultureChallengeBtn")?.addEventListener("click", retryCultureChallenge);
     }
 
-    async function submitExplorationGuess(sceneId) {
-      if (!explorationState.mission || explorationState.submitting) return;
+    function discoveredClue(type) {
+      return explorationState.discoveredClues.find(clue => clue.type === type) || null;
+    }
+
+    function investigationHint(type) {
+      return ({ LOCAL: "確認所在區域", HISTORY: "追查歷史背景", VISUAL: "辨認建築外觀" })[type] || "取得旅行線索";
+    }
+
+    function undiscoveredLabel(type) {
+      return ({ LOCAL: "地點線索尚未取得", HISTORY: "歷史背景尚未確認", VISUAL: "建築外觀尚未確認" })[type] || "線索尚未取得";
+    }
+
+    async function submitInvestigation(action) {
+      const mission = explorationState.mission;
+      if (!mission || explorationState.submitting) return;
       explorationState.submitting = true;
       explorationState.feedback = null;
       renderExplorationMission();
       try {
-        const result = await api(`/api/explorations/${encodeURIComponent(explorationState.mission.missionId)}/guess`, {
+        const result = await api(`/api/explorations/${encodeURIComponent(mission.missionId)}/investigate`, {
+          method: "POST",
+          body: JSON.stringify({ action })
+        });
+        applyExplorationProgress(result);
+        explorationState.feedback = {
+          type: "correct",
+          title: result.alreadyDiscovered ? "這項調查已完成" : "發現新線索",
+          message: result.alreadyDiscovered ? "重複調查不會消耗探索行動。" : result.clue
+        };
+      } catch (error) {
+        explorationState.feedback = { type: "wrong", title: "調查失敗", message: error.message };
+        addLog(error.message);
+      } finally {
+        explorationState.submitting = false;
+        renderExplorationMission();
+      }
+    }
+
+    async function submitExplorationGuess(sceneId) {
+      const mission = explorationState.mission;
+      if (!mission || explorationState.submitting) return;
+      explorationState.submitting = true;
+      explorationState.feedback = null;
+      renderExplorationMission();
+      try {
+        const result = await api(`/api/explorations/${encodeURIComponent(mission.missionId)}/guess`, {
           method: "POST",
           body: JSON.stringify({ sceneId })
         });
+        applyExplorationProgress(result);
         explorationState.guessCorrect = result.correct;
         if (result.correct) {
           explorationState.guessedScene = result;
@@ -201,7 +322,7 @@ async function loadExplorationMission(cityId = 3) {
           explorationState.feedback = {
             type: "wrong",
             title: "推理尚未成功",
-            message: `「${result.sceneName}」不符合所有線索，再推敲一次。`
+            message: `「${result.sceneName}」與目前線索不完全吻合，剩餘 ${result.remainingActions} 次行動。`
           };
           addLog(`旅行委託推理失敗：${result.sceneName}。`);
         }
@@ -224,11 +345,7 @@ async function loadExplorationMission(cityId = 3) {
       try {
         const result = await api(`/api/explorations/${encodeURIComponent(mission.missionId)}/complete`, {
           method: "POST",
-          body: JSON.stringify({
-            questionId: challenge.questionId,
-            answer,
-            difficulty: selectedDifficulty
-          })
+          body: JSON.stringify({ questionId: challenge.questionId, answer, difficulty: selectedDifficulty })
         });
         if (!result.completed) {
           explorationState.cultureChallenge = null;
@@ -242,7 +359,7 @@ async function loadExplorationMission(cityId = 3) {
           return;
         }
         explorationState.completion = result;
-        addLog(`${result.sceneName}探索完成，獲得 EXP ${result.experienceGained}、金幣 ${result.coinsGained}。`);
+        addLog(`${result.sceneName}探索完成，獲得 ${result.explorationGrade} 評價。`);
         await refreshState();
       } catch (error) {
         explorationState.cultureChallenge = null;

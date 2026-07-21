@@ -57,21 +57,47 @@ class ExplorationIntegrationTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("取得探索任務成功"))
+                .andExpect(jsonPath("$.message").value("取得旅行委託成功"))
                 .andExpect(jsonPath("$.data.missionId").value("TAINAN-ANPING-01"))
-                .andExpect(jsonPath("$.data.clues", hasSize(3)))
+                .andExpect(jsonPath("$.data.remainingActions").value(4))
+                .andExpect(jsonPath("$.data.availableInvestigations", hasSize(3)))
+                .andExpect(jsonPath("$.data.discoveredClues", hasSize(0)))
                 .andExpect(jsonPath("$.data.candidates", hasSize(3)))
                 .andExpect(jsonPath("$.data.candidates[1].sceneId").value(8))
                 .andExpect(jsonPath("$.data.candidates[1].name").value("安平古堡"))
+                .andExpect(jsonPath("$.data.clues").doesNotExist())
                 .andExpect(jsonPath("$.data.correctSceneId").doesNotExist());
+
+        mockMvc.perform(post("/api/explorations/TAINAN-ANPING-01/investigate")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"HISTORY\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("你從歷史文獻中發現了新線索"))
+                .andExpect(jsonPath("$.data.clueType").value("HISTORY"))
+                .andExpect(jsonPath("$.data.alreadyDiscovered").value(false))
+                .andExpect(jsonPath("$.data.remainingActions").value(3))
+                .andExpect(jsonPath("$.data.discoveredClues", hasSize(1)));
+
+        mockMvc.perform(post("/api/explorations/TAINAN-ANPING-01/investigate")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"HISTORY\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("這項線索已經調查過"))
+                .andExpect(jsonPath("$.data.alreadyDiscovered").value(true))
+                .andExpect(jsonPath("$.data.remainingActions").value(3));
 
         mockMvc.perform(post("/api/explorations/TAINAN-ANPING-01/guess")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"sceneId\":7}"))
+                .content("{\"sceneId\":7}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("推理尚未成功"))
+                .andExpect(jsonPath("$.message").value("這個地點與目前線索不完全吻合"))
                 .andExpect(jsonPath("$.data.correct").value(false))
+                .andExpect(jsonPath("$.data.remainingActions").value(2))
+                .andExpect(jsonPath("$.data.wrongGuesses").value(1))
+                .andExpect(jsonPath("$.data.canContinue").value(true))
                 .andExpect(jsonPath("$.data.challenge").isEmpty());
 
         String firstChallengeBody = submitCorrectGuess(token);
@@ -81,7 +107,7 @@ class ExplorationIntegrationTest {
                         .header("Authorization", "Bearer " + otherToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(completeRequest(firstQuestionId, "荷蘭")))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.success").value(false));
 
         mockMvc.perform(post("/api/explorations/TAINAN-ANPING-01/complete")
@@ -119,6 +145,9 @@ class ExplorationIntegrationTest {
                 .andExpect(jsonPath("$.data.completed").value(true))
                 .andExpect(jsonPath("$.data.sceneId").value(8))
                 .andExpect(jsonPath("$.data.sceneName").value("安平古堡"))
+                .andExpect(jsonPath("$.data.explorationGrade").value("B"))
+                .andExpect(jsonPath("$.data.cluesUsed").value(1))
+                .andExpect(jsonPath("$.data.wrongGuesses").value(1))
                 .andExpect(jsonPath("$.data.experienceGained").value(174))
                 .andExpect(jsonPath("$.data.coinsGained").value(150))
                 .andExpect(jsonPath("$.data.levelUp").value(true))

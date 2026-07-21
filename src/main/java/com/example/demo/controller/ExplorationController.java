@@ -31,9 +31,23 @@ public class ExplorationController {
             @PathVariable Long cityId, Authentication authentication) {
         Long userId = userService.userIdFor(authentication.getName());
         return ResponseEntity.ok(ApiResponse.success(
-                "取得探索任務成功",
+                "取得旅行委託成功",
                 explorationService.randomMission(userId, cityId)
         ));
+    }
+
+    @PostMapping("/{missionId}/investigate")
+    public ResponseEntity<ApiResponse<ExplorationService.InvestigationResult>> investigate(
+            @PathVariable String missionId,
+            @Valid @RequestBody InvestigationRequest request,
+            Authentication authentication) {
+        Long userId = userService.userIdFor(authentication.getName());
+        ExplorationService.InvestigationResult result = explorationService.investigate(
+                userId, missionId, request.action());
+        String message = result.alreadyDiscovered()
+                ? "這項線索已經調查過"
+                : investigationMessage(result.clueType());
+        return ResponseEntity.ok(ApiResponse.success(message, result));
     }
 
     @PostMapping("/{missionId}/guess")
@@ -44,7 +58,9 @@ public class ExplorationController {
         Long userId = userService.userIdFor(authentication.getName());
         ExplorationService.ExplorationGuessResult result = explorationService.submitGuess(
                 userId, missionId, request.sceneId());
-        String message = result.correct() ? "推理成功，請完成文化挑戰" : "推理尚未成功";
+        String message = result.correct()
+                ? "推理成功，請完成文化挑戰"
+                : "這個地點與目前線索不完全吻合";
         return ResponseEntity.ok(ApiResponse.success(message, result));
     }
 
@@ -65,10 +81,21 @@ public class ExplorationController {
     public record ExplorationGuessRequest(@NotNull(message = "請選擇候選景點") Long sceneId) {
     }
 
+    public record InvestigationRequest(@NotBlank(message = "請選擇調查行動") String action) {
+    }
+
     public record ExplorationCompleteRequest(
             @NotBlank(message = "缺少文化挑戰題目") String questionId,
             @NotBlank(message = "請選擇文化挑戰答案") String answer,
             @NotBlank(message = "請選擇挑戰難度") String difficulty
     ) {
+    }
+
+    private String investigationMessage(ExplorationService.ClueType clueType) {
+        return switch (clueType) {
+            case LOCAL -> "你從當地居民口中發現了新線索";
+            case HISTORY -> "你從歷史文獻中發現了新線索";
+            case VISUAL -> "你從舊照片中發現了新線索";
+        };
     }
 }
