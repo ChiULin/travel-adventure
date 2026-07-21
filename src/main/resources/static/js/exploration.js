@@ -1,9 +1,11 @@
-async function loadExplorationMission(cityId = 3) {
+async function loadExplorationMission(cityId = activeCityId || 1) {
       explorationState = createExplorationState();
+      explorationState.cityId = Number(cityId);
       explorationState.loading = true;
       renderExplorationMission();
       try {
         explorationState.mission = await api(`/api/explorations/cities/${cityId}/random`);
+        explorationState.cityId = Number(explorationState.mission.cityId || cityId);
         applyExplorationProgress(explorationState.mission);
       } catch (error) {
         explorationState.error = error.message;
@@ -29,8 +31,11 @@ async function loadExplorationMission(cityId = 3) {
     function renderExplorationMission() {
       const container = document.getElementById("exploration-mission");
       if (!container || !session?.token) return;
-      const tainanUnlocked = appState?.cities?.some(city => city.id === 3 && city.unlocked);
-      if (!tainanUnlocked && !explorationState.completion) {
+      const explorationCityId = Number(explorationState.mission?.cityId || explorationState.cityId);
+      const explorationCity = appState?.cities?.find(city => city.id === explorationCityId);
+      const cityName = explorationCity?.name || "城市";
+      if ((!explorationCity?.unlocked || explorationCityId !== Number(activeCityId))
+          && !explorationState.completion) {
         container.innerHTML = "";
         return;
       }
@@ -38,7 +43,7 @@ async function loadExplorationMission(cityId = 3) {
       if (explorationState.loading) {
         container.innerHTML = `
           <div class="exploration-card">
-            <span class="exploration-kicker">台南旅行委託 · 試作版</span>
+            <span class="exploration-kicker">${escapeHtml(cityName)}旅行委託</span>
             <h2>正在接收旅行委託…</h2>
           </div>
         `;
@@ -48,13 +53,13 @@ async function loadExplorationMission(cityId = 3) {
       if (explorationState.error) {
         container.innerHTML = `
           <div class="exploration-card">
-            <span class="exploration-kicker">台南旅行委託 · 試作版</span>
+            <span class="exploration-kicker">${escapeHtml(cityName)}旅行委託</span>
             <h2>目前無法取得探索任務</h2>
             <p>${escapeHtml(explorationState.error)}</p>
             <button class="btn ghost" id="retryExplorationBtn" type="button">重新取得任務</button>
           </div>
         `;
-        document.getElementById("retryExplorationBtn").addEventListener("click", () => loadExplorationMission());
+        document.getElementById("retryExplorationBtn").addEventListener("click", () => loadExplorationMission(explorationCityId));
         return;
       }
 
@@ -78,7 +83,7 @@ async function loadExplorationMission(cityId = 3) {
 
       container.innerHTML = `
         <article class="exploration-card">
-          <span class="exploration-kicker">台南旅行委託 · 試作版</span>
+          <span class="exploration-kicker">${escapeHtml(cityName)}旅行委託</span>
           <div class="section-head">
             <div>
               <h2>${escapeHtml(mission.title)}</h2>
@@ -167,7 +172,7 @@ async function loadExplorationMission(cityId = 3) {
     }
 
     function renderCultureChallengeStage() {
-      const sceneName = explorationState.guessedScene?.sceneName || "安平古堡";
+      const sceneName = explorationState.guessedScene?.sceneName || "目標景點";
       const challenge = explorationState.cultureChallenge;
       if (!challenge) {
         return `
@@ -225,12 +230,12 @@ async function loadExplorationMission(cityId = 3) {
           ${completion.levelUp ? `<div class="exploration-result correct"><strong>LEVEL UP！</strong><span>玩家等級已提升。</span></div>` : ""}
           <div class="exploration-candidates">
             <button class="btn full" id="viewExplorationStoryBtn" type="button">查看景點故事</button>
-            <button class="btn ghost" id="returnTainanMapBtn" type="button">返回台南地圖</button>
+            <button class="btn ghost" id="returnExplorationMapBtn" type="button">返回城市地圖</button>
           </div>
         </article>
       `;
-      document.getElementById("viewExplorationStoryBtn").addEventListener("click", () => focusTainan("city-detail"));
-      document.getElementById("returnTainanMapBtn").addEventListener("click", () => focusTainan("city-list"));
+      document.getElementById("viewExplorationStoryBtn").addEventListener("click", () => focusExplorationCity("city-detail"));
+      document.getElementById("returnExplorationMapBtn").addEventListener("click", () => focusExplorationCity("city-list"));
     }
 
     function bindExplorationEvents() {
@@ -355,7 +360,7 @@ async function loadExplorationMission(cityId = 3) {
             title: "文化挑戰未通過",
             message: "答案不正確，重新取得題目後再試一次。"
           };
-          addLog("安平古堡文化挑戰答案錯誤。");
+          addLog(`${explorationState.guessedScene?.sceneName || "景點"}文化挑戰答案錯誤。`);
           return;
         }
         explorationState.completion = result;
@@ -378,10 +383,11 @@ async function loadExplorationMission(cityId = 3) {
       await submitExplorationGuess(sceneId);
     }
 
-    function focusTainan(targetId) {
-      const tainan = appState?.cities.find(city => city.id === 3);
-      if (tainan) {
-        activeCityId = tainan.id;
+    function focusExplorationCity(targetId) {
+      const cityId = Number(explorationState.mission?.cityId || explorationState.cityId);
+      const city = appState?.cities.find(item => item.id === cityId);
+      if (city) {
+        activeCityId = city.id;
         renderCityCards();
         renderCityDetail(activeCityId);
       }

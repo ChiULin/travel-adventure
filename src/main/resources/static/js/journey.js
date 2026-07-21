@@ -112,10 +112,11 @@ async function refreshState() {
         activeCityId = firstUnlocked.id;
       }
       renderAll();
-      const tainanUnlocked = appState.cities.some(city => city.id === 3 && city.unlocked);
-      if (tainanUnlocked && !explorationState.mission && !explorationState.loading
+      const explorationCity = appState.cities.find(city => city.id === activeCityId);
+      const supportsExploration = [1, 3, 5].includes(Number(explorationCity?.id));
+      if (supportsExploration && explorationCity.unlocked && !explorationState.mission && !explorationState.loading
           && !explorationState.error && !explorationState.completion) {
-        loadExplorationMission();
+        loadExplorationMission(explorationCity.id);
       }
       setTimeout(maybeShowFinalEnding, 0);
     }
@@ -285,7 +286,7 @@ function renderCityCards() {
           <div class="scene-list">
             ${city.scenes.map(scene => {
               const sceneActive = activeSceneQuizId === scene.id;
-              const usesExploration = city.id === 3 && scene.id === 8;
+              const usesExploration = [1, 8, 13].includes(Number(scene.id));
               return `
               <article class="scene-card ${scene.checked ? "done" : ""} ${sceneActive ? "active" : ""}">
                 <div class="scene-image" ${scene.imageUrl ? `style="background-image: linear-gradient(180deg, rgba(255,255,255,.08), rgba(11,35,71,.18)), url('${escapeHtml(scene.imageUrl)}')"` : ""}></div>
@@ -324,8 +325,9 @@ function renderCityCards() {
 
       document.querySelectorAll("[data-open-exploration]").forEach(button => {
         button.addEventListener("click", async () => {
-          if (!explorationState.mission && !explorationState.loading) {
-            await loadExplorationMission();
+          if ((!explorationState.mission || Number(explorationState.mission.cityId) !== Number(city.id))
+              && !explorationState.loading) {
+            await loadExplorationMission(city.id);
           }
           document.getElementById("exploration-mission")?.scrollIntoView({ behavior: "smooth", block: "start" });
         });

@@ -32,6 +32,7 @@ const SESSION_KEY = "travelAdventureApiSession";
     function createExplorationState() {
       return {
         mission: null,
+        cityId: null,
         remainingActions: 4,
         discoveredClues: [],
         wrongGuesses: 0,

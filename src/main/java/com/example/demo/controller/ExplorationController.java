@@ -46,7 +46,7 @@ public class ExplorationController {
                 userId, missionId, request.action());
         String message = result.alreadyDiscovered()
                 ? "這項線索已經調查過"
-                : investigationMessage(result.clueType());
+                : result.resultMessage();
         return ResponseEntity.ok(ApiResponse.success(message, result));
     }
 
@@ -91,11 +91,4 @@ public class ExplorationController {
     ) {
     }
 
-    private String investigationMessage(ExplorationService.ClueType clueType) {
-        return switch (clueType) {
-            case LOCAL -> "你從當地居民口中發現了新線索";
-            case HISTORY -> "你從歷史文獻中發現了新線索";
-            case VISUAL -> "你從舊照片中發現了新線索";
-        };
-    }
 }

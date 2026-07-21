@@ -1,7 +1,9 @@
 package com.example.demo.service;
 
+import com.example.demo.entity.Checkin;
 import com.example.demo.entity.UserProgress;
 import com.example.demo.repository.CheckinRepository;
+import com.example.demo.repository.SceneRepository;
 import com.example.demo.repository.UserProgressRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -13,6 +15,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -20,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -30,9 +34,11 @@ class ExplorationServiceTest {
         CheckinRepository checkinRepository = mock(CheckinRepository.class);
         UserProgressRepository progressRepository = mock(UserProgressRepository.class);
         CheckinService checkinService = mock(CheckinService.class);
+        SceneRepository sceneRepository = sceneRepository();
         MutableClock clock = new MutableClock(Instant.parse("2026-07-21T12:00:00Z"));
         ExplorationService service = new ExplorationService(
-                checkinRepository, progressRepository, checkinService, clock);
+                checkinRepository, progressRepository, checkinService,
+                new ExplorationMissionRegistry(), sceneRepository, clock);
 
         when(progressRepository.findByUserIdAndCityId(1L, 3L))
                 .thenReturn(Optional.of(UserProgress.builder().unlocked(true).build()));
@@ -54,9 +60,11 @@ class ExplorationServiceTest {
         CheckinRepository checkinRepository = mock(CheckinRepository.class);
         UserProgressRepository progressRepository = mock(UserProgressRepository.class);
         CheckinService checkinService = mock(CheckinService.class);
+        SceneRepository sceneRepository = sceneRepository();
         MutableClock clock = new MutableClock(Instant.parse("2026-07-21T12:00:00Z"));
         ExplorationService service = new ExplorationService(
-                checkinRepository, progressRepository, checkinService, clock);
+                checkinRepository, progressRepository, checkinService,
+                new ExplorationMissionRegistry(), sceneRepository, clock);
 
         when(progressRepository.findByUserIdAndCityId(1L, 3L))
                 .thenReturn(Optional.of(UserProgress.builder().unlocked(true).build()));
@@ -78,9 +86,11 @@ class ExplorationServiceTest {
         CheckinRepository checkinRepository = mock(CheckinRepository.class);
         UserProgressRepository progressRepository = mock(UserProgressRepository.class);
         CheckinService checkinService = mock(CheckinService.class);
+        SceneRepository sceneRepository = sceneRepository();
         MutableClock clock = new MutableClock(Instant.parse("2026-07-21T12:00:00Z"));
         ExplorationService service = new ExplorationService(
-                checkinRepository, progressRepository, checkinService, clock);
+                checkinRepository, progressRepository, checkinService,
+                new ExplorationMissionRegistry(), sceneRepository, clock);
 
         when(progressRepository.findByUserIdAndCityId(1L, 3L))
                 .thenReturn(Optional.of(UserProgress.builder().unlocked(true).build()));
@@ -115,6 +125,112 @@ class ExplorationServiceTest {
         assertEquals("C", completed.explorationGrade());
         assertEquals(3, completed.cluesUsed());
         assertEquals(1, completed.wrongGuesses());
+    }
+
+    @Test
+    void registryProvidesThreeCompleteCitySpecificMissions() {
+        ExplorationMissionRegistry registry = new ExplorationMissionRegistry();
+
+        assertEquals("TAIPEI-101-01", registry.findByCityId(1L).getFirst().missionKey());
+        assertEquals("TAINAN-ANPING-01", registry.findByCityId(3L).getFirst().missionKey());
+        assertEquals("HUALIEN-TAROKO-01", registry.findByCityId(5L).getFirst().missionKey());
+        assertTrue(registry.findByCityId(2L).isEmpty());
+
+        List.of(1L, 3L, 5L).forEach(cityId -> {
+            ExplorationMissionDefinition mission = registry.findByCityId(cityId).getFirst();
+            assertEquals(3, mission.investigations().size());
+            assertEquals(3, mission.investigations().stream()
+                    .map(InvestigationDefinition::type).distinct().count());
+            assertEquals(3, mission.candidateSceneIds().size());
+            assertTrue(mission.candidateSceneIds().contains(mission.targetSceneId()));
+            assertTrue(mission.cultureOptions().contains(mission.cultureAnswer()));
+        });
+    }
+
+    @Test
+    void unsupportedCityDoesNotReturnAnotherCityMission() {
+        ExplorationService service = new ExplorationService(
+                mock(CheckinRepository.class), mock(UserProgressRepository.class), mock(CheckinService.class),
+                new ExplorationMissionRegistry(), sceneRepository(), Clock.systemUTC());
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> service.randomMission(1L, 2L));
+
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+        assertEquals("這座城市目前沒有探索任務", exception.getReason());
+    }
+
+    @Test
+    void lockedCityMissionIsRejected() {
+        CheckinRepository checkinRepository = mock(CheckinRepository.class);
+        UserProgressRepository progressRepository = mock(UserProgressRepository.class);
+        ExplorationService service = new ExplorationService(
+                checkinRepository, progressRepository, mock(CheckinService.class),
+                new ExplorationMissionRegistry(), sceneRepository(), Clock.systemUTC());
+        when(progressRepository.findByUserIdAndCityId(1L, 1L)).thenReturn(Optional.empty());
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> service.randomMission(1L, 1L));
+
+        assertEquals("城市尚未解鎖", exception.getMessage());
+    }
+
+    @Test
+    void completedTargetSceneIsExcludedFromRandomMission() {
+        CheckinRepository checkinRepository = mock(CheckinRepository.class);
+        UserProgressRepository progressRepository = mock(UserProgressRepository.class);
+        ExplorationService service = new ExplorationService(
+                checkinRepository, progressRepository, mock(CheckinService.class),
+                new ExplorationMissionRegistry(), sceneRepository(), Clock.systemUTC());
+        when(progressRepository.findByUserIdAndCityId(1L, 1L))
+                .thenReturn(Optional.of(UserProgress.builder().unlocked(true).build()));
+        when(checkinRepository.findByUserIdAndSceneId(1L, 1L))
+                .thenReturn(Optional.of(Checkin.builder().completed(true).build()));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> service.randomMission(1L, 1L));
+
+        assertEquals("目前沒有未完成的探索委託", exception.getMessage());
+    }
+
+    @Test
+    void playerCanKeepIndependentMissionStateForDifferentCities() {
+        CheckinRepository checkinRepository = mock(CheckinRepository.class);
+        UserProgressRepository progressRepository = mock(UserProgressRepository.class);
+        ExplorationService service = new ExplorationService(
+                checkinRepository, progressRepository, mock(CheckinService.class),
+                new ExplorationMissionRegistry(), sceneRepository(), Clock.systemUTC());
+        when(progressRepository.findByUserIdAndCityId(1L, 1L))
+                .thenReturn(Optional.of(UserProgress.builder().unlocked(true).build()));
+        when(progressRepository.findByUserIdAndCityId(1L, 5L))
+                .thenReturn(Optional.of(UserProgress.builder().unlocked(true).build()));
+        when(checkinRepository.findByUserIdAndSceneId(1L, 1L)).thenReturn(Optional.empty());
+        when(checkinRepository.findByUserIdAndSceneId(1L, 13L)).thenReturn(Optional.empty());
+
+        var taipei = service.randomMission(1L, 1L);
+        service.investigate(1L, taipei.missionId(), "LOCAL");
+        var hualien = service.randomMission(1L, 5L);
+        service.investigate(1L, hualien.missionId(), "VISUAL");
+
+        assertEquals(ClueType.LOCAL, service.randomMission(1L, 1L).discoveredClues().getFirst().type());
+        assertEquals(ClueType.VISUAL, service.randomMission(1L, 5L).discoveredClues().getFirst().type());
+        assertEquals(3, service.randomMission(1L, 1L).remainingActions());
+        assertEquals(3, service.randomMission(1L, 5L).remainingActions());
+    }
+
+    private SceneRepository sceneRepository() {
+        SceneRepository sceneRepository = mock(SceneRepository.class);
+        when(sceneRepository.findAllById(any())).thenAnswer(invocation -> {
+            Iterable<Long> ids = invocation.getArgument(0);
+            java.util.Map<Long, String> names = java.util.Map.of(
+                    1L, "台北101", 2L, "國立故宮博物院", 3L, "西門町",
+                    7L, "赤崁樓", 8L, "安平古堡", 9L, "台南孔廟",
+                    13L, "太魯閣", 14L, "七星潭", 15L, "清水斷崖");
+            java.util.ArrayList<com.example.demo.entity.Scene> scenes = new java.util.ArrayList<>();
+            ids.forEach(id -> scenes.add(com.example.demo.entity.Scene.builder().id(id).name(names.get(id)).build()));
+            return scenes;
+        });
+        return sceneRepository;
     }
 
     private static final class MutableClock extends Clock {

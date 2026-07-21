@@ -1,6 +1,8 @@
 package com.example.demo.service;
 
+import com.example.demo.entity.Scene;
 import com.example.demo.repository.CheckinRepository;
+import com.example.demo.repository.SceneRepository;
 import com.example.demo.repository.UserProgressRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,78 +20,82 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class ExplorationService {
-    private static final Long TAINAN_CITY_ID = 3L;
     private static final int INITIAL_ACTIONS = 4;
     private static final Duration MISSION_DURATION = Duration.ofMinutes(30);
     private static final Duration CULTURE_CHALLENGE_DURATION = Duration.ofMinutes(2);
-    private static final String CULTURE_QUESTION = "安平古堡最早與哪一個歐洲國家的統治有關？";
-    private static final String CULTURE_ANSWER = "荷蘭";
-    private static final List<String> CULTURE_OPTIONS = List.of("英國", "荷蘭", "法國", "葡萄牙");
-
-    private static final List<InvestigationOption> INVESTIGATIONS = List.of(
-            new InvestigationOption(ClueType.LOCAL, "詢問當地居民"),
-            new InvestigationOption(ClueType.HISTORY, "查閱歷史文獻"),
-            new InvestigationOption(ClueType.VISUAL, "觀察舊照片")
-    );
-
-    private static final Map<ClueType, String> CLUES = Map.of(
-            ClueType.LOCAL, "這個地方位於台南安平一帶。",
-            ClueType.HISTORY, "它曾是荷蘭人在台灣建立的重要據點。",
-            ClueType.VISUAL, "可以看見紅磚城牆與古老遺跡。"
-    );
-
-    private static final ExplorationMission ANPING_MISSION = new ExplorationMission(
-            "TAINAN-ANPING-01",
-            "尋找海港旁的古老據點",
-            "尋找一座與台灣早期海上歷史有關的景點。",
-            List.of(
-                    new SceneOption(7L, "赤崁樓"),
-                    new SceneOption(8L, "安平古堡"),
-                    new SceneOption(9L, "億載金城")
-            ),
-            8L
-    );
 
     private final CheckinRepository checkinRepository;
     private final UserProgressRepository userProgressRepository;
     private final CheckinService checkinService;
+    private final ExplorationMissionRegistry missionRegistry;
+    private final SceneRepository sceneRepository;
     private final Clock clock;
     private final Map<String, ExplorationState> explorationStates = new ConcurrentHashMap<>();
 
     @Autowired
     public ExplorationService(CheckinRepository checkinRepository,
                               UserProgressRepository userProgressRepository,
-                              CheckinService checkinService) {
-        this(checkinRepository, userProgressRepository, checkinService, Clock.systemUTC());
+                              CheckinService checkinService,
+                              ExplorationMissionRegistry missionRegistry,
+                              SceneRepository sceneRepository) {
+        this(checkinRepository, userProgressRepository, checkinService,
+                missionRegistry, sceneRepository, Clock.systemUTC());
     }
 
     ExplorationService(CheckinRepository checkinRepository,
                        UserProgressRepository userProgressRepository,
                        CheckinService checkinService,
+                       ExplorationMissionRegistry missionRegistry,
+                       SceneRepository sceneRepository,
                        Clock clock) {
         this.checkinRepository = checkinRepository;
         this.userProgressRepository = userProgressRepository;
         this.checkinService = checkinService;
+        this.missionRegistry = missionRegistry;
+        this.sceneRepository = sceneRepository;
         this.clock = clock;
     }
 
     public ExplorationMissionView randomMission(Long userId, Long cityId) {
-        if (!TAINAN_CITY_ID.equals(cityId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "目前只有台南探索試作任務");
+        List<ExplorationMissionDefinition> cityMissions = missionRegistry.findByCityId(cityId);
+        if (cityMissions.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "這座城市目前沒有探索任務");
         }
-        validateCityUnlocked(userId);
-        validateSceneNotCompleted(userId);
+        validateCityUnlocked(userId, cityId);
 
-        String key = stateKey(userId, ANPING_MISSION.missionId());
+        List<ExplorationMissionDefinition> available = cityMissions.stream()
+                .filter(mission -> !sceneCompleted(userId, mission.targetSceneId()))
+                .toList();
+        if (available.isEmpty()) {
+            throw new IllegalArgumentException("目前沒有未完成的探索委託");
+        }
+
         Instant now = clock.instant();
-        ExplorationState state = explorationStates.compute(key, (ignored, existing) -> {
-            if (existing == null || !now.isBefore(existing.expiresAt)) {
-                return new ExplorationState(userId, ANPING_MISSION, now, now.plus(MISSION_DURATION));
+        ExplorationState existing = available.stream()
+                .map(mission -> explorationStates.get(stateKey(userId, mission.missionKey())))
+                .filter(state -> state != null && !state.completed && now.isBefore(state.expiresAt))
+                .findFirst()
+                .orElse(null);
+        if (existing != null) {
+            synchronized (existing) {
+                return missionView(existing);
             }
-            return existing;
+        }
+
+        ExplorationMissionDefinition selected = available.get(
+                ThreadLocalRandom.current().nextInt(available.size()));
+        String key = stateKey(userId, selected.missionKey());
+        ExplorationState state = explorationStates.compute(key, (ignored, current) -> {
+            if (current == null || current.completed || !now.isBefore(current.expiresAt)) {
+                return new ExplorationState(userId, selected, now, now.plus(MISSION_DURATION));
+            }
+            return current;
         });
         synchronized (state) {
             return missionView(state);
@@ -101,6 +107,7 @@ public class ExplorationService {
         ClueType clueType = clueType(actionName);
         synchronized (state) {
             validateInvestigationOpen(state);
+            InvestigationDefinition investigation = investigation(state.mission, clueType);
             boolean alreadyDiscovered = state.discoveredClues.contains(clueType);
             if (!alreadyDiscovered) {
                 if (state.remainingActions > 0) {
@@ -111,7 +118,8 @@ public class ExplorationService {
             }
             return new InvestigationResult(
                     clueType,
-                    CLUES.get(clueType),
+                    investigation.clueText(),
+                    investigation.resultMessage(),
                     alreadyDiscovered,
                     state.remainingActions,
                     discoveredClueViews(state),
@@ -122,20 +130,20 @@ public class ExplorationService {
 
     public ExplorationGuessResult submitGuess(Long userId, String missionId, Long sceneId) {
         ExplorationState state = activeState(userId, missionId);
-        validateSceneNotCompleted(userId);
-        SceneOption selected = state.mission.candidates().stream()
+        validateSceneNotCompleted(userId, state.mission);
+        SceneOption selected = candidateOptions(state.mission).stream()
                 .filter(candidate -> candidate.sceneId().equals(sceneId))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("候選景點不在這次委託中"));
+                .orElseThrow(() -> new IllegalArgumentException("選擇的地點不在本次候選清單中"));
 
         synchronized (state) {
             if (state.completed) {
-                throw new IllegalArgumentException("探索任務已完成");
+                throw new IllegalArgumentException("旅行委託已經完成");
             }
-            boolean correct = state.mission.correctSceneId().equals(sceneId);
+            boolean correct = state.mission.targetSceneId().equals(sceneId);
             if (state.reasoningCompleted) {
                 if (!correct) {
-                    throw new IllegalArgumentException("景點推理已完成");
+                    throw new IllegalArgumentException("景點推理已經完成");
                 }
                 CultureChallengeView challenge = currentOrNewCultureChallenge(state);
                 return guessResult(state, selected, true, challenge);
@@ -165,10 +173,10 @@ public class ExplorationService {
             }
             PendingCultureChallenge pending = state.pendingChallenge;
             if (pending == null) {
-                throw new IllegalArgumentException("請先取得文化挑戰");
+                throw new IllegalArgumentException("請先取得文化挑戰題目");
             }
             if (!pending.questionId().equals(questionId)) {
-                throw new IllegalArgumentException("文化挑戰題目不符");
+                throw new IllegalArgumentException("文化挑戰題目無效");
             }
             if (!clock.instant().isBefore(pending.expiresAt())) {
                 state.pendingChallenge = null;
@@ -177,11 +185,11 @@ public class ExplorationService {
 
             state.pendingChallenge = null;
             if (!pending.correctAnswer().equals(normalize(answer))) {
-                return ExplorationCompletionResult.incorrect(state);
+                return ExplorationCompletionResult.incorrect(state, targetSceneName(state.mission));
             }
 
             CheckinService.ExplorationCheckinResult checkin = checkinService.completeExploration(
-                    userId, state.mission.correctSceneId(), difficulty);
+                    userId, state.mission.targetSceneId(), difficulty);
             state.completed = true;
             return new ExplorationCompletionResult(
                     true,
@@ -219,31 +227,32 @@ public class ExplorationService {
         String key = stateKey(userId, missionId);
         ExplorationState state = explorationStates.get(key);
         if (state == null) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "請先取得旅行委託");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "請先接取自己的旅行委託");
         }
         if (!clock.instant().isBefore(state.expiresAt)) {
             explorationStates.remove(key, state);
-            throw new ResponseStatusException(HttpStatus.GONE, "旅行委託已過期，請重新取得");
+            throw new ResponseStatusException(HttpStatus.GONE, "旅行委託已過期，請重新接取");
         }
         return state;
     }
 
-    private ExplorationMission mission(String missionId) {
-        if (!ANPING_MISSION.missionId().equals(missionId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "找不到探索任務");
-        }
-        return ANPING_MISSION;
+    private ExplorationMissionDefinition mission(String missionId) {
+        return missionRegistry.findByKey(missionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "找不到旅行委託"));
     }
 
     private ExplorationMissionView missionView(ExplorationState state) {
         return new ExplorationMissionView(
-                state.mission.missionId(),
+                state.mission.missionKey(),
+                state.mission.cityId(),
                 state.mission.title(),
                 state.mission.description(),
                 state.remainingActions,
-                INVESTIGATIONS,
+                state.mission.investigations().stream()
+                        .map(definition -> new InvestigationOption(definition.type(), definition.actionName()))
+                        .toList(),
                 discoveredClueViews(state),
-                state.mission.candidates(),
+                candidateOptions(state.mission),
                 state.wrongGuesses,
                 true,
                 state.createdAt,
@@ -255,7 +264,7 @@ public class ExplorationService {
                                                boolean correct, CultureChallengeView challenge) {
         return new ExplorationGuessResult(
                 correct,
-                state.mission.missionId(),
+                state.mission.missionKey(),
                 selected.sceneId(),
                 selected.name(),
                 state.remainingActions,
@@ -269,33 +278,63 @@ public class ExplorationService {
     private CultureChallengeView currentOrNewCultureChallenge(ExplorationState state) {
         PendingCultureChallenge pending = state.pendingChallenge;
         if (pending != null && clock.instant().isBefore(pending.expiresAt())) {
-            return challengeView(pending);
+            return challengeView(state.mission, pending);
         }
         return issueCultureChallenge(state);
     }
 
     private CultureChallengeView issueCultureChallenge(ExplorationState state) {
         PendingCultureChallenge pending = new PendingCultureChallenge(
-                UUID.randomUUID().toString(), CULTURE_ANSWER,
+                UUID.randomUUID().toString(), state.mission.cultureAnswer(),
                 clock.instant().plus(CULTURE_CHALLENGE_DURATION));
         state.pendingChallenge = pending;
         state.cultureChallengeIssued = true;
-        return challengeView(pending);
+        return challengeView(state.mission, pending);
     }
 
-    private CultureChallengeView challengeView(PendingCultureChallenge pending) {
+    private CultureChallengeView challengeView(ExplorationMissionDefinition mission,
+                                               PendingCultureChallenge pending) {
         return new CultureChallengeView(
-                pending.questionId(), CULTURE_QUESTION, CULTURE_OPTIONS, pending.expiresAt());
+                pending.questionId(), mission.cultureQuestion(), mission.cultureOptions(), pending.expiresAt());
+    }
+
+    private List<SceneOption> candidateOptions(ExplorationMissionDefinition mission) {
+        Map<Long, Scene> scenesById = sceneRepository.findAllById(mission.candidateSceneIds()).stream()
+                .collect(Collectors.toMap(Scene::getId, Function.identity()));
+        return mission.candidateSceneIds().stream()
+                .map(sceneId -> {
+                    Scene scene = scenesById.get(sceneId);
+                    if (scene == null) {
+                        throw new IllegalStateException("探索任務候選景點設定不完整：" + mission.missionKey());
+                    }
+                    return new SceneOption(scene.getId(), scene.getName());
+                })
+                .toList();
+    }
+
+    private String targetSceneName(ExplorationMissionDefinition mission) {
+        return candidateOptions(mission).stream()
+                .filter(candidate -> candidate.sceneId().equals(mission.targetSceneId()))
+                .map(SceneOption::name)
+                .findFirst()
+                .orElse("景點");
     }
 
     private List<ClueView> discoveredClueViews(ExplorationState state) {
         List<ClueView> result = new ArrayList<>();
         for (ClueType type : ClueType.values()) {
             if (state.discoveredClues.contains(type)) {
-                result.add(new ClueView(type, CLUES.get(type)));
+                result.add(new ClueView(type, investigation(state.mission, type).clueText()));
             }
         }
         return List.copyOf(result);
+    }
+
+    private InvestigationDefinition investigation(ExplorationMissionDefinition mission, ClueType type) {
+        return mission.investigations().stream()
+                .filter(definition -> definition.type() == type)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("探索任務缺少調查設定：" + type));
     }
 
     private void revealAllCluesWhenActionsExhausted(ExplorationState state) {
@@ -307,10 +346,10 @@ public class ExplorationService {
 
     private void validateInvestigationOpen(ExplorationState state) {
         if (state.completed) {
-            throw new IllegalArgumentException("探索任務已完成");
+            throw new IllegalArgumentException("旅行委託已經完成");
         }
         if (state.reasoningCompleted) {
-            throw new IllegalArgumentException("景點推理已完成");
+            throw new IllegalArgumentException("景點推理已經完成");
         }
     }
 
@@ -336,21 +375,24 @@ public class ExplorationService {
         return "S";
     }
 
-    private void validateSceneNotCompleted(Long userId) {
-        boolean completed = checkinRepository.findByUserIdAndSceneId(userId, ANPING_MISSION.correctSceneId())
-                .map(checkin -> Boolean.TRUE.equals(checkin.getCompleted()))
-                .orElse(false);
-        if (completed) {
-            throw new IllegalArgumentException("目前沒有未完成的探索委託");
+    private void validateSceneNotCompleted(Long userId, ExplorationMissionDefinition mission) {
+        if (sceneCompleted(userId, mission.targetSceneId())) {
+            throw new IllegalArgumentException("這個景點已經完成探索");
         }
     }
 
-    private void validateCityUnlocked(Long userId) {
-        boolean unlocked = userProgressRepository.findByUserIdAndCityId(userId, TAINAN_CITY_ID)
+    private boolean sceneCompleted(Long userId, Long sceneId) {
+        return checkinRepository.findByUserIdAndSceneId(userId, sceneId)
+                .map(checkin -> Boolean.TRUE.equals(checkin.getCompleted()))
+                .orElse(false);
+    }
+
+    private void validateCityUnlocked(Long userId, Long cityId) {
+        boolean unlocked = userProgressRepository.findByUserIdAndCityId(userId, cityId)
                 .map(progress -> Boolean.TRUE.equals(progress.getUnlocked()))
                 .orElse(false);
         if (!unlocked) {
-            throw new IllegalArgumentException("台南尚未解鎖");
+            throw new IllegalArgumentException("城市尚未解鎖");
         }
     }
 
@@ -362,21 +404,6 @@ public class ExplorationService {
         return answer == null ? "" : answer.trim();
     }
 
-    public enum ClueType {
-        LOCAL,
-        HISTORY,
-        VISUAL
-    }
-
-    private record ExplorationMission(
-            String missionId,
-            String title,
-            String description,
-            List<SceneOption> candidates,
-            Long correctSceneId
-    ) {
-    }
-
     private record PendingCultureChallenge(
             String questionId,
             String correctAnswer,
@@ -386,7 +413,7 @@ public class ExplorationService {
 
     private static final class ExplorationState {
         private final Long userId;
-        private final ExplorationMission mission;
+        private final ExplorationMissionDefinition mission;
         private final Instant createdAt;
         private final Instant expiresAt;
         private int remainingActions = INITIAL_ACTIONS;
@@ -398,7 +425,8 @@ public class ExplorationService {
         private boolean actionsExhausted;
         private PendingCultureChallenge pendingChallenge;
 
-        private ExplorationState(Long userId, ExplorationMission mission, Instant createdAt, Instant expiresAt) {
+        private ExplorationState(Long userId, ExplorationMissionDefinition mission,
+                                 Instant createdAt, Instant expiresAt) {
             this.userId = userId;
             this.mission = mission;
             this.createdAt = createdAt;
@@ -408,6 +436,7 @@ public class ExplorationService {
 
     public record ExplorationMissionView(
             String missionId,
+            Long cityId,
             String title,
             String description,
             int remainingActions,
@@ -433,6 +462,7 @@ public class ExplorationService {
     public record InvestigationResult(
             ClueType clueType,
             String clue,
+            String resultMessage,
             boolean alreadyDiscovered,
             int remainingActions,
             List<ClueView> discoveredClues,
@@ -474,16 +504,11 @@ public class ExplorationService {
             boolean levelUp,
             boolean cityBossUnlocked
     ) {
-        private static ExplorationCompletionResult incorrect(ExplorationState state) {
-            String sceneName = state.mission.candidates().stream()
-                    .filter(candidate -> candidate.sceneId().equals(state.mission.correctSceneId()))
-                    .map(SceneOption::name)
-                    .findFirst()
-                    .orElse("景點");
+        private static ExplorationCompletionResult incorrect(ExplorationState state, String sceneName) {
             return new ExplorationCompletionResult(
                     false,
                     false,
-                    state.mission.correctSceneId(),
+                    state.mission.targetSceneId(),
                     sceneName,
                     null,
                     state.discoveredClues.size(),

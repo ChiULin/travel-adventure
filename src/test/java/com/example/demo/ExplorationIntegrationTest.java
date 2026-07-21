@@ -49,7 +49,7 @@ class ExplorationIntegrationTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.message").value("台南尚未解鎖"));
+                .andExpect(jsonPath("$.message").value("城市尚未解鎖"));
 
         unlockTainan(user.getId());
 
@@ -100,7 +100,8 @@ class ExplorationIntegrationTest {
                 .andExpect(jsonPath("$.data.canContinue").value(true))
                 .andExpect(jsonPath("$.data.challenge").isEmpty());
 
-        String firstChallengeBody = submitCorrectGuess(token);
+        String firstChallengeBody = submitCorrectGuess(
+                token, "TAINAN-ANPING-01", 8L, "安平古堡");
         String firstQuestionId = extract(firstChallengeBody, "questionId");
 
         mockMvc.perform(post("/api/explorations/TAINAN-ANPING-01/complete")
@@ -129,7 +130,8 @@ class ExplorationIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false));
 
-        String secondChallengeBody = submitCorrectGuess(token);
+        String secondChallengeBody = submitCorrectGuess(
+                token, "TAINAN-ANPING-01", 8L, "安平古堡");
         String secondQuestionId = extract(secondChallengeBody, "questionId");
         if (firstQuestionId.equals(secondQuestionId)) {
             throw new AssertionError("A retried challenge must receive a new question id");
@@ -165,17 +167,92 @@ class ExplorationIntegrationTest {
                 .andExpect(jsonPath("$.message").value("目前沒有未完成的探索委託"));
     }
 
-    private String submitCorrectGuess(String token) throws Exception {
-        return mockMvc.perform(post("/api/explorations/TAINAN-ANPING-01/guess")
+    @Test
+    void cityMissionsRemainIsolatedAndCompleteTheirOwnScenes() throws Exception {
+        String token = registerAndGetToken("multi-explore");
+        User user = userRepository.findByUsername("multi-explore").orElseThrow();
+        unlockCity(user.getId(), 5L);
+
+        mockMvc.perform(get("/api/explorations/cities/1/random")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.missionId").value("TAIPEI-101-01"))
+                .andExpect(jsonPath("$.data.cityId").value(1))
+                .andExpect(jsonPath("$.data.availableInvestigations", hasSize(3)))
+                .andExpect(jsonPath("$.data.candidates", hasSize(3)))
+                .andExpect(jsonPath("$.data.candidates[0].sceneId").value(1))
+                .andExpect(jsonPath("$.data.candidates[1].sceneId").value(2))
+                .andExpect(jsonPath("$.data.candidates[2].sceneId").value(3))
+                .andExpect(jsonPath("$.data.correctSceneId").doesNotExist())
+                .andExpect(jsonPath("$.data.cultureAnswer").doesNotExist());
+
+        mockMvc.perform(get("/api/explorations/cities/5/random")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.missionId").value("HUALIEN-TAROKO-01"))
+                .andExpect(jsonPath("$.data.cityId").value(5))
+                .andExpect(jsonPath("$.data.availableInvestigations", hasSize(3)))
+                .andExpect(jsonPath("$.data.candidates", hasSize(3)))
+                .andExpect(jsonPath("$.data.candidates[0].sceneId").value(13))
+                .andExpect(jsonPath("$.data.candidates[1].sceneId").value(14))
+                .andExpect(jsonPath("$.data.candidates[2].sceneId").value(15))
+                .andExpect(jsonPath("$.data.correctSceneId").doesNotExist())
+                .andExpect(jsonPath("$.data.cultureAnswer").doesNotExist());
+
+        mockMvc.perform(post("/api/explorations/TAIPEI-101-01/guess")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"sceneId\":8}"))
+                        .content("{\"sceneId\":13}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("選擇的地點不在本次候選清單中"));
+
+        String taipeiChallenge = submitCorrectGuess(token, "TAIPEI-101-01", 1L, "台北101");
+        String tarokoChallenge = submitCorrectGuess(token, "HUALIEN-TAROKO-01", 13L, "太魯閣");
+        String taipeiQuestionId = extract(taipeiChallenge, "questionId");
+        String tarokoQuestionId = extract(tarokoChallenge, "questionId");
+
+        mockMvc.perform(post("/api/explorations/HUALIEN-TAROKO-01/complete")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(completeRequest(taipeiQuestionId, "立霧溪")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("文化挑戰題目無效"));
+
+        mockMvc.perform(post("/api/explorations/TAIPEI-101-01/complete")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(completeRequest(taipeiQuestionId, "竹子")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.completed").value(true))
+                .andExpect(jsonPath("$.data.sceneId").value(1))
+                .andExpect(jsonPath("$.data.sceneName").value("台北101"));
+
+        mockMvc.perform(post("/api/explorations/HUALIEN-TAROKO-01/complete")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(completeRequest(tarokoQuestionId, "立霧溪")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.completed").value(true))
+                .andExpect(jsonPath("$.data.sceneId").value(13))
+                .andExpect(jsonPath("$.data.sceneName").value("太魯閣"));
+
+        if (!checkinRepository.existsByUserIdAndSceneId(user.getId(), 1L)
+                || !checkinRepository.existsByUserIdAndSceneId(user.getId(), 13L)) {
+            throw new AssertionError("Each mission must create a checkin for its own target scene");
+        }
+    }
+
+    private String submitCorrectGuess(String token, String missionId, Long sceneId, String sceneName) throws Exception {
+        return mockMvc.perform(post("/api/explorations/" + missionId + "/guess")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"sceneId\":" + sceneId + "}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("推理成功，請完成文化挑戰"))
                 .andExpect(jsonPath("$.data.correct").value(true))
-                .andExpect(jsonPath("$.data.missionId").value("TAINAN-ANPING-01"))
-                .andExpect(jsonPath("$.data.sceneId").value(8))
-                .andExpect(jsonPath("$.data.sceneName").value("安平古堡"))
+                .andExpect(jsonPath("$.data.missionId").value(missionId))
+                .andExpect(jsonPath("$.data.sceneId").value(sceneId))
+                .andExpect(jsonPath("$.data.sceneName").value(sceneName))
                 .andExpect(jsonPath("$.data.challenge.questionId").isString())
                 .andExpect(jsonPath("$.data.challenge.question").isString())
                 .andExpect(jsonPath("$.data.challenge.options", hasSize(4)))
@@ -199,7 +276,11 @@ class ExplorationIntegrationTest {
     }
 
     private void unlockTainan(Long userId) {
-        UserProgress progress = userProgressRepository.findByUserIdAndCityId(userId, 3L).orElseThrow();
+        unlockCity(userId, 3L);
+    }
+
+    private void unlockCity(Long userId, Long cityId) {
+        UserProgress progress = userProgressRepository.findByUserIdAndCityId(userId, cityId).orElseThrow();
         progress.setUnlocked(true);
         userProgressRepository.save(progress);
     }
