@@ -97,20 +97,6 @@ class StageChallengeIntegrationTest {
     }
 
     @Test
-    void unconfiguredCityKeepsExistingExplorationBehavior() throws Exception {
-        String token = registerAndGetToken("stage-compatible");
-        User user = userRepository.findByUsername("stage-compatible").orElseThrow();
-        var progress = userProgressRepository.findByUserIdAndCityId(user.getId(), 6L).orElseThrow();
-        progress.setUnlocked(true);
-        userProgressRepository.save(progress);
-
-        mockMvc.perform(get("/api/explorations/cities/6/random")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.missionId").value("PENGHU-DOUBLE-HEART-01"));
-    }
-
-    @Test
     void newPlayerJourneyReturnsOrderedConfiguredStageMetadata() throws Exception {
         String token = registerAndGetToken("journey-new-user");
 
@@ -198,8 +184,22 @@ class StageChallengeIntegrationTest {
                 .andExpect(jsonPath("$.data.cities[4].bossStage.cityId").value(5))
                 .andExpect(jsonPath("$.data.cities[4].bossStage.stageOrder").value(4))
                 .andExpect(jsonPath("$.data.cities[4].bossStage.stageStatus").value("LOCKED"))
-                .andExpect(jsonPath("$.data.cities[5].scenes[0].stageConfigured").value(false))
-                .andExpect(jsonPath("$.data.cities[5].bossStage").value((Object) null));
+                .andExpect(jsonPath("$.data.cities[5].scenes[0].id").value(16))
+                .andExpect(jsonPath("$.data.cities[5].scenes[0].stageConfigured").value(true))
+                .andExpect(jsonPath("$.data.cities[5].scenes[0].stageOrder").value(1))
+                .andExpect(jsonPath("$.data.cities[5].scenes[0].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[5].scenes[0].interactionType").value("EXPLORATION"))
+                .andExpect(jsonPath("$.data.cities[5].scenes[1].id").value(17))
+                .andExpect(jsonPath("$.data.cities[5].scenes[1].stageOrder").value(2))
+                .andExpect(jsonPath("$.data.cities[5].scenes[1].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[5].scenes[1].interactionType").value("QUIZ"))
+                .andExpect(jsonPath("$.data.cities[5].scenes[2].id").value(18))
+                .andExpect(jsonPath("$.data.cities[5].scenes[2].stageOrder").value(3))
+                .andExpect(jsonPath("$.data.cities[5].scenes[2].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[5].scenes[2].interactionType").value("QUIZ"))
+                .andExpect(jsonPath("$.data.cities[5].bossStage.cityId").value(6))
+                .andExpect(jsonPath("$.data.cities[5].bossStage.stageOrder").value(4))
+                .andExpect(jsonPath("$.data.cities[5].bossStage.stageStatus").value("LOCKED"));
     }
 
     @Test
@@ -319,12 +319,12 @@ class StageChallengeIntegrationTest {
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"action\":\"HISTORY\"}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().is4xxClientError());
         mockMvc.perform(post("/api/explorations/TAINAN-ANPING-01/guess")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"sceneId\":8}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().is4xxClientError());
         assertNoCheckin(user.getId(), 8L);
 
         saveCheckin(user, 7L, true);
@@ -519,12 +519,12 @@ class StageChallengeIntegrationTest {
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"action\":\"LOCAL\"}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().is4xxClientError());
         mockMvc.perform(post("/api/explorations/HUALIEN-TAROKO-01/guess")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"sceneId\":13}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().is4xxClientError());
         assertNoCheckin(user.getId(), 13L);
 
         unlockCity(user, 5L);
@@ -616,6 +616,117 @@ class StageChallengeIntegrationTest {
         saveCheckin(user, 13L, false);
 
         assertLocked(get("/api/quizzes/landmarks/14/random?difficulty=NORMAL"), token);
+    }
+
+    @Test
+    void penghuChallengeApisEnforceStageOrderWithoutCreatingLockedExplorationState() throws Exception {
+        String token = registerAndGetToken("penghu-api-player");
+        User user = userRepository.findByUsername("penghu-api-player").orElseThrow();
+
+        mockMvc.perform(get("/api/explorations/cities/6/random")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/explorations/PENGHU-DOUBLE-HEART-01/investigate")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"LOCAL\"}"))
+                .andExpect(status().is4xxClientError());
+        mockMvc.perform(post("/api/explorations/PENGHU-DOUBLE-HEART-01/guess")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"sceneId\":16}"))
+                .andExpect(status().is4xxClientError());
+        assertNoCheckin(user.getId(), 16L);
+
+        unlockCity(user, 6L);
+
+        mockMvc.perform(get("/api/explorations/cities/6/random")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.missionId").value("PENGHU-DOUBLE-HEART-01"));
+
+        assertLocked(get("/api/quizzes/landmarks/17/random?difficulty=NORMAL"), token);
+        assertNoCheckin(user.getId(), 17L);
+
+        saveCheckin(user, 16L, true);
+
+        mockMvc.perform(get("/api/quizzes/landmarks/17/random?difficulty=NORMAL")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.questionId").isString());
+        assertLocked(get("/api/quizzes/landmarks/18/random?difficulty=NORMAL"), token);
+
+        saveCheckin(user, 17L, true);
+
+        mockMvc.perform(get("/api/quizzes/landmarks/18/random?difficulty=NORMAL")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.questionId").isString());
+        assertNoCheckin(user.getId(), 18L);
+    }
+
+    @Test
+    void penghuJourneyUnlocksStagesAndBossInOrder() throws Exception {
+        String token = registerAndGetToken("penghu-journey");
+        User user = userRepository.findByUsername("penghu-journey").orElseThrow();
+
+        unlockCity(user, 6L);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[5].scenes[0].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[5].scenes[1].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[5].scenes[2].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[5].bossStage.stageStatus").value("LOCKED"));
+
+        saveCheckin(user, 16L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[5].scenes[0].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[5].scenes[1].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[5].scenes[2].stageStatus").value("LOCKED"));
+
+        saveCheckin(user, 17L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[5].scenes[1].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[5].scenes[2].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[5].bossStage.stageStatus").value("LOCKED"));
+
+        saveCheckin(user, 18L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[5].scenes[2].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[5].bossStage.stageStatus").value("AVAILABLE"));
+    }
+
+    @Test
+    void anotherPlayersPenghuCheckinDoesNotUnlockGreatBridge() throws Exception {
+        registerAndGetToken("penghu-owner");
+        String otherToken = registerAndGetToken("penghu-other");
+        User owner = userRepository.findByUsername("penghu-owner").orElseThrow();
+        User other = userRepository.findByUsername("penghu-other").orElseThrow();
+        unlockCity(other, 6L);
+        saveCheckin(owner, 16L, true);
+
+        assertLocked(get("/api/quizzes/landmarks/17/random?difficulty=NORMAL"), otherToken);
+    }
+
+    @Test
+    void incompleteStoneWeirCheckinDoesNotUnlockGreatBridge() throws Exception {
+        String token = registerAndGetToken("penghu-incomplete");
+        User user = userRepository.findByUsername("penghu-incomplete").orElseThrow();
+        unlockCity(user, 6L);
+        saveCheckin(user, 16L, false);
+
+        assertLocked(get("/api/quizzes/landmarks/17/random?difficulty=NORMAL"), token);
     }
 
     @Test

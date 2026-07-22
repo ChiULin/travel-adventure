@@ -129,8 +129,21 @@ class LandmarkStageRegistryTest {
     }
 
     @Test
-    void unconfiguredCityShouldNotBeFullyConfigured() {
-        assertFalse(registry.isCityFullyConfigured(PENGHU_CITY_ID));
+    void penghuShouldBeFullyConfigured() {
+        assertTrue(registry.isCityFullyConfigured(PENGHU_CITY_ID));
+    }
+
+    @Test
+    void penghuStagesShouldUseConfiguredLandmarkOrder() {
+        var stages = registry.findByCityId(PENGHU_CITY_ID);
+
+        assertEquals(3, stages.size());
+        assertEquals(16L, stages.get(0).landmarkId());
+        assertEquals(1, stages.get(0).stageOrder());
+        assertEquals(17L, stages.get(1).landmarkId());
+        assertEquals(2, stages.get(1).stageOrder());
+        assertEquals(18L, stages.get(2).landmarkId());
+        assertEquals(3, stages.get(2).stageOrder());
     }
 
     @Test

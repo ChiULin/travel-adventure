@@ -310,7 +310,7 @@ class ExplorationIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.cities[1].scenes[0].actionLabel").value("查看故事"))
                 .andExpect(jsonPath("$.data.cities[3].scenes[0].actionLabel").value("查看故事"))
-                .andExpect(jsonPath("$.data.cities[5].scenes[0].actionLabel").value("查看景點故事"));
+                .andExpect(jsonPath("$.data.cities[5].scenes[0].actionLabel").value("查看故事"));
 
         for (Long cityId : java.util.List.of(2L, 4L, 6L)) {
             mockMvc.perform(get("/api/explorations/cities/" + cityId + "/random")

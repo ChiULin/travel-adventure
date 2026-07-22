@@ -28,6 +28,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -128,6 +129,84 @@ class BossChallengeIntegrationTest {
     }
 
     @Test
+    void penghuBossCompletesJourneyWithoutCreatingNextCityOrDuplicateRewards() throws Exception {
+        String token = registerAndGetToken("penghu-final-player");
+        User user = readyPenghuUser("penghu-final-player");
+        int progressCountBefore = userProgressRepository.findByUserId(user.getId()).size();
+        int expBefore = user.getExp();
+        int coinsBefore = user.getCoins();
+        int bossPointsBefore = user.getBossPoints();
+
+        MvcResult firstStart = startBoss(token, "NORMAL", 6L);
+        JsonNode firstQuestion = responseData(firstStart).path("question");
+        String firstAnswer = correctBossAnswer(6L, firstQuestion.path("questionId").asText());
+        mockMvc.perform(post("/api/cities/6/boss/challenge")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bossAnswerRequest(firstQuestion, firstAnswer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.win").value(true))
+                .andExpect(jsonPath("$.data.earnedExp").value(312))
+                .andExpect(jsonPath("$.data.earnedCoins").value(360));
+
+        User rewarded = userRepository.findById(user.getId()).orElseThrow();
+        UserProgress penghu = userProgressRepository.findByUserIdAndCityId(user.getId(), 6L).orElseThrow();
+        assertTrue(penghu.getBossCompleted());
+        assertTrue(penghu.getBadgeUnlocked());
+        assertEquals(expBefore + 312, rewarded.getExp());
+        assertEquals(coinsBefore + 360, rewarded.getCoins());
+        assertEquals(bossPointsBefore + 1, rewarded.getBossPoints());
+        assertEquals(progressCountBefore, userProgressRepository.findByUserId(user.getId()).size());
+
+        int rewardedExp = rewarded.getExp();
+        int rewardedCoins = rewarded.getCoins();
+        int rewardedBossPoints = rewarded.getBossPoints();
+        MvcResult repeatStart = startBoss(token, "NORMAL", 6L);
+        JsonNode repeatQuestion = responseData(repeatStart).path("question");
+        String repeatAnswer = correctBossAnswer(6L, repeatQuestion.path("questionId").asText());
+        mockMvc.perform(post("/api/cities/6/boss/challenge")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bossAnswerRequest(repeatQuestion, repeatAnswer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.win").value(true))
+                .andExpect(jsonPath("$.data.earnedExp").value(0))
+                .andExpect(jsonPath("$.data.earnedCoins").value(0));
+
+        User afterRepeat = userRepository.findById(user.getId()).orElseThrow();
+        assertEquals(rewardedExp, afterRepeat.getExp());
+        assertEquals(rewardedCoins, afterRepeat.getCoins());
+        assertEquals(rewardedBossPoints, afterRepeat.getBossPoints());
+        assertEquals(progressCountBefore, userProgressRepository.findByUserId(user.getId()).size());
+    }
+
+    @Test
+    void hualienBossFirstClearUnlocksPenghuFirstStage() throws Exception {
+        String token = registerAndGetToken("hualien-to-penghu");
+        User user = readyHualienUser("hualien-to-penghu");
+
+        MvcResult start = startBoss(token, "NORMAL", 5L);
+        JsonNode question = responseData(start).path("question");
+        String answer = correctBossAnswer(5L, question.path("questionId").asText());
+        mockMvc.perform(post("/api/cities/5/boss/challenge")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bossAnswerRequest(question, answer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.win").value(true));
+
+        UserProgress penghu = userProgressRepository.findByUserIdAndCityId(user.getId(), 6L).orElseThrow();
+        assertTrue(penghu.getUnlocked());
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[5].scenes[0].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[5].scenes[1].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[5].scenes[2].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[5].bossStage.stageStatus").value("LOCKED"));
+    }
+
+    @Test
     void directBossChallengeWithoutStartShouldBeRejected() throws Exception {
         String token = registerAndGetToken("boss-direct-player");
         readyUser("boss-direct-player");
@@ -193,6 +272,22 @@ class BossChallengeIntegrationTest {
         return userRepository.findById(user.getId()).orElseThrow();
     }
 
+    private User readyPenghuUser(String username) {
+        User user = userRepository.findByUsername(username).orElseThrow();
+        user.setLevel(100);
+        userRepository.save(user);
+        completeCity(user, 6L, List.of(16L, 17L, 18L));
+        return userRepository.findById(user.getId()).orElseThrow();
+    }
+
+    private User readyHualienUser(String username) {
+        User user = userRepository.findByUsername(username).orElseThrow();
+        user.setLevel(100);
+        userRepository.save(user);
+        completeCity(user, 5L, List.of(13L, 14L, 15L));
+        return userRepository.findById(user.getId()).orElseThrow();
+    }
+
     private void completeCity(User user, Long cityId, List<Long> sceneIds) {
         for (Long sceneId : sceneIds) {
             if (checkinRepository.existsByUserIdAndSceneId(user.getId(), sceneId)) {
@@ -216,7 +311,11 @@ class BossChallengeIntegrationTest {
     }
 
     private MvcResult startBoss(String token, String difficulty) throws Exception {
-        return mockMvc.perform(post("/api/cities/3/boss/start")
+        return startBoss(token, difficulty, 3L);
+    }
+
+    private MvcResult startBoss(String token, String difficulty, Long cityId) throws Exception {
+        return mockMvc.perform(post("/api/cities/" + cityId + "/boss/start")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"difficulty\":\"" + difficulty + "\"}"))
