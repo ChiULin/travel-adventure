@@ -12,13 +12,17 @@ import com.example.demo.repository.SceneRepository;
 import com.example.demo.repository.UserProgressRepository;
 import com.example.demo.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.UUID;
 
 @Service
 public class BossService {
@@ -29,6 +33,8 @@ public class BossService {
     private final SceneRepository sceneRepository;
     private final QuizQuestionService quizQuestionService;
     private final Map<String, BossBattleState> activeBattles = new ConcurrentHashMap<>();
+    private final Map<String, BattleResultPermit> battleResultPermits = new ConcurrentHashMap<>();
+    private static final Duration BATTLE_RESULT_RETENTION = Duration.ofMinutes(5);
 
     public BossService(CityRepository cityRepository, UserRepository userRepository, UserProgressRepository userProgressRepository,
                        CheckinRepository checkinRepository, SceneRepository sceneRepository,
@@ -46,7 +52,7 @@ public class BossService {
         bossContext(userId, cityId);
         GameDifficulty difficulty = requestedDifficulty == null
                 ? GameDifficulty.CASUAL : requestedDifficulty;
-        BossBattleState state = new BossBattleState(difficulty);
+        BossBattleState state = new BossBattleState(difficulty, UUID.randomUUID().toString(), Instant.now());
         activeBattles.put(battleKey(userId, cityId), state);
 
         Map<String, Object> question;
@@ -88,27 +94,25 @@ public class BossService {
         City city = context.city();
         UserProgress progress = context.progress();
 
-        BossBattleState battleState = null;
-        if (questionId != null && !questionId.isBlank()) {
-            battleState = activeBattles.remove(battleKey(userId, cityId));
-            if (battleState == null) {
-                throw new IllegalArgumentException("boss battle has not been started");
-            }
-            GameDifficulty submittedDifficulty = GameDifficulty.from(difficultyName);
-            if (battleState.difficulty() != submittedDifficulty) {
-                throw new IllegalArgumentException("boss difficulty does not match active battle");
-            }
+        if (questionId == null || questionId.isBlank()) {
+            throw new IllegalArgumentException("questionId is required");
+        }
+        BossBattleState battleState = activeBattles.remove(battleKey(userId, cityId));
+        if (battleState == null) {
+            throw new IllegalArgumentException("boss battle has not been started");
+        }
+        GameDifficulty submittedDifficulty = GameDifficulty.from(difficultyName);
+        if (battleState.difficulty() != submittedDifficulty) {
+            throw new IllegalArgumentException("boss difficulty does not match active battle");
         }
 
         int userPower = (user.getLevel() == null ? 1 : user.getLevel()) * 10
                 + ((user.getExp() == null ? 0 : user.getExp()) / 10);
         int bossPower = city.getBossPower() == null ? 0 : city.getBossPower();
-        boolean answerCorrect = questionId == null || questionId.isBlank()
-                ? bossAnswerCorrect(city, selectedAnswer, selectedAnswerText)
-                : quizQuestionService.bossAnswerCorrect(userId, city, questionId, selectedAnswerText, difficultyName);
+        boolean answerCorrect = quizQuestionService.bossAnswerCorrect(
+                userId, city, questionId, selectedAnswerText, difficultyName);
         boolean win = answerCorrect && userPower >= bossPower;
-        GameDifficulty difficulty = battleState == null
-                ? GameDifficulty.from(difficultyName) : battleState.difficulty();
+        GameDifficulty difficulty = battleState.difficulty();
         int earnedExp = 0;
         int earnedCoins = 0;
 
@@ -126,54 +130,16 @@ public class BossService {
                 earnedCoins = difficulty.reward(300);
                 grantFirstClearRewards(user, earnedExp, earnedCoins);
             }
+            battleResultPermits.put(battleKey(userId, cityId), new BattleResultPermit(
+                    battleState.battleId(), difficulty, Instant.now().plus(BATTLE_RESULT_RETENTION)));
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("win", win);
         result.put("earnedExp", earnedExp);
         result.put("earnedCoins", earnedCoins);
+        result.put("battleResultToken", win ? battleState.battleId() : null);
         return result;
-    }
-
-    private boolean bossAnswerCorrect(City city, String selectedAnswer, String selectedAnswerText) {
-        String correctAnswer = normalizeAnswer(city.getBossCorrectAnswer());
-        String answer = normalizeAnswer(selectedAnswer);
-        if (correctAnswer == null || correctAnswer.isBlank()) {
-            return true;
-        }
-        String correctText = optionText(city, correctAnswer);
-        String answerText = normalizeText(selectedAnswerText);
-        if (answerText != null && correctText != null) {
-            return answerText.equals(normalizeText(correctText));
-        }
-        if (answer == null || answer.isBlank()) {
-            return false;
-        }
-        return correctAnswer.equals(answer);
-    }
-
-    private String optionText(City city, String answer) {
-        return switch (answer) {
-            case "A" -> city.getBossOptionA();
-            case "B" -> city.getBossOptionB();
-            case "C" -> city.getBossOptionC();
-            case "D" -> city.getBossOptionD();
-            default -> null;
-        };
-    }
-
-    private String normalizeAnswer(String answer) {
-        if (answer == null) {
-            return null;
-        }
-        return answer.trim().toUpperCase();
-    }
-
-    private String normalizeText(String answerText) {
-        if (answerText == null || answerText.isBlank()) {
-            return null;
-        }
-        return answerText.trim();
     }
 
     public Map<String, Object> recordBattleResult(Long userId, Long cityId, BattleResultRequest request) {
@@ -192,6 +158,18 @@ public class BossService {
         }
 
         validateBattleResult(request, cityTotal, sceneRepository.findByCityId(cityId));
+        BattleResultPermit permit = battleResultPermits.get(battleKey(userId, cityId));
+        if (permit == null || request.getBattleResultToken() == null
+                || !permit.token().equals(request.getBattleResultToken())
+                || !Instant.now().isBefore(permit.expiresAt())) {
+            throw new IllegalArgumentException("battle result does not match a completed battle");
+        }
+        if (permit.difficulty() != GameDifficulty.from(request.getDifficulty())) {
+            throw new IllegalArgumentException("battle result difficulty does not match");
+        }
+        if (!battleResultPermits.remove(battleKey(userId, cityId), permit)) {
+            throw new IllegalArgumentException("battle result has already been recorded");
+        }
 
         String oldRank = progress.getBestRank();
         int oldBestCombo = progress.getBestCombo() == null ? 0 : progress.getBestCombo();
@@ -228,6 +206,21 @@ public class BossService {
         result.put("newRecord", newRecord);
         result.put("cityName", city.getName());
         return result;
+    }
+
+    @Scheduled(fixedDelayString = "${game.boss.cleanup-interval-ms:60000}")
+    public void removeExpiredBattleState() {
+        Instant now = Instant.now();
+        activeBattles.forEach((key, state) -> {
+            if (!now.isBefore(state.startedAt().plus(BATTLE_RESULT_RETENTION))) {
+                activeBattles.remove(key, state);
+            }
+        });
+        battleResultPermits.forEach((key, permit) -> {
+            if (!now.isBefore(permit.expiresAt())) {
+                battleResultPermits.remove(key, permit);
+            }
+        });
     }
 
     public Map<String, Object> restartCity(Long userId, Long cityId) {
@@ -381,6 +374,9 @@ public class BossService {
     private record BossContext(User user, City city, UserProgress progress) {
     }
 
-    private record BossBattleState(GameDifficulty difficulty) {
+    private record BossBattleState(GameDifficulty difficulty, String battleId, Instant startedAt) {
+    }
+
+    private record BattleResultPermit(String token, GameDifficulty difficulty, Instant expiresAt) {
     }
 }

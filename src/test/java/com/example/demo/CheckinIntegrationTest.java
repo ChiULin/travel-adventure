@@ -8,6 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.demo.entity.Scene;
+import com.example.demo.repository.SceneRepository;
+import com.example.demo.repository.CityRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,6 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 
 @ActiveProfiles("test")
 @SpringBootTest
@@ -24,6 +28,10 @@ class CheckinIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+    @Autowired
+    private SceneRepository sceneRepository;
+    @Autowired
+    private CityRepository cityRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -64,15 +72,7 @@ class CheckinIntegrationTest {
     void checkinShouldUpdateLevelProgress() throws Exception {
         String token = registerAndGetToken("levelTester01");
 
-        mockMvc.perform(post("/api/checkins")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "sceneId": 1,
-                                  "answer": "A"
-                                }
-                                """))
+        answerScene(token, 1L, true)
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/journey/me")
@@ -89,15 +89,7 @@ class CheckinIntegrationTest {
     void wrongAnswerShouldNotCompleteCheckinOrGrantReward() throws Exception {
         String token = registerAndGetToken("quizTester01");
 
-        mockMvc.perform(post("/api/checkins")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "sceneId": 1,
-                                  "answer": "B"
-                                }
-                                """))
+        answerScene(token, 1L, false)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("答案錯誤"))
@@ -110,15 +102,7 @@ class CheckinIntegrationTest {
                 .andExpect(jsonPath("$.data.user.experience").value(0))
                 .andExpect(jsonPath("$.data.cities[0].done").value(0));
 
-        mockMvc.perform(post("/api/checkins")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "sceneId": 1,
-                                  "answer": "A"
-                                }
-                                """))
+        answerScene(token, 1L, true)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.ok").value(true));
     }
@@ -127,16 +111,7 @@ class CheckinIntegrationTest {
     void answerTextShouldBeAcceptedWhenOptionLabelIsShuffled() throws Exception {
         String token = registerAndGetToken("shuffleTester01");
 
-        mockMvc.perform(post("/api/checkins")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "sceneId": 1,
-                                  "answer": "C",
-                                  "answerText": "節節高升"
-                                }
-                                """))
+        answerScene(token, 1L, true)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.ok").value(true));
 
@@ -151,15 +126,7 @@ class CheckinIntegrationTest {
     void missionsAndAchievementsShouldUseExistingProgress() throws Exception {
         String token = registerAndGetToken("missionTester01");
 
-        mockMvc.perform(post("/api/checkins")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "sceneId": 1,
-                                  "answer": "A"
-                                }
-                                """))
+        answerScene(token, 1L, true)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.ok").value(true));
 
@@ -208,6 +175,85 @@ class CheckinIntegrationTest {
         String secondQuestionId = objectMapper.readTree(second.getResponse().getContentAsString())
                 .path("data").path("questionId").asText();
         assertNotEquals(firstQuestionId, secondQuestionId);
+    }
+
+    @Test
+    void directCheckinWithoutIssuedQuestionShouldBeRejected() throws Exception {
+        String token = registerAndGetToken("directBlock01");
+
+        mockMvc.perform(post("/api/checkins")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"sceneId\":1,\"answer\":\"A\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("questionId is required"));
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[0].done").value(0));
+    }
+
+    @Test
+    void lockedStageCannotBeCompletedWithForgedQuestionId() throws Exception {
+        String token = registerAndGetToken("lockedStage01");
+
+        mockMvc.perform(post("/api/checkins")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "sceneId": 2,
+                                  "answerText": "forged",
+                                  "questionId": "scene-2-fact",
+                                  "difficulty": "CASUAL"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false));
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[0].done").value(0));
+    }
+
+    private ResultActions answerScene(String token, Long sceneId, boolean correct) throws Exception {
+        MvcResult issued = mockMvc.perform(get("/api/quizzes/landmarks/{sceneId}/random", sceneId)
+                        .queryParam("difficulty", "CASUAL")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode question = objectMapper.readTree(issued.getResponse().getContentAsString()).path("data");
+        String answerText = correct ? correctSceneAnswer(sceneId, question.path("questionId").asText())
+                : "definitely-not-the-correct-answer";
+        String request = objectMapper.writeValueAsString(java.util.Map.of(
+                "sceneId", sceneId,
+                "answerText", answerText,
+                "questionId", question.path("questionId").asText(),
+                "difficulty", "CASUAL"));
+        return mockMvc.perform(post("/api/checkins")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request));
+    }
+
+    private String correctSceneAnswer(Long sceneId, String questionId) {
+        Scene scene = sceneRepository.findById(sceneId).orElseThrow();
+        if (questionId.endsWith("-city")) {
+            return cityRepository.findById(scene.getCity().getId()).orElseThrow().getName();
+        }
+        if (questionId.endsWith("-identify")) {
+            return scene.getName();
+        }
+        return switch (scene.getQuizCorrectAnswer()) {
+            case "A" -> scene.getQuizOptionA();
+            case "B" -> scene.getQuizOptionB();
+            case "C" -> scene.getQuizOptionC();
+            case "D" -> scene.getQuizOptionD();
+            default -> throw new AssertionError("Unknown scene answer");
+        };
     }
 
     private String registerAndGetToken(String username) throws Exception {

@@ -28,11 +28,15 @@ public class Checkin {
     private String selectedAnswer;
 
     @Column(name = "quiz_correct")
+    @Builder.Default
     private Boolean quizCorrect = false;
 
+    @Builder.Default
     private Boolean completed = false;
 
+    @Builder.Default
     private Integer earnedExp = 0;
+    @Builder.Default
     private Integer earnedCoins = 0;
 
     @Column(name = "completed_at")

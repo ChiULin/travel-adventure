@@ -179,10 +179,11 @@ function renderBattleStatus() {
       `);
     }
 
-    async function submitBattleResult(city, rank) {
+    async function submitBattleResult(city, rank, battleResultToken) {
       return api(`/api/cities/${city.id}/battle-result`, {
         method: "POST",
         body: JSON.stringify({
+          battleResultToken,
           rank,
           maxCombo: cityBattleStats.maxCombo,
           remainingLives: cityLives,
@@ -345,7 +346,7 @@ async function challengeBoss(answer, answerText) {
           const rank = calculateBattleRank();
           let recordResult = null;
           try {
-            recordResult = await submitBattleResult(city, rank);
+            recordResult = await submitBattleResult(city, rank, result.battleResultToken);
           } catch (error) {
             addLog(`最佳紀錄儲存失敗：${error.message}`);
           }

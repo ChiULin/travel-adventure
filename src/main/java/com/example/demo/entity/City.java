@@ -31,9 +31,11 @@ public class City {
     private String imageUrl;
 
     @Column(name = "city_order")
+    @Builder.Default
     private Integer unlockOrder = 0;
 
     private String bossName;
+    @Builder.Default
     private Integer bossPower = 0;
 
     @Column(name = "boss_question", length = 500)

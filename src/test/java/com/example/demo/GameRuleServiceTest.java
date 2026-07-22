@@ -15,6 +15,7 @@ import com.example.demo.service.BossService;
 import com.example.demo.service.CheckinService;
 import com.example.demo.service.JourneyStateService;
 import com.example.demo.service.QuizQuestionService;
+import com.example.demo.stage.LandmarkStageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,13 +49,15 @@ class GameRuleServiceTest {
     private JourneyStateService journeyStateService;
     @Mock
     private QuizQuestionService quizQuestionService;
+    @Mock
+    private LandmarkStageService landmarkStageService;
     private CheckinService checkinService;
     private BossService bossService;
 
     @BeforeEach
     void setUp() {
         checkinService = new CheckinService(checkinRepository, userRepository, sceneRepository,
-                userProgressRepository, journeyStateService, quizQuestionService);
+                userProgressRepository, journeyStateService, quizQuestionService, landmarkStageService);
         bossService = new BossService(cityRepository, userRepository, userProgressRepository,
                 checkinRepository, sceneRepository, quizQuestionService);
     }
@@ -108,7 +111,7 @@ class GameRuleServiceTest {
     }
 
     @Test
-    void repeatedBossClearDoesNotGrantFirstClearRewardsAgain() {
+    void directBossChallengeWithoutIssuedQuestionIsRejected() {
         User user = user();
         user.setLevel(10);
         City city = city();
@@ -120,9 +123,9 @@ class GameRuleServiceTest {
         when(checkinRepository.countByUserIdAndSceneCityIdAndCompletedTrue(1L, 1L)).thenReturn(3L);
         when(sceneRepository.countByCityId(1L)).thenReturn(3L);
 
-        boolean win = bossService.challenge(1L, 1L, "A", null);
+        assertThrows(IllegalArgumentException.class,
+                () -> bossService.challenge(1L, 1L, "A", null));
 
-        assertEquals(true, win);
         assertEquals(0, user.getExp());
         assertEquals(0, user.getCoins());
         assertEquals(0, user.getBossPoints());

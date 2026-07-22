@@ -28,6 +28,8 @@ static/
 │  ├─ auth.js
 │  ├─ journey.js
 │  ├─ quiz.js
+│  ├─ exploration.js
+│  ├─ image-recognition.js
 │  ├─ boss.js
 │  ├─ missions.js
 │  ├─ collection.js
@@ -53,14 +55,17 @@ static/
 
 ## 題目簽發狀態
 
-題目暫存於單機記憶體，回應包含 `issuedAt` 與 `expiresAt`。提交後題目會立即失效，系統也會定期清除過期題目與防重複題目的暫存紀錄。
+題目、探索、圖片辨識與 Boss 戰鬥暫存於單機記憶體，回應包含 `issuedAt` 與 `expiresAt`。提交後狀態會立即失效，系統也會定期清除過期紀錄。
 
 ```properties
 game.quiz.max-pending-per-player=5
 game.quiz.cleanup-interval-ms=60000
+game.exploration.cleanup-interval-ms=60000
+game.image-recognition.cleanup-interval-ms=60000
+game.boss.cleanup-interval-ms=60000
 ```
 
-同一玩家預設最多保留 5 題未完成題目；同一關卡重新取題會取代前一題，不會額外占用配額。多節點部署時應將這段狀態改存 Redis 或共享資料庫。
+同一玩家預設最多保留 5 題未完成題目；同一關卡重新取題會取代前一題，不會額外占用配額。目前部署模型明確限制為單一應用節點；多節點部署前必須將全部挑戰狀態改存 Redis 或共享資料庫。
 
 ## 本機啟動
 
@@ -96,7 +101,7 @@ http://localhost:8080
 CREATE DATABASE travel_adventure CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-預設 MySQL 環境設定為 `spring.sql.init.mode=never`，不會自動執行 `data.sql`；正式資料應由資料庫遷移或部署流程管理。
+預設 MySQL 環境設定為 `spring.sql.init.mode=never`，不會自動執行 `data.sql`。既有資料庫第一次啟動 Flyway 時會建立 baseline，之後依 `src/main/resources/db/migration` 的版本腳本更新；JPA 僅驗證 schema，不再自行修改。
 
 ## 測試
 

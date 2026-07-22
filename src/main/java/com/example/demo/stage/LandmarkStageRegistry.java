@@ -40,6 +40,10 @@ public class LandmarkStageRegistry {
                 .toList();
     }
 
+    public List<LandmarkStageDefinition> findAll() {
+        return List.copyOf(stagesByLandmarkId.values());
+    }
+
     private void validate(List<LandmarkStageDefinition> definitions) {
         long uniqueLandmarks = definitions.stream()
                 .map(LandmarkStageDefinition::landmarkId)

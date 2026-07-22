@@ -127,6 +127,58 @@ class BossChallengeIntegrationTest {
         assertEquals(rewardedCoins, afterRepeat.getCoins());
     }
 
+    @Test
+    void directBossChallengeWithoutStartShouldBeRejected() throws Exception {
+        String token = registerAndGetToken("boss-direct-player");
+        readyUser("boss-direct-player");
+
+        mockMvc.perform(post("/api/cities/3/boss/challenge")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"answer\":\"A\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("questionId is required"));
+    }
+
+    @Test
+    void battleResultRequiresOneTimePermitFromCompletedBossBattle() throws Exception {
+        String token = registerAndGetToken("boss-record-player");
+        readyUser("boss-record-player");
+
+        mockMvc.perform(post("/api/cities/3/battle-result")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(battleResultRequest("forged")))
+                .andExpect(status().isBadRequest());
+
+        MvcResult start = startBoss(token, "NORMAL");
+        JsonNode question = responseData(start).path("question");
+        String answer = correctBossAnswer(3L, question.path("questionId").asText());
+        MvcResult challenge = mockMvc.perform(post("/api/cities/3/boss/challenge")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bossAnswerRequest(question, answer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.win").value(true))
+                .andExpect(jsonPath("$.data.battleResultToken").isString())
+                .andReturn();
+        String permit = responseData(challenge).path("battleResultToken").asText();
+
+        String resultRequest = battleResultRequest(permit);
+        mockMvc.perform(post("/api/cities/3/battle-result")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(resultRequest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.rank").value("S"));
+
+        mockMvc.perform(post("/api/cities/3/battle-result")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(resultRequest))
+                .andExpect(status().isBadRequest());
+    }
+
     private MvcResult startReadyBoss(String username, String difficulty) throws Exception {
         String token = registerAndGetToken(username);
         readyUser(username);
@@ -187,6 +239,21 @@ class BossChallengeIntegrationTest {
         return objectMapper.writeValueAsString(Map.of(
                 "questionId", question.path("questionId").asText(),
                 "answerText", answerText,
+                "difficulty", "NORMAL"
+        ));
+    }
+
+    private String battleResultRequest(String permit) throws Exception {
+        return objectMapper.writeValueAsString(Map.of(
+                "battleResultToken", permit,
+                "rank", "S",
+                "maxCombo", 4,
+                "remainingLives", 3,
+                "correctAnswers", 4,
+                "wrongAnswers", 0,
+                "timeoutCount", 0,
+                "earnedExp", 0,
+                "earnedCoins", 0,
                 "difficulty", "NORMAL"
         ));
     }

@@ -7,6 +7,7 @@ import com.example.demo.repository.CheckinRepository;
 import com.example.demo.repository.SceneRepository;
 import com.example.demo.repository.UserProgressRepository;
 import com.example.demo.repository.UserRepository;
+import com.example.demo.stage.LandmarkStageService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,16 +24,18 @@ public class CheckinService {
     private final UserProgressRepository userProgressRepository;
     private final JourneyStateService journeyStateService;
     private final QuizQuestionService quizQuestionService;
+    private final LandmarkStageService landmarkStageService;
 
     public CheckinService(CheckinRepository checkinRepository, UserRepository userRepository, SceneRepository sceneRepository,
                           UserProgressRepository userProgressRepository, JourneyStateService journeyStateService,
-                          QuizQuestionService quizQuestionService) {
+                          QuizQuestionService quizQuestionService, LandmarkStageService landmarkStageService) {
         this.checkinRepository = checkinRepository;
         this.userRepository = userRepository;
         this.sceneRepository = sceneRepository;
         this.userProgressRepository = userProgressRepository;
         this.journeyStateService = journeyStateService;
         this.quizQuestionService = quizQuestionService;
+        this.landmarkStageService = landmarkStageService;
     }
 
     public Checkin checkin(Long userId, Long sceneId) {
@@ -54,12 +57,15 @@ public class CheckinService {
         CheckinContext context = prepareCheckin(userId, sceneId);
         Checkin checkin = context.checkin();
         Scene scene = context.scene();
+        landmarkStageService.validateStageAvailable(userId, sceneId);
+        if (questionId == null || questionId.isBlank()) {
+            throw new IllegalArgumentException("questionId is required");
+        }
         checkin.setCheckinTime(LocalDateTime.now());
         checkin.setSelectedAnswer(normalizeAnswer(selectedAnswer));
 
-        boolean correct = questionId == null || questionId.isBlank()
-                ? isCorrect(scene, selectedAnswer, selectedAnswerText)
-                : quizQuestionService.sceneAnswerCorrect(userId, scene, questionId, selectedAnswerText, difficultyName);
+        boolean correct = quizQuestionService.sceneAnswerCorrect(
+                userId, scene, questionId, selectedAnswerText, difficultyName);
         checkin.setQuizCorrect(correct);
         if (!correct) {
             return checkinRepository.save(checkin);
@@ -148,45 +154,11 @@ public class CheckinService {
         return checkin;
     }
 
-    private boolean isCorrect(Scene scene, String selectedAnswer, String selectedAnswerText) {
-        String correctAnswer = normalizeAnswer(scene.getQuizCorrectAnswer());
-        String answer = normalizeAnswer(selectedAnswer);
-        if (correctAnswer == null || correctAnswer.isBlank()) {
-            return true;
-        }
-        String correctText = optionText(scene, correctAnswer);
-        String answerText = normalizeText(selectedAnswerText);
-        if (answerText != null && correctText != null) {
-            return answerText.equals(normalizeText(correctText));
-        }
-        if (answer == null || answer.isBlank()) {
-            return false;
-        }
-        return correctAnswer.equals(answer);
-    }
-
-    private String optionText(Scene scene, String answer) {
-        return switch (answer) {
-            case "A" -> scene.getQuizOptionA();
-            case "B" -> scene.getQuizOptionB();
-            case "C" -> scene.getQuizOptionC();
-            case "D" -> scene.getQuizOptionD();
-            default -> null;
-        };
-    }
-
     private String normalizeAnswer(String answer) {
         if (answer == null) {
             return null;
         }
         return answer.trim().toUpperCase();
-    }
-
-    private String normalizeText(String answerText) {
-        if (answerText == null || answerText.isBlank()) {
-            return null;
-        }
-        return answerText.trim();
     }
 
     private record CheckinContext(User user, Scene scene, Checkin checkin) {
