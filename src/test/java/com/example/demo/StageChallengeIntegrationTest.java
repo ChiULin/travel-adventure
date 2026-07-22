@@ -100,14 +100,14 @@ class StageChallengeIntegrationTest {
     void unconfiguredCityKeepsExistingExplorationBehavior() throws Exception {
         String token = registerAndGetToken("stage-compatible");
         User user = userRepository.findByUsername("stage-compatible").orElseThrow();
-        var progress = userProgressRepository.findByUserIdAndCityId(user.getId(), 4L).orElseThrow();
+        var progress = userProgressRepository.findByUserIdAndCityId(user.getId(), 5L).orElseThrow();
         progress.setUnlocked(true);
         userProgressRepository.save(progress);
 
-        mockMvc.perform(get("/api/explorations/cities/4/random")
+        mockMvc.perform(get("/api/explorations/cities/5/random")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.missionId").value("KAOHSIUNG-PIER2-01"));
+                .andExpect(jsonPath("$.data.missionId").value("HUALIEN-TAROKO-01"));
     }
 
     @Test
@@ -168,8 +168,21 @@ class StageChallengeIntegrationTest {
                 .andExpect(jsonPath("$.data.cities[2].bossStage.cityId").value(3))
                 .andExpect(jsonPath("$.data.cities[2].bossStage.stageOrder").value(4))
                 .andExpect(jsonPath("$.data.cities[2].bossStage.stageStatus").value("LOCKED"))
-                .andExpect(jsonPath("$.data.cities[3].scenes[0].stageConfigured").value(false))
-                .andExpect(jsonPath("$.data.cities[3].bossStage").value((Object) null))
+                .andExpect(jsonPath("$.data.cities[3].scenes[0].id").value(10))
+                .andExpect(jsonPath("$.data.cities[3].scenes[0].stageConfigured").value(true))
+                .andExpect(jsonPath("$.data.cities[3].scenes[0].stageOrder").value(1))
+                .andExpect(jsonPath("$.data.cities[3].scenes[0].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[3].scenes[0].interactionType").value("EXPLORATION"))
+                .andExpect(jsonPath("$.data.cities[3].scenes[1].id").value(11))
+                .andExpect(jsonPath("$.data.cities[3].scenes[1].stageOrder").value(2))
+                .andExpect(jsonPath("$.data.cities[3].scenes[1].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[3].scenes[1].interactionType").value("QUIZ"))
+                .andExpect(jsonPath("$.data.cities[3].scenes[2].id").value(12))
+                .andExpect(jsonPath("$.data.cities[3].scenes[2].stageOrder").value(3))
+                .andExpect(jsonPath("$.data.cities[3].scenes[2].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[3].bossStage.cityId").value(4))
+                .andExpect(jsonPath("$.data.cities[3].bossStage.stageOrder").value(4))
+                .andExpect(jsonPath("$.data.cities[3].bossStage.stageStatus").value("LOCKED"))
                 .andExpect(jsonPath("$.data.cities[4].scenes[0].stageConfigured").value(false))
                 .andExpect(jsonPath("$.data.cities[4].bossStage").value((Object) null))
                 .andExpect(jsonPath("$.data.cities[5].scenes[0].stageConfigured").value(false))
@@ -380,6 +393,105 @@ class StageChallengeIntegrationTest {
         saveCheckin(user, 7L, false);
 
         assertLocked(get("/api/explorations/cities/3/random"), token);
+    }
+
+    @Test
+    void kaohsiungChallengeApisEnforceStageOrder() throws Exception {
+        String token = registerAndGetToken("kaohsiung-api-player");
+        User user = userRepository.findByUsername("kaohsiung-api-player").orElseThrow();
+
+        mockMvc.perform(get("/api/explorations/cities/4/random")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest());
+        unlockCity(user, 4L);
+
+        mockMvc.perform(get("/api/explorations/cities/4/random")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.missionId").value("KAOHSIUNG-PIER2-01"));
+
+        assertLocked(get("/api/quizzes/landmarks/11/random?difficulty=NORMAL"), token);
+        assertNoCheckin(user.getId(), 11L);
+
+        saveCheckin(user, 10L, true);
+
+        mockMvc.perform(get("/api/quizzes/landmarks/11/random?difficulty=NORMAL")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.questionId").isString());
+        assertLocked(get("/api/quizzes/landmarks/12/random?difficulty=NORMAL"), token);
+
+        saveCheckin(user, 11L, true);
+
+        mockMvc.perform(get("/api/quizzes/landmarks/12/random?difficulty=NORMAL")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.questionId").isString());
+        assertNoCheckin(user.getId(), 12L);
+    }
+
+    @Test
+    void kaohsiungJourneyUnlocksStagesAndBossInOrder() throws Exception {
+        String token = registerAndGetToken("kaohsiung-journey");
+        User user = userRepository.findByUsername("kaohsiung-journey").orElseThrow();
+
+        unlockCity(user, 4L);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[3].scenes[0].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[3].scenes[1].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[3].scenes[2].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[3].bossStage.stageStatus").value("LOCKED"));
+
+        saveCheckin(user, 10L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[3].scenes[0].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[3].scenes[1].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[3].scenes[2].stageStatus").value("LOCKED"));
+
+        saveCheckin(user, 11L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[3].scenes[1].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[3].scenes[2].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[3].bossStage.stageStatus").value("LOCKED"));
+
+        saveCheckin(user, 12L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[3].scenes[2].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[3].bossStage.stageStatus").value("AVAILABLE"));
+    }
+
+    @Test
+    void anotherPlayersKaohsiungCheckinDoesNotUnlockLoveRiver() throws Exception {
+        registerAndGetToken("kaohsiung-owner");
+        String otherToken = registerAndGetToken("kaohsiung-other");
+        User owner = userRepository.findByUsername("kaohsiung-owner").orElseThrow();
+        User other = userRepository.findByUsername("kaohsiung-other").orElseThrow();
+        unlockCity(other, 4L);
+        saveCheckin(owner, 10L, true);
+
+        assertLocked(get("/api/quizzes/landmarks/11/random?difficulty=NORMAL"), otherToken);
+    }
+
+    @Test
+    void incompletePier2CheckinDoesNotUnlockLoveRiver() throws Exception {
+        String token = registerAndGetToken("kaohsiung-incomplete");
+        User user = userRepository.findByUsername("kaohsiung-incomplete").orElseThrow();
+        unlockCity(user, 4L);
+        saveCheckin(user, 10L, false);
+
+        assertLocked(get("/api/quizzes/landmarks/11/random?difficulty=NORMAL"), token);
     }
 
     @Test
