@@ -100,14 +100,14 @@ class StageChallengeIntegrationTest {
     void unconfiguredCityKeepsExistingExplorationBehavior() throws Exception {
         String token = registerAndGetToken("stage-compatible");
         User user = userRepository.findByUsername("stage-compatible").orElseThrow();
-        var progress = userProgressRepository.findByUserIdAndCityId(user.getId(), 3L).orElseThrow();
+        var progress = userProgressRepository.findByUserIdAndCityId(user.getId(), 4L).orElseThrow();
         progress.setUnlocked(true);
         userProgressRepository.save(progress);
 
-        mockMvc.perform(get("/api/explorations/cities/3/random")
+        mockMvc.perform(get("/api/explorations/cities/4/random")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.missionId").value("TAINAN-ANPING-01"));
+                .andExpect(jsonPath("$.data.missionId").value("KAOHSIUNG-PIER2-01"));
     }
 
     @Test
@@ -153,8 +153,21 @@ class StageChallengeIntegrationTest {
                 .andExpect(jsonPath("$.data.cities[1].bossStage.cityId").value(2))
                 .andExpect(jsonPath("$.data.cities[1].bossStage.stageOrder").value(4))
                 .andExpect(jsonPath("$.data.cities[1].bossStage.stageStatus").value("LOCKED"))
-                .andExpect(jsonPath("$.data.cities[2].scenes[0].stageConfigured").value(false))
-                .andExpect(jsonPath("$.data.cities[2].bossStage").value((Object) null))
+                .andExpect(jsonPath("$.data.cities[2].scenes[0].id").value(7))
+                .andExpect(jsonPath("$.data.cities[2].scenes[0].stageConfigured").value(true))
+                .andExpect(jsonPath("$.data.cities[2].scenes[0].stageOrder").value(1))
+                .andExpect(jsonPath("$.data.cities[2].scenes[0].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[2].scenes[0].interactionType").value("QUIZ"))
+                .andExpect(jsonPath("$.data.cities[2].scenes[1].id").value(8))
+                .andExpect(jsonPath("$.data.cities[2].scenes[1].stageOrder").value(2))
+                .andExpect(jsonPath("$.data.cities[2].scenes[1].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[2].scenes[1].interactionType").value("EXPLORATION"))
+                .andExpect(jsonPath("$.data.cities[2].scenes[2].id").value(9))
+                .andExpect(jsonPath("$.data.cities[2].scenes[2].stageOrder").value(3))
+                .andExpect(jsonPath("$.data.cities[2].scenes[2].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[2].bossStage.cityId").value(3))
+                .andExpect(jsonPath("$.data.cities[2].bossStage.stageOrder").value(4))
+                .andExpect(jsonPath("$.data.cities[2].bossStage.stageStatus").value("LOCKED"))
                 .andExpect(jsonPath("$.data.cities[3].scenes[0].stageConfigured").value(false))
                 .andExpect(jsonPath("$.data.cities[3].bossStage").value((Object) null))
                 .andExpect(jsonPath("$.data.cities[4].scenes[0].stageConfigured").value(false))
@@ -260,6 +273,113 @@ class StageChallengeIntegrationTest {
         saveCheckin(user, 4L, false);
 
         assertLocked(get("/api/quizzes/landmarks/5/random?difficulty=NORMAL"), token);
+    }
+
+    @Test
+    void tainanChallengeApisEnforceStageOrderWithoutCreatingLockedExplorationState() throws Exception {
+        String token = registerAndGetToken("tainan-api-player");
+        User user = userRepository.findByUsername("tainan-api-player").orElseThrow();
+
+        assertLocked(get("/api/quizzes/landmarks/7/random?difficulty=NORMAL"), token);
+        unlockCity(user, 3L);
+
+        mockMvc.perform(get("/api/quizzes/landmarks/7/random?difficulty=NORMAL")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.questionId").isString());
+
+        assertLocked(get("/api/explorations/cities/3/random"), token);
+        mockMvc.perform(post("/api/explorations/TAINAN-ANPING-01/investigate")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"HISTORY\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/explorations/TAINAN-ANPING-01/guess")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"sceneId\":8}"))
+                .andExpect(status().isForbidden());
+        assertNoCheckin(user.getId(), 8L);
+
+        saveCheckin(user, 7L, true);
+
+        mockMvc.perform(get("/api/explorations/cities/3/random")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.missionId").value("TAINAN-ANPING-01"));
+        assertLocked(get("/api/quizzes/landmarks/9/random?difficulty=NORMAL"), token);
+
+        saveCheckin(user, 8L, true);
+
+        mockMvc.perform(get("/api/quizzes/landmarks/9/random?difficulty=NORMAL")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.questionId").isString());
+        assertNoCheckin(user.getId(), 9L);
+    }
+
+    @Test
+    void tainanJourneyUnlocksStagesAndBossInOrder() throws Exception {
+        String token = registerAndGetToken("tainan-journey");
+        User user = userRepository.findByUsername("tainan-journey").orElseThrow();
+
+        unlockCity(user, 3L);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[2].scenes[0].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[2].scenes[1].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[2].scenes[2].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[2].bossStage.stageStatus").value("LOCKED"));
+
+        saveCheckin(user, 7L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[2].scenes[0].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[2].scenes[1].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[2].scenes[2].stageStatus").value("LOCKED"));
+
+        saveCheckin(user, 8L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[2].scenes[1].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[2].scenes[2].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[2].bossStage.stageStatus").value("LOCKED"));
+
+        saveCheckin(user, 9L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[2].scenes[2].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[2].bossStage.stageStatus").value("AVAILABLE"));
+    }
+
+    @Test
+    void anotherPlayersTainanCheckinDoesNotUnlockAnpingFort() throws Exception {
+        registerAndGetToken("tainan-owner");
+        String otherToken = registerAndGetToken("tainan-other");
+        User owner = userRepository.findByUsername("tainan-owner").orElseThrow();
+        User other = userRepository.findByUsername("tainan-other").orElseThrow();
+        unlockCity(other, 3L);
+        saveCheckin(owner, 7L, true);
+
+        assertLocked(get("/api/explorations/cities/3/random"), otherToken);
+    }
+
+    @Test
+    void incompleteChihkanTowerCheckinDoesNotUnlockAnpingFort() throws Exception {
+        String token = registerAndGetToken("tainan-incomplete");
+        User user = userRepository.findByUsername("tainan-incomplete").orElseThrow();
+        unlockCity(user, 3L);
+        saveCheckin(user, 7L, false);
+
+        assertLocked(get("/api/explorations/cities/3/random"), token);
     }
 
     @Test

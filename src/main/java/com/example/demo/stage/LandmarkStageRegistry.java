@@ -19,6 +19,10 @@ public class LandmarkStageRegistry {
     private static final long GAOMEI_WETLANDS_ID = 4L;
     private static final long NATIONAL_TAICHUNG_THEATER_ID = 5L;
     private static final long RAINBOW_VILLAGE_ID = 6L;
+    private static final long TAINAN_CITY_ID = 3L;
+    private static final long CHIHKAN_TOWER_ID = 7L;
+    private static final long ANPING_FORT_ID = 8L;
+    private static final long TAINAN_CONFUCIUS_TEMPLE_ID = 9L;
 
     private final Map<Long, LandmarkStageDefinition> stagesByLandmarkId;
 
@@ -29,7 +33,10 @@ public class LandmarkStageRegistry {
                 new LandmarkStageDefinition(TAIPEI_CITY_ID, XIMENDING_ID, 3),
                 new LandmarkStageDefinition(TAICHUNG_CITY_ID, GAOMEI_WETLANDS_ID, 1),
                 new LandmarkStageDefinition(TAICHUNG_CITY_ID, NATIONAL_TAICHUNG_THEATER_ID, 2),
-                new LandmarkStageDefinition(TAICHUNG_CITY_ID, RAINBOW_VILLAGE_ID, 3)
+                new LandmarkStageDefinition(TAICHUNG_CITY_ID, RAINBOW_VILLAGE_ID, 3),
+                new LandmarkStageDefinition(TAINAN_CITY_ID, CHIHKAN_TOWER_ID, 1),
+                new LandmarkStageDefinition(TAINAN_CITY_ID, ANPING_FORT_ID, 2),
+                new LandmarkStageDefinition(TAINAN_CITY_ID, TAINAN_CONFUCIUS_TEMPLE_ID, 3)
         );
 
         validate(definitions);

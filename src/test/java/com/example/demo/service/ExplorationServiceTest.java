@@ -47,6 +47,7 @@ class ExplorationServiceTest {
         when(progressRepository.findByUserIdAndCityId(1L, 3L))
                 .thenReturn(Optional.of(UserProgress.builder().unlocked(true).build()));
         when(checkinRepository.findByUserIdAndSceneId(1L, 8L)).thenReturn(Optional.empty());
+        when(checkinRepository.existsByUserIdAndSceneIdAndCompletedTrue(1L, 7L)).thenReturn(true);
 
         var first = service.randomMission(1L, 3L);
         service.investigate(1L, first.missionId(), "LOCAL");
@@ -73,6 +74,7 @@ class ExplorationServiceTest {
         when(progressRepository.findByUserIdAndCityId(1L, 3L))
                 .thenReturn(Optional.of(UserProgress.builder().unlocked(true).build()));
         when(checkinRepository.findByUserIdAndSceneId(1L, 8L)).thenReturn(Optional.empty());
+        when(checkinRepository.existsByUserIdAndSceneIdAndCompletedTrue(1L, 7L)).thenReturn(true);
 
         service.randomMission(1L, 3L);
         var guess = service.submitGuess(1L, "TAINAN-ANPING-01", 8L);
@@ -99,6 +101,7 @@ class ExplorationServiceTest {
         when(progressRepository.findByUserIdAndCityId(1L, 3L))
                 .thenReturn(Optional.of(UserProgress.builder().unlocked(true).build()));
         when(checkinRepository.findByUserIdAndSceneId(1L, 8L)).thenReturn(Optional.empty());
+        when(checkinRepository.existsByUserIdAndSceneIdAndCompletedTrue(1L, 7L)).thenReturn(true);
         when(checkinService.completeExploration(1L, 8L, "NORMAL"))
                 .thenReturn(new CheckinService.ExplorationCheckinResult(8L, "安平古堡", 174, 150, true, false));
 

@@ -60,6 +60,7 @@ class ExplorationIntegrationTest {
                 .andExpect(jsonPath("$.message").value("城市尚未解鎖"));
 
         unlockTainan(user.getId());
+        saveCompletedCheckin(user, 7L);
 
         mockMvc.perform(get("/api/explorations/cities/3/random")
                         .header("Authorization", "Bearer " + token))
@@ -402,6 +403,17 @@ class ExplorationIntegrationTest {
         UserProgress progress = userProgressRepository.findByUserIdAndCityId(userId, cityId).orElseThrow();
         progress.setUnlocked(true);
         userProgressRepository.save(progress);
+    }
+
+    private void saveCompletedCheckin(User user, Long sceneId) {
+        checkinRepository.save(com.example.demo.entity.Checkin.builder()
+                .user(user)
+                .scene(sceneRepository.findById(sceneId).orElseThrow())
+                .quizCorrect(true)
+                .completed(true)
+                .earnedExp(0)
+                .earnedCoins(0)
+                .build());
     }
 
     private String completeRequest(String questionId, String answer) {
