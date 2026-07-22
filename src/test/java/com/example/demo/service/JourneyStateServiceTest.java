@@ -73,7 +73,8 @@ class JourneyStateServiceTest {
         when(landmarkStageRegistry.findByCityId(CITY_ID)).thenReturn(List.of(
                 definition(first, 1), definition(second, 2), definition(third, 3)));
 
-        Map<String, Object> cityResponse = firstCity(service.state(USER_ID));
+        Map<String, Object> state = service.state(USER_ID);
+        Map<String, Object> cityResponse = firstCity(state);
         List<Map<String, Object>> scenes = scenes(cityResponse);
 
         assertEquals(List.of(901L, 902L, 903L),
@@ -81,6 +82,13 @@ class JourneyStateServiceTest {
         JourneyBossStageResponse bossStage = assertInstanceOf(
                 JourneyBossStageResponse.class, cityResponse.get("bossStage"));
         assertEquals(4, bossStage.stageOrder());
+        assertFalse((Boolean) state.get("journeyCompleted"));
+        assertEquals(0, state.get("completedCityCount"));
+        assertEquals(1, state.get("totalCityCount"));
+        assertEquals(0, state.get("completedLandmarkCount"));
+        assertEquals(3, state.get("totalLandmarkCount"));
+        assertEquals(0, state.get("badgeCount"));
+        assertEquals(1, state.get("totalBadgeCount"));
         verify(landmarkStageRegistry).isCityFullyConfigured(CITY_ID);
     }
 

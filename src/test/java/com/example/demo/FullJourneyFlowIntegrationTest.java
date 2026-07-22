@@ -86,6 +86,15 @@ class FullJourneyFlowIntegrationTest {
         PlayerSession player = register("full-journey-main");
         Long userId = player.user().getId();
 
+        JsonNode initialJourney = journey(player.token());
+        assertFalse(initialJourney.path("journeyCompleted").asBoolean());
+        assertEquals(0, initialJourney.path("completedCityCount").asInt());
+        assertEquals(6, initialJourney.path("totalCityCount").asInt());
+        assertEquals(0, initialJourney.path("completedLandmarkCount").asInt());
+        assertEquals(18, initialJourney.path("totalLandmarkCount").asInt());
+        assertEquals(0, initialJourney.path("badgeCount").asInt());
+        assertEquals(6, initialJourney.path("totalBadgeCount").asInt());
+
         assertEquals(6, userProgressRepository.findByUserId(userId).size());
         assertCityState(player.token(), 1L, true,
                 "AVAILABLE", "LOCKED", "LOCKED", "LOCKED");
@@ -184,6 +193,13 @@ class FullJourneyFlowIntegrationTest {
         assertEquals(3, penghuAfterReplay.getBestRemainingLives());
 
         JsonNode completedJourney = journey(player.token());
+        assertTrue(completedJourney.path("journeyCompleted").asBoolean());
+        assertEquals(6, completedJourney.path("completedCityCount").asInt());
+        assertEquals(6, completedJourney.path("totalCityCount").asInt());
+        assertEquals(18, completedJourney.path("completedLandmarkCount").asInt());
+        assertEquals(18, completedJourney.path("totalLandmarkCount").asInt());
+        assertEquals(6, completedJourney.path("badgeCount").asInt());
+        assertEquals(6, completedJourney.path("totalBadgeCount").asInt());
         assertEquals(18, completedJourney.path("checkedSceneIds").size());
         assertEquals(6, completedJourney.path("defeatedBossCityIds").size());
     }

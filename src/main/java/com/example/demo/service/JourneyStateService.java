@@ -121,9 +121,31 @@ public class JourneyStateService {
             return dto;
         }).toList();
 
+        int completedCityCount = (int) cityDtos.stream()
+                .filter(city -> Boolean.TRUE.equals(city.get("defeated")))
+                .count();
+        int completedLandmarkCount = cityDtos.stream()
+                .mapToInt(city -> ((Number) city.get("done")).intValue())
+                .sum();
+        int badgeCount = (int) cityDtos.stream()
+                .filter(city -> Boolean.TRUE.equals(city.get("badgeUnlocked")))
+                .count();
+        int totalCityCount = cityDtos.size();
+        int totalLandmarkCount = cityDtos.stream()
+                .mapToInt(city -> ((Number) city.get("total")).intValue())
+                .sum();
+        boolean journeyCompleted = totalCityCount > 0 && completedCityCount == totalCityCount;
+
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("user", userDto(user));
         result.put("cities", cityDtos);
+        result.put("journeyCompleted", journeyCompleted);
+        result.put("completedCityCount", completedCityCount);
+        result.put("totalCityCount", totalCityCount);
+        result.put("completedLandmarkCount", completedLandmarkCount);
+        result.put("totalLandmarkCount", totalLandmarkCount);
+        result.put("badgeCount", badgeCount);
+        result.put("totalBadgeCount", totalCityCount);
         result.put("unlockedCityIds", unlockedCityIds);
         result.put("defeatedBossCityIds", defeatedCityIds);
         result.put("checkedSceneIds", checkedSceneIds);
