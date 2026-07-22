@@ -55,39 +55,19 @@ loginForm.addEventListener("submit", async event => {
     });
 
     document.getElementById("logoutBtn").addEventListener("click", () => {
-      saveSession(null);
-      appState = null;
-      missionsState = null;
-      achievementsState = null;
-      collectionState = null;
-      selectedCollectionId = null;
-      explorationState = createExplorationState();
-      stopImageRecognitionTimer();
-      imageRecognitionState = createImageRecognitionState();
-      activeCityId = null;
-      answerSubmitting = false;
-      finalEndingShown = false;
-      logs = [];
-      document.getElementById("tutorial").classList.add("hidden");
-      document.getElementById("finalEnding").classList.add("hidden");
-      document.getElementById("finalEndingCard").innerHTML = "";
-      document.getElementById("collectionOverlay").classList.add("hidden");
-      document.getElementById("collectionGrid").innerHTML = "";
-      document.getElementById("collectionDetail").innerHTML = "";
-      document.getElementById("exploration-mission").innerHTML = "";
-      document.getElementById("image-recognition").innerHTML = "";
-      closeResultCard();
-      document.getElementById("login").classList.remove("hidden");
+      clearAuthState();
+      showLoginPage();
     });
 
     document.getElementById("startAdventureBtn").addEventListener("click", completeTutorial);
 
     if (session?.token) {
       document.getElementById("login").classList.add("hidden");
-      refreshState().then(showTutorialIfNeeded).catch(() => {
-        saveSession(null);
-        document.getElementById("tutorial").classList.add("hidden");
-        document.getElementById("login").classList.remove("hidden");
+      refreshState().then(showTutorialIfNeeded).catch(error => {
+        if (session?.token) {
+          clearAuthState();
+          showLoginPage(error.message);
+        }
       });
     }
 
