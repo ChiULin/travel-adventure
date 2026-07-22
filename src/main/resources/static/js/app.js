@@ -44,6 +44,7 @@ document.getElementById("loginForm").addEventListener("submit", async event => {
       explorationState = createExplorationState();
       stopImageRecognitionTimer();
       imageRecognitionState = createImageRecognitionState();
+      foodEventState = createFoodEventState();
       activeCityId = null;
       finalEndingShown = false;
       logs = [];

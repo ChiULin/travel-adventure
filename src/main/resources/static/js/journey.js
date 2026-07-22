@@ -133,6 +133,7 @@ async function refreshState() {
         activeCityId = firstUnlocked.id;
       }
       renderAll();
+      loadFoodEvent(activeCityId, true);
       const explorationCity = appState.cities.find(city => city.id === activeCityId);
       const supportsExploration = explorationCity?.scenes?.some(scene =>
         scene.interactionType === "EXPLORATION" && !scene.checked
@@ -258,6 +259,7 @@ function renderCityCards() {
           renderCityCards();
           renderPlayerSummary();
           renderCityDetail(activeCityId);
+          loadFoodEvent(activeCityId, true);
         });
       });
     }
@@ -338,6 +340,7 @@ function renderCityCards() {
             `;
             }).join("")}
           </div>
+          ${renderFoodEventCard(city)}
           ${renderBossChallenge(city, itemProgress)}
           <div class="log-list">${logsMarkup}</div>
         </div>
@@ -383,6 +386,7 @@ function renderCityCards() {
         button.addEventListener("click", () => restartCity(Number(button.dataset.restartCityId)));
       });
 
+      bindFoodEventActions();
       startActiveQuizTimer();
     }
 
