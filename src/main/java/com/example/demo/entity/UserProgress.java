@@ -4,7 +4,13 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "player_progress", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "city_id"}))
+@Table(
+        name = "player_progress",
+        uniqueConstraints = @UniqueConstraint(
+                name = "idx_progress_user_city",
+                columnNames = {"user_id", "city_id"}
+        )
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

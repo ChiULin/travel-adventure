@@ -5,7 +5,13 @@ import lombok.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
-@Table(name = "cities")
+@Table(
+        name = "cities",
+        uniqueConstraints = @UniqueConstraint(
+                name = "idx_cities_unlock_order",
+                columnNames = "city_order"
+        )
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
