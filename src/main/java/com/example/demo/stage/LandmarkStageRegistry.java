@@ -40,6 +40,18 @@ public class LandmarkStageRegistry {
                 .toList();
     }
 
+    public boolean isCityFullyConfigured(Long cityId) {
+        List<LandmarkStageDefinition> stages = findByCityId(cityId);
+
+        if (stages.size() != 3) {
+            return false;
+        }
+
+        return stages.get(0).stageOrder() == 1
+                && stages.get(1).stageOrder() == 2
+                && stages.get(2).stageOrder() == 3;
+    }
+
     public List<LandmarkStageDefinition> findAll() {
         return List.copyOf(stagesByLandmarkId.values());
     }
