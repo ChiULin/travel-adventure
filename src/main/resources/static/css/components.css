@@ -218,7 +218,7 @@
     }
 
     .tutorial-step {
-      min-height: 156px;
+      min-height: 132px;
       padding: 14px;
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -245,6 +245,46 @@
       font-weight: 800;
       line-height: 1.55;
       white-space: pre-line;
+    }
+
+    .tutorial-difficulties {
+      margin-bottom: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fffaf0;
+    }
+
+    .tutorial-difficulties h3 {
+      margin: 0 0 10px;
+      color: var(--ink);
+      font-size: 16px;
+    }
+
+    .tutorial-difficulty-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .tutorial-difficulty {
+      display: grid;
+      gap: 4px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .tutorial-difficulty strong {
+      color: #123b78;
+    }
+
+    .tutorial-difficulty span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.45;
     }
 
     .result-modal {
@@ -976,7 +1016,7 @@
       .brand h1 { font-size: 22px; }
       .metric-grid, .city-grid { grid-template-columns: 1fr; }
       .achievement-grid { grid-template-columns: 1fr; }
-      .tutorial-steps { grid-template-columns: 1fr; }
+      .tutorial-steps, .tutorial-difficulty-list { grid-template-columns: 1fr; }
       .final-checks, .final-stats, .final-actions { grid-template-columns: 1fr; }
       .final-route { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .collection-layout, .collection-grid { grid-template-columns: 1fr; }

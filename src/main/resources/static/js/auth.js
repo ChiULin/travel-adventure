@@ -1,5 +1,10 @@
 function tutorialIsCompleted() {
-      return localStorage.getItem(TUTORIAL_KEY) === "true";
+      return localStorage.getItem(tutorialStorageKey()) === "true";
+    }
+
+    function tutorialStorageKey() {
+      const userId = appState?.user?.id || session?.userId;
+      return userId ? `${TUTORIAL_KEY}:${userId}` : TUTORIAL_KEY;
     }
 
     function showTutorialIfNeeded() {
@@ -10,9 +15,9 @@ function tutorialIsCompleted() {
     }
 
     function completeTutorial() {
-      localStorage.setItem(TUTORIAL_KEY, "true");
+      localStorage.setItem(tutorialStorageKey(), "true");
       document.getElementById("tutorial").classList.add("hidden");
-      addLog("新手教學完成，開始你的台灣探索旅程。");
+      addLog("新手教學完成，開始你的臺灣探索旅程。");
       setTimeout(maybeShowFinalEnding, 0);
     }
 
