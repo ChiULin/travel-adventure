@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record BossChallengeRequest(
-        GameDifficulty difficulty,
-        String foodKey
+        GameDifficulty difficulty
 ) {
 }

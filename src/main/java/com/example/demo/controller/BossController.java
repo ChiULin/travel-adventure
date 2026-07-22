@@ -36,8 +36,7 @@ public class BossController {
         BossStartResponse result = bossService.startChallenge(
                 userService.userIdFor(authentication.getName()),
                 cityId,
-                request == null ? null : request.difficulty(),
-                request == null ? null : request.foodKey()
+                request == null ? null : request.difficulty()
         );
         return ResponseEntity.ok(ApiResponse.success("守護者挑戰開始", result));
     }

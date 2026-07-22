@@ -11,10 +11,6 @@ import com.example.demo.repository.CityRepository;
 import com.example.demo.repository.SceneRepository;
 import com.example.demo.repository.UserProgressRepository;
 import com.example.demo.repository.UserRepository;
-import com.example.demo.service.food.FoodChallengeService;
-import com.example.demo.service.food.FoodDefinition;
-import com.example.demo.service.food.FoodEffectType;
-import com.example.demo.service.food.FoodRegistry;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,64 +28,41 @@ public class BossService {
     private final CheckinRepository checkinRepository;
     private final SceneRepository sceneRepository;
     private final QuizQuestionService quizQuestionService;
-    private final FoodRegistry foodRegistry;
-    private final FoodChallengeService foodChallengeService;
     private final Map<String, BossBattleState> activeBattles = new ConcurrentHashMap<>();
 
     public BossService(CityRepository cityRepository, UserRepository userRepository, UserProgressRepository userProgressRepository,
                        CheckinRepository checkinRepository, SceneRepository sceneRepository,
-                       QuizQuestionService quizQuestionService, FoodRegistry foodRegistry,
-                       FoodChallengeService foodChallengeService) {
+                       QuizQuestionService quizQuestionService) {
         this.cityRepository = cityRepository;
         this.userRepository = userRepository;
         this.userProgressRepository = userProgressRepository;
         this.checkinRepository = checkinRepository;
         this.sceneRepository = sceneRepository;
         this.quizQuestionService = quizQuestionService;
-        this.foodRegistry = foodRegistry;
-        this.foodChallengeService = foodChallengeService;
     }
 
     public BossStartResponse startChallenge(Long userId, Long cityId,
-                                            GameDifficulty requestedDifficulty,
-                                            String foodKey) {
-        BossContext context = bossContext(userId, cityId);
+                                            GameDifficulty requestedDifficulty) {
+        bossContext(userId, cityId);
         GameDifficulty difficulty = requestedDifficulty == null
                 ? GameDifficulty.CASUAL : requestedDifficulty;
-        FoodDefinition food = resolveFoodEffect(userId, cityId, foodKey);
-        int extraSeconds = food == null ? 0 : food.effectValue();
-        BossBattleState state = new BossBattleState(
-                userId,
-                cityId,
-                difficulty,
-                food == null ? null : food.foodKey(),
-                extraSeconds
-        );
+        BossBattleState state = new BossBattleState(difficulty);
         activeBattles.put(battleKey(userId, cityId), state);
 
         Map<String, Object> question;
         try {
             question = quizQuestionService.randomBossQuestion(
-                    userId, cityId, difficulty.name(), extraSeconds);
+                    userId, cityId, difficulty.name());
         } catch (RuntimeException exception) {
             activeBattles.remove(battleKey(userId, cityId), state);
             throw exception;
         }
 
-        BossStartResponse.ActiveFood activeFood = food == null ? null
-                : new BossStartResponse.ActiveFood(
-                        food.foodKey(),
-                        food.name(),
-                        food.effectType().name(),
-                        food.effectValue(),
-                        "每題作答時間增加 %d 秒".formatted(food.effectValue())
-                );
         return new BossStartResponse(
                 difficulty.name(),
                 difficulty.seconds(),
-                difficulty.seconds() + extraSeconds,
-                activeFood,
-                new BossStartResponse.Battle(difficulty.lives(), 0),
+                difficulty.lives(),
+                0,
                 question
         );
     }
@@ -387,24 +360,6 @@ public class BossService {
         return new BossContext(optionalUser.get(), optionalCity.get(), progress);
     }
 
-    private FoodDefinition resolveFoodEffect(Long userId, Long cityId, String foodKey) {
-        if (foodKey == null || foodKey.isBlank()) {
-            return null;
-        }
-        FoodDefinition food = foodRegistry.findByFoodKey(foodKey)
-                .orElseThrow(() -> new IllegalArgumentException("找不到指定美食"));
-        if (!food.cityId().equals(cityId)) {
-            throw new IllegalArgumentException("此美食不能用於目前城市");
-        }
-        if (!foodChallengeService.isFoodUnlocked(userId, food.foodKey())) {
-            throw new IllegalArgumentException("尚未解鎖此美食");
-        }
-        if (food.effectType() != FoodEffectType.EXTRA_TIME) {
-            throw new IllegalArgumentException("目前不支援此美食效果");
-        }
-        return food;
-    }
-
     private String battleKey(Long userId, Long cityId) {
         return "%d:%d".formatted(userId, cityId);
     }
@@ -426,12 +381,6 @@ public class BossService {
     private record BossContext(User user, City city, UserProgress progress) {
     }
 
-    private record BossBattleState(
-            Long userId,
-            Long cityId,
-            GameDifficulty difficulty,
-            String activeFoodKey,
-            int extraSecondsPerQuestion
-    ) {
+    private record BossBattleState(GameDifficulty difficulty) {
     }
 }

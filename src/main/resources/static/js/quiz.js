@@ -64,7 +64,7 @@ function stopQuizTimer() {
       try {
         const battle = await api(`/api/cities/${cityId}/boss/start`, {
           method: "POST",
-          body: JSON.stringify({ difficulty: selectedDifficulty, foodKey: null })
+          body: JSON.stringify({ difficulty: selectedDifficulty })
         });
         activeQuizQuestion = battle.question;
         difficultyLocked = true;

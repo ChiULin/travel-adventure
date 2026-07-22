@@ -94,7 +94,7 @@ class QuizQuestionServiceTest {
     }
 
     @Test
-    void bossExtraTimeChangesDisplayedSecondsAndServerExpiry() {
+    void bossQuestionTimeComesOnlyFromDifficulty() {
         QuizQuestionService service = serviceWithLimit(5);
         City bossCity = mock(City.class);
         when(bossCity.getId()).thenReturn(3L);
@@ -108,13 +108,10 @@ class QuizQuestionServiceTest {
         when(cityRepository.findById(3L)).thenReturn(Optional.of(bossCity));
         when(sceneRepository.findByCityId(3L)).thenReturn(List.of());
 
-        Map<String, Object> withoutFood = service.randomBossQuestion(1L, 3L, "NORMAL", 0);
-        Map<String, Object> withFood = service.randomBossQuestion(1L, 3L, "NORMAL", 2);
+        Map<String, Object> normal = service.randomBossQuestion(1L, 3L, "NORMAL");
 
-        assertEquals(5, withoutFood.get("seconds"));
-        assertEquals(clock.instant().plusSeconds(7), withoutFood.get("expiresAt"));
-        assertEquals(7, withFood.get("seconds"));
-        assertEquals(clock.instant().plusSeconds(9), withFood.get("expiresAt"));
+        assertEquals(5, normal.get("seconds"));
+        assertEquals(clock.instant().plusSeconds(5), normal.get("expiresAt"));
     }
 
     private QuizQuestionService serviceWithLimit(int limit) {
