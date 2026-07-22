@@ -100,7 +100,10 @@ function stopImageRecognitionTimer() {
             <button class="btn ghost" id="retryImageRecognitionBtn" type="button">重新取得挑戰</button>
           </article>
         `;
-        document.getElementById("retryImageRecognitionBtn")?.addEventListener("click", retryImageRecognition);
+        const retryButton = document.getElementById("retryImageRecognitionBtn");
+        retryButton?.addEventListener("click", () =>
+          runWithButtonLock(retryButton, retryImageRecognition)
+        );
         return;
       }
       if (imageRecognitionState.result) {
@@ -142,9 +145,14 @@ function stopImageRecognitionTimer() {
         </article>
       `;
       document.querySelectorAll("[data-image-candidate]").forEach(button => {
-        button.addEventListener("click", () => submitImageRecognition(Number(button.dataset.imageCandidate)));
+        button.addEventListener("click", () => runWithButtonLock(button, () =>
+          submitImageRecognition(Number(button.dataset.imageCandidate))
+        ));
       });
-      document.getElementById("retryImageRecognitionBtn")?.addEventListener("click", retryImageRecognition);
+      const retryButton = document.getElementById("retryImageRecognitionBtn");
+      retryButton?.addEventListener("click", () =>
+        runWithButtonLock(retryButton, retryImageRecognition)
+      );
     }
 
     function renderImageRecognitionResult(container) {
@@ -160,7 +168,10 @@ function stopImageRecognitionTimer() {
             <button class="btn full" id="retryImageRecognitionBtn" type="button">重新取得挑戰</button>
           </article>
         `;
-        document.getElementById("retryImageRecognitionBtn")?.addEventListener("click", retryImageRecognition);
+        const retryButton = document.getElementById("retryImageRecognitionBtn");
+        retryButton?.addEventListener("click", () =>
+          runWithButtonLock(retryButton, retryImageRecognition)
+        );
         return;
       }
       container.innerHTML = `
@@ -212,5 +223,5 @@ function stopImageRecognitionTimer() {
     function retryImageRecognition() {
       const city = appState?.cities.find(item => item.id === Number(imageRecognitionState.cityId));
       const scene = city?.scenes?.find(item => item.id === Number(imageRecognitionState.sceneId));
-      if (scene) startImageRecognition(scene);
+      if (scene) return startImageRecognition(scene);
     }

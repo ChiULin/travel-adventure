@@ -49,7 +49,7 @@ function formatNumber(value) {
         addLog("目前無法開啟這個景點玩法。");
         return;
       }
-      handler(scene);
+      return handler(scene);
     }
 
     function addLog(text) {
@@ -471,10 +471,10 @@ function renderCityCards() {
       `;
 
       document.querySelectorAll("[data-start-scene-interaction]").forEach(button => {
-        button.addEventListener("click", () => {
+        button.addEventListener("click", () => runWithButtonLock(button, () => {
           const scene = city.scenes.find(item => item.id === Number(button.dataset.startSceneInteraction));
-          startSceneInteraction(scene);
-        });
+          return startSceneInteraction(scene);
+        }));
       });
 
       document.querySelectorAll("[data-view-scene-story]").forEach(button => {
@@ -484,23 +484,22 @@ function renderCityCards() {
       });
 
       document.querySelectorAll("[data-stage-action]").forEach(button => {
-        button.addEventListener("click", async () => {
-          if (button.disabled) return;
+        button.addEventListener("click", () => runWithButtonLock(button, async () => {
           const scene = city.scenes.find(item => item.id === Number(button.dataset.stageAction));
           if (!scene || scene.stageStatus === "LOCKED") return;
           if (scene.stageStatus === "COMPLETED") {
             await viewSceneStory(scene.id);
             return;
           }
-          startSceneInteraction(scene);
-        });
+          await startSceneInteraction(scene);
+        }));
       });
 
       document.querySelectorAll("[data-boss-stage-action]").forEach(button => {
-        button.addEventListener("click", () => {
-          if (button.disabled || city.bossStage?.stageStatus === "LOCKED") return;
-          startBossQuiz(Number(button.dataset.bossStageAction));
-        });
+        button.addEventListener("click", () => runWithButtonLock(button, () => {
+          if (city.bossStage?.stageStatus === "LOCKED") return;
+          return startBossQuiz(Number(button.dataset.bossStageAction));
+        }));
       });
 
       document.querySelectorAll("[data-difficulty]").forEach(button => {
@@ -513,19 +512,27 @@ function renderCityCards() {
       });
 
       document.querySelectorAll("[data-scene-id]").forEach(button => {
-        button.addEventListener("click", () => checkin(Number(button.dataset.sceneId), button.dataset.answer, button.dataset.answerText));
+        button.addEventListener("click", () => runWithButtonLock(button, () =>
+          checkin(Number(button.dataset.sceneId), button.dataset.answer, button.dataset.answerText)
+        ));
       });
 
       document.querySelectorAll("[data-start-boss-city-id]").forEach(button => {
-        button.addEventListener("click", () => startBossQuiz(Number(button.dataset.startBossCityId)));
+        button.addEventListener("click", () => runWithButtonLock(button, () =>
+          startBossQuiz(Number(button.dataset.startBossCityId))
+        ));
       });
 
       document.querySelectorAll("[data-boss-city-id]").forEach(button => {
-        button.addEventListener("click", () => challengeBoss(button.dataset.answer, button.dataset.answerText));
+        button.addEventListener("click", () => runWithButtonLock(button, () =>
+          challengeBoss(button.dataset.answer, button.dataset.answerText)
+        ));
       });
 
       document.querySelectorAll("[data-restart-city-id]").forEach(button => {
-        button.addEventListener("click", () => restartCity(Number(button.dataset.restartCityId)));
+        button.addEventListener("click", () => runWithButtonLock(button, () =>
+          restartCity(Number(button.dataset.restartCityId))
+        ));
       });
 
       startActiveQuizTimer();

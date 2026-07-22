@@ -299,7 +299,10 @@ function renderBattleStatus() {
         closeFinalEnding();
         window.scrollTo({ top: 0, behavior: "smooth" });
       });
-      document.getElementById("finalRestartBtn").addEventListener("click", restartCompletedJourney);
+      const restartButton = document.getElementById("finalRestartBtn");
+      restartButton.addEventListener("click", () =>
+        runWithButtonLock(restartButton, restartCompletedJourney)
+      );
     }
 
     function closeFinalEnding() {
@@ -326,11 +329,12 @@ function renderBattleStatus() {
     }
 
 async function challengeBoss(answer, answerText) {
+      if (answerSubmitting) return;
+      answerSubmitting = true;
       stopQuizTimer();
-      activeBossQuizCityId = null;
       const questionId = activeQuizQuestion?.questionId;
-      activeQuizQuestion = null;
       const city = activeCity();
+      disableVisibleQuizOptions();
       try {
         const result = await api(`/api/cities/${city.id}/boss/challenge`, {
           method: "POST",
@@ -341,6 +345,8 @@ async function challengeBoss(answer, answerText) {
             difficulty: selectedDifficulty
           })
         });
+        activeBossQuizCityId = null;
+        activeQuizQuestion = null;
         if (result.win) {
           registerCorrectAnswer({ expReward: result.earnedExp || 0, coinReward: result.earnedCoins || 0 });
           const rank = calculateBattleRank();
@@ -365,6 +371,8 @@ async function challengeBoss(answer, answerText) {
         await refreshState();
       } catch (error) {
         addLog(error.message);
+      } finally {
+        answerSubmitting = false;
       }
     }
 

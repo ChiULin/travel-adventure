@@ -59,7 +59,10 @@ async function loadExplorationMission(cityId = activeCityId || 1) {
             <button class="btn ghost" id="retryExplorationBtn" type="button">重新取得任務</button>
           </div>
         `;
-        document.getElementById("retryExplorationBtn").addEventListener("click", () => loadExplorationMission(explorationCityId));
+        const retryButton = document.getElementById("retryExplorationBtn");
+        retryButton.addEventListener("click", () =>
+          runWithButtonLock(retryButton, () => loadExplorationMission(explorationCityId))
+        );
         return;
       }
 
@@ -240,13 +243,19 @@ async function loadExplorationMission(cityId = activeCityId || 1) {
 
     function bindExplorationEvents() {
       document.querySelectorAll("[data-investigation-action]").forEach(button => {
-        button.addEventListener("click", () => submitInvestigation(button.dataset.investigationAction));
+        button.addEventListener("click", () => runWithButtonLock(button, () =>
+          submitInvestigation(button.dataset.investigationAction)
+        ));
       });
       document.querySelectorAll("[data-exploration-scene-id]").forEach(button => {
-        button.addEventListener("click", () => submitExplorationGuess(Number(button.dataset.explorationSceneId)));
+        button.addEventListener("click", () => runWithButtonLock(button, () =>
+          submitExplorationGuess(Number(button.dataset.explorationSceneId))
+        ));
       });
       document.querySelectorAll("[data-culture-answer]").forEach(button => {
-        button.addEventListener("click", () => submitCultureChallenge(button.dataset.cultureAnswer));
+        button.addEventListener("click", () => runWithButtonLock(button, () =>
+          submitCultureChallenge(button.dataset.cultureAnswer)
+        ));
       });
       document.getElementById("continueInvestigatingBtn")?.addEventListener("click", () => {
         explorationState.reasoningStarted = false;
@@ -264,7 +273,10 @@ async function loadExplorationMission(cityId = activeCityId || 1) {
         explorationState.feedback = null;
         renderExplorationMission();
       });
-      document.getElementById("retryCultureChallengeBtn")?.addEventListener("click", retryCultureChallenge);
+      const retryButton = document.getElementById("retryCultureChallengeBtn");
+      retryButton?.addEventListener("click", () =>
+        runWithButtonLock(retryButton, retryCultureChallenge)
+      );
     }
 
     function discoveredClue(type) {

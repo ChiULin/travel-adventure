@@ -18,6 +18,7 @@ const SESSION_KEY = "travelAdventureApiSession";
     let quizTimerTarget = null;
     let activeSceneQuizId = null;
     let activeBossQuizCityId = null;
+    let answerSubmitting = false;
     let answerCombo = 0;
     let cityLives = DIFFICULTIES[selectedDifficulty].lives;
     let cityFailedPending = false;

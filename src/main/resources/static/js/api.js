@@ -22,3 +22,28 @@ async function api(path, options = {}) {
       }
       return body.data;
     }
+
+const buttonLocks = new WeakSet();
+
+async function runWithButtonLock(button, action) {
+      if (!button || button.disabled || buttonLocks.has(button)) {
+        return;
+      }
+
+      const originalContent = button.innerHTML;
+      buttonLocks.add(button);
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+      button.textContent = "處理中…";
+
+      try {
+        return await action();
+      } finally {
+        buttonLocks.delete(button);
+        button.removeAttribute("aria-busy");
+        if (button.isConnected) {
+          button.disabled = false;
+          button.innerHTML = originalContent;
+        }
+      }
+    }

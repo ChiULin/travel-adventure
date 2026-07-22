@@ -119,17 +119,20 @@ function stopQuizTimer() {
     }
 
 async function checkin(sceneId, answer, answerText) {
+      if (answerSubmitting) return;
+      answerSubmitting = true;
       stopQuizTimer();
-      activeSceneQuizId = null;
       const questionId = activeQuizQuestion?.questionId;
-      activeQuizQuestion = null;
       const city = activeCity();
       const scene = city?.scenes?.find(item => item.id === sceneId);
+      disableVisibleQuizOptions();
       try {
         const result = await api("/api/checkins", {
           method: "POST",
           body: JSON.stringify({ sceneId, answer, answerText, questionId, difficulty: selectedDifficulty })
         });
+        activeSceneQuizId = null;
+        activeQuizQuestion = null;
         if (!result.ok) {
           registerWrongAnswer();
           if (cityLives <= 0) {
@@ -154,5 +157,7 @@ async function checkin(sceneId, answer, answerText) {
         await refreshState();
       } catch (error) {
         addLog(error.message);
+      } finally {
+        answerSubmitting = false;
       }
     }
