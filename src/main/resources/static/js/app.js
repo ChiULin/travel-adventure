@@ -42,6 +42,8 @@ document.getElementById("loginForm").addEventListener("submit", async event => {
       collectionState = null;
       selectedCollectionId = null;
       explorationState = createExplorationState();
+      stopImageRecognitionTimer();
+      imageRecognitionState = createImageRecognitionState();
       activeCityId = null;
       finalEndingShown = false;
       logs = [];
@@ -52,6 +54,7 @@ document.getElementById("loginForm").addEventListener("submit", async event => {
       document.getElementById("collectionGrid").innerHTML = "";
       document.getElementById("collectionDetail").innerHTML = "";
       document.getElementById("exploration-mission").innerHTML = "";
+      document.getElementById("image-recognition").innerHTML = "";
       closeResultCard();
       document.getElementById("login").classList.remove("hidden");
     });

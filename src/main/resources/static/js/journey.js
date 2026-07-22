@@ -31,6 +31,27 @@ function formatNumber(value) {
       return appState?.cities.find(city => city.id === activeCityId) || appState?.cities[0];
     }
 
+    const interactionHandlers = {
+      EXPLORATION: async scene => {
+        if ((!explorationState.mission || Number(explorationState.mission.cityId) !== Number(activeCityId))
+            && !explorationState.loading) {
+          await loadExplorationMission(activeCityId);
+        }
+        document.getElementById("exploration-mission")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      },
+      IMAGE_RECOGNITION: startImageRecognition,
+      QUIZ: scene => startSceneQuiz(scene.id)
+    };
+
+    function startSceneInteraction(scene) {
+      const handler = interactionHandlers[scene?.interactionType];
+      if (!handler) {
+        addLog("目前無法開啟這個景點玩法。");
+        return;
+      }
+      handler(scene);
+    }
+
     function addLog(text) {
       const time = new Date().toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" });
       logs.unshift({ time, text });
@@ -288,7 +309,6 @@ function renderCityCards() {
           <div class="scene-list">
             ${city.scenes.map(scene => {
               const sceneActive = activeSceneQuizId === scene.id;
-              const usesExploration = scene.interactionType === "EXPLORATION";
               return `
               <article class="scene-card ${scene.checked ? "done" : ""} ${sceneActive ? "active" : ""}">
                 <div class="scene-image" ${scene.imageUrl ? `style="background-image: linear-gradient(180deg, rgba(255,255,255,.08), rgba(11,35,71,.18)), url('${escapeHtml(scene.imageUrl)}')"` : ""}></div>
@@ -300,10 +320,6 @@ function renderCityCards() {
                     <button class="btn full" type="button" data-view-scene-story="${scene.id}">
                       ${escapeHtml(scene.actionLabel || "查看景點故事")}
                     </button>
-                  ` : usesExploration ? `
-                    <button class="btn full" type="button" data-open-exploration>
-                      ${escapeHtml(scene.actionLabel || "接旅行委託")}
-                    </button>
                   ` : sceneActive ? `
                     <div class="quiz-box">
                       <strong>${escapeHtml(activeQuizQuestion?.question || scene.quizQuestion || "回答景點問題後完成打卡")}</strong>
@@ -313,7 +329,7 @@ function renderCityCards() {
                       </div>
                     </div>
                   ` : `
-                    <button class="btn full" type="button" data-start-scene-id="${scene.id}" ${cityLives <= 0 ? "disabled" : ""}>
+                    <button class="btn full" type="button" data-start-scene-interaction="${scene.id}" ${cityLives <= 0 ? "disabled" : ""}>
                       ${escapeHtml(scene.actionLabel || "開始答題")}
                     </button>
                   `}
@@ -327,17 +343,10 @@ function renderCityCards() {
         </div>
       `;
 
-      document.querySelectorAll("[data-start-scene-id]").forEach(button => {
-        button.addEventListener("click", () => startSceneQuiz(Number(button.dataset.startSceneId)));
-      });
-
-      document.querySelectorAll("[data-open-exploration]").forEach(button => {
-        button.addEventListener("click", async () => {
-          if ((!explorationState.mission || Number(explorationState.mission.cityId) !== Number(city.id))
-              && !explorationState.loading) {
-            await loadExplorationMission(city.id);
-          }
-          document.getElementById("exploration-mission")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.querySelectorAll("[data-start-scene-interaction]").forEach(button => {
+        button.addEventListener("click", () => {
+          const scene = city.scenes.find(item => item.id === Number(button.dataset.startSceneInteraction));
+          startSceneInteraction(scene);
         });
       });
 
@@ -416,6 +425,7 @@ function renderCityCards() {
       renderPlayerSummary();
       renderJourneyProgress();
       renderExplorationMission();
+      renderImageRecognition();
       renderDailyMissions();
       renderAchievements();
       renderCityCards();

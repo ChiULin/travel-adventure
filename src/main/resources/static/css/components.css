@@ -869,6 +869,74 @@
     .exploration-grade.grade-b { border-color: #8bc9a2; background: #eefaf2; color: #176738; }
     .exploration-grade.grade-c { border-color: #b7becb; background: #f3f5f8; color: #566174; }
 
+    .image-recognition-card {
+      margin-top: 18px;
+      padding: 20px;
+      border: 1px solid #7db5e8;
+      border-radius: 14px;
+      background: linear-gradient(145deg, #edf7ff, #ffffff);
+      box-shadow: 0 12px 30px rgba(27, 91, 145, .1);
+    }
+
+    .image-recognition-card h2 { margin: 7px 0; }
+
+    .image-timer {
+      padding: 8px 12px;
+      border-radius: 999px;
+      color: #155a91;
+      background: #dceeff;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .image-timer.warning {
+      color: #a12424;
+      background: #ffe2e2;
+      animation: badgePulse 1s infinite;
+    }
+
+    .recognition-image-frame {
+      position: relative;
+      min-height: 260px;
+      margin: 16px 0;
+      overflow: hidden;
+      border: 1px solid #9fc8eb;
+      border-radius: 14px;
+      background: #17354f;
+    }
+
+    .recognition-image-frame img {
+      display: block;
+      width: 100%;
+      height: 360px;
+      object-fit: cover;
+      transform: scale(1.04);
+      transition: filter .25s linear;
+    }
+
+    .recognition-image-frame span {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      color: white;
+      background: rgba(12, 38, 61, .78);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .recognition-candidates {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    .image-recognition-complete {
+      border-color: #91d3aa;
+      background: linear-gradient(135deg, #eefaf2, #ffffff);
+    }
+
     @keyframes ambientSweep {
       from { background-position: -260px 0, 0 0; }
       to { background-position: 260px 0, 0 0; }
@@ -914,6 +982,9 @@
       .collection-layout, .collection-grid { grid-template-columns: 1fr; }
       .exploration-clues, .exploration-candidates, .exploration-rewards { grid-template-columns: 1fr; }
       .investigation-actions, .exploration-decision { grid-template-columns: 1fr; }
+      .recognition-candidates { grid-template-columns: 1fr; }
+      .recognition-image-frame { min-height: 190px; }
+      .recognition-image-frame img { height: 240px; }
       .exploration-action-bar { align-items: flex-start; flex-direction: column; }
       .exploration-action-bar > span:last-child { margin-left: 0; }
       .summary-layout { grid-template-columns: 52px 1fr; }

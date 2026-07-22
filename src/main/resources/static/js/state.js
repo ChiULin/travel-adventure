@@ -28,6 +28,7 @@ const SESSION_KEY = "travelAdventureApiSession";
     let collectionTab = "landmarks";
     let selectedCollectionId = null;
     let explorationState = createExplorationState();
+    let imageRecognitionState = createImageRecognitionState();
 
     function createExplorationState() {
       return {
@@ -46,6 +47,30 @@ const SESSION_KEY = "travelAdventureApiSession";
         error: null,
         loading: false,
         submitting: false
+      };
+    }
+
+    function createImageRecognitionState() {
+      return {
+        questionId: null,
+        cityId: null,
+        sceneId: null,
+        prompt: null,
+        imageUrl: null,
+        displayMode: null,
+        initialBlurLevel: 0,
+        currentBlurLevel: 0,
+        difficulty: null,
+        issuedAt: null,
+        expiresAt: null,
+        candidates: [],
+        timerId: null,
+        remainingSeconds: 0,
+        loading: false,
+        submitting: false,
+        expired: false,
+        result: null,
+        error: null
       };
     }
 

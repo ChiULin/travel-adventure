@@ -31,16 +31,19 @@ public class JourneyStateService {
     private final CheckinRepository checkinRepository;
     private final UserProgressRepository userProgressRepository;
     private final ExplorationMissionRegistry explorationMissionRegistry;
+    private final ImageRecognitionRegistry imageRecognitionRegistry;
 
     public JourneyStateService(UserRepository userRepository, CityRepository cityRepository, SceneRepository sceneRepository,
                                CheckinRepository checkinRepository, UserProgressRepository userProgressRepository,
-                               ExplorationMissionRegistry explorationMissionRegistry) {
+                               ExplorationMissionRegistry explorationMissionRegistry,
+                               ImageRecognitionRegistry imageRecognitionRegistry) {
         this.userRepository = userRepository;
         this.cityRepository = cityRepository;
         this.sceneRepository = sceneRepository;
         this.checkinRepository = checkinRepository;
         this.userProgressRepository = userProgressRepository;
         this.explorationMissionRegistry = explorationMissionRegistry;
+        this.imageRecognitionRegistry = imageRecognitionRegistry;
     }
 
     public Map<String, Object> state(Long userId) {
@@ -271,13 +274,22 @@ public class JourneyStateService {
         dto.put("expReward", scene.getExpReward());
         dto.put("coinReward", scene.getCoinReward());
         dto.put("checked", checked);
-        SceneInteractionType interactionType = explorationMissionRegistry.findByTargetSceneId(scene.getId()).isPresent()
-                ? SceneInteractionType.EXPLORATION
-                : SceneInteractionType.QUIZ;
+        SceneInteractionType interactionType;
+        if (explorationMissionRegistry.findByTargetSceneId(scene.getId()).isPresent()) {
+            interactionType = SceneInteractionType.EXPLORATION;
+        } else if (imageRecognitionRegistry.findByTargetSceneId(scene.getId()).isPresent()) {
+            interactionType = SceneInteractionType.IMAGE_RECOGNITION;
+        } else {
+            interactionType = SceneInteractionType.QUIZ;
+        }
         dto.put("interactionType", interactionType.name());
         dto.put("actionLabel", checked
                 ? "查看景點故事"
-                : interactionType == SceneInteractionType.EXPLORATION ? "接旅行委託" : "開始答題");
+                : switch (interactionType) {
+                    case EXPLORATION -> "接旅行委託";
+                    case IMAGE_RECOGNITION -> "觀察景點照片";
+                    default -> "開始答題";
+                });
         return dto;
     }
 
