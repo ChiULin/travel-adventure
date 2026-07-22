@@ -133,12 +133,19 @@ class StageChallengeIntegrationTest {
                 .andExpect(jsonPath("$.data.cities[0].scenes[2].stageLabel").value("第 3 關"))
                 .andExpect(jsonPath("$.data.cities[0].scenes[2].stageStatus").value("LOCKED"))
                 .andExpect(jsonPath("$.data.cities[0].scenes[2].actionLabel").value("完成上一關後解鎖"))
+                .andExpect(jsonPath("$.data.cities[0].bossStage.cityId").value(1))
+                .andExpect(jsonPath("$.data.cities[0].bossStage.bossName").value("台北守護者"))
+                .andExpect(jsonPath("$.data.cities[0].bossStage.stageOrder").value(4))
+                .andExpect(jsonPath("$.data.cities[0].bossStage.stageLabel").value("第 4 關"))
+                .andExpect(jsonPath("$.data.cities[0].bossStage.stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[0].bossStage.actionLabel").value("完成前三關後解鎖"))
                 .andExpect(jsonPath("$.data.cities[1].scenes[0].stageConfigured").value(false))
                 .andExpect(jsonPath("$.data.cities[1].scenes[0].stageOrder").doesNotExist())
                 .andExpect(jsonPath("$.data.cities[1].scenes[0].stageLabel").doesNotExist())
                 .andExpect(jsonPath("$.data.cities[1].scenes[0].stageStatus").doesNotExist())
                 .andExpect(jsonPath("$.data.cities[1].scenes[0].interactionType").value("EXPLORATION"))
-                .andExpect(jsonPath("$.data.cities[1].scenes[0].actionLabel").value("接旅行委託"));
+                .andExpect(jsonPath("$.data.cities[1].scenes[0].actionLabel").value("接旅行委託"))
+                .andExpect(jsonPath("$.data.cities[1].bossStage").value((Object) null));
     }
 
     @Test
@@ -154,7 +161,8 @@ class StageChallengeIntegrationTest {
                 .andExpect(jsonPath("$.data.cities[0].scenes[0].actionLabel").value("查看故事"))
                 .andExpect(jsonPath("$.data.cities[0].scenes[1].stageStatus").value("AVAILABLE"))
                 .andExpect(jsonPath("$.data.cities[0].scenes[1].actionLabel").value("開始挑戰"))
-                .andExpect(jsonPath("$.data.cities[0].scenes[2].stageStatus").value("LOCKED"));
+                .andExpect(jsonPath("$.data.cities[0].scenes[2].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[0].bossStage.stageStatus").value("LOCKED"));
     }
 
     @Test
@@ -187,6 +195,76 @@ class StageChallengeIntegrationTest {
                 .andExpect(jsonPath("$.data.cities[0].scenes[0].stageStatus").value("AVAILABLE"))
                 .andExpect(jsonPath("$.data.cities[0].scenes[1].stageStatus").value("LOCKED"))
                 .andExpect(jsonPath("$.data.cities[0].scenes[2].stageStatus").value("LOCKED"));
+    }
+
+    @Test
+    void taipeiBossStageBecomesAvailableOnlyAfterAllThreeStagesComplete() throws Exception {
+        String token = registerAndGetToken("journey-boss-ready");
+        User user = userRepository.findByUsername("journey-boss-ready").orElseThrow();
+        saveCheckin(user, 1L, true);
+        saveCheckin(user, 2L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[0].bossStage.stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[0].bossStage.actionLabel").value("完成前三關後解鎖"));
+
+        saveCheckin(user, 3L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[0].bossStage.stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[0].bossStage.actionLabel").value("挑戰城市守護者"));
+    }
+
+    @Test
+    void incompleteCheckinDoesNotCountTowardTaipeiBossStage() throws Exception {
+        String token = registerAndGetToken("boss-incomplete");
+        User user = userRepository.findByUsername("boss-incomplete").orElseThrow();
+        saveCheckin(user, 1L, true);
+        saveCheckin(user, 2L, true);
+        saveCheckin(user, 3L, false);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[0].bossStage.stageStatus").value("LOCKED"));
+    }
+
+    @Test
+    void completedTaipeiBossStageSupportsAnotherChallenge() throws Exception {
+        String token = registerAndGetToken("boss-completed");
+        User user = userRepository.findByUsername("boss-completed").orElseThrow();
+        saveCheckin(user, 1L, true);
+        saveCheckin(user, 2L, true);
+        saveCheckin(user, 3L, true);
+        var progress = userProgressRepository.findByUserIdAndCityId(user.getId(), 1L).orElseThrow();
+        progress.setBossCompleted(true);
+        progress.setBadgeUnlocked(true);
+        userProgressRepository.save(progress);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[0].bossStage.stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[0].bossStage.actionLabel").value("再次挑戰守護者"));
+    }
+
+    @Test
+    void onePlayersTaipeiBossProgressDoesNotAffectAnotherPlayer() throws Exception {
+        registerAndGetToken("journey-boss-owner");
+        String otherToken = registerAndGetToken("journey-boss-other");
+        User owner = userRepository.findByUsername("journey-boss-owner").orElseThrow();
+        saveCheckin(owner, 1L, true);
+        saveCheckin(owner, 2L, true);
+        saveCheckin(owner, 3L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + otherToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[0].bossStage.stageStatus").value("LOCKED"));
     }
 
     private void assertLocked(

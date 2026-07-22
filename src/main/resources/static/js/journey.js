@@ -316,7 +316,10 @@ function renderCityCards() {
     }
 
     function renderStageRoute(city, stages) {
-      const completedCount = stages.filter(scene => scene.stageStatus === "COMPLETED").length;
+      const bossStage = city.bossStage;
+      const completedCount = stages.filter(scene => scene.stageStatus === "COMPLETED").length
+        + (bossStage?.stageStatus === "COMPLETED" ? 1 : 0);
+      const totalStages = stages.length + (bossStage ? 1 : 0);
 
       return `
         <section class="stage-route" id="stage-route" aria-label="${escapeHtml(city.name)}關卡路線">
@@ -325,7 +328,7 @@ function renderCityCards() {
               <span class="stage-route__eyebrow">循序景點挑戰</span>
               <h2>${escapeHtml(city.name)}關卡路線</h2>
             </div>
-            <strong>${completedCount} / ${stages.length} 個景點完成</strong>
+            <strong>${completedCount} / ${totalStages} 關完成</strong>
           </div>
           <div class="stage-route__list">
             ${stages.map(scene => {
@@ -365,8 +368,41 @@ function renderCityCards() {
                 </article>
               `;
             }).join("")}
+            ${bossStage ? renderBossStageNode(city, bossStage) : ""}
           </div>
         </section>
+      `;
+    }
+
+    function renderBossStageNode(city, bossStage) {
+      const stageStatus = bossStage.stageStatus || "LOCKED";
+      const statusClass = stageStatus.toLowerCase();
+      const completed = stageStatus === "COMPLETED";
+      const locked = stageStatus === "LOCKED";
+      const bossActive = activeBossQuizCityId === city.id;
+      const marker = completed ? "✓" : locked ? "🔒" : "▶";
+      const statusLabel = completed ? "已完成" : locked ? "尚未解鎖" : "可挑戰";
+
+      return `
+        <article class="stage-node stage-node--boss stage-node--${statusClass} ${bossActive ? "stage-node--active" : ""}">
+          <div class="stage-node__rail" aria-hidden="true">
+            <span class="stage-node__marker">${marker}</span>
+          </div>
+          <div class="stage-node__content">
+            <div class="stage-node__heading">
+              <span class="stage-node__label">${escapeHtml(bossStage.stageLabel)}</span>
+              <span class="stage-node__status">${statusLabel}</span>
+            </div>
+            <h3>${escapeHtml(bossStage.bossName)}</h3>
+            <p>完成城市最終文化挑戰，取得${escapeHtml(city.name)}徽章。</p>
+            ${bossActive ? renderActiveBossQuiz(city) : `
+              <button class="btn red full stage-node__button" type="button"
+                      data-boss-stage-action="${bossStage.cityId}" ${locked || cityLives <= 0 ? "disabled" : ""}>
+                ${escapeHtml(bossStage.actionLabel)}
+              </button>
+            `}
+          </div>
+        </article>
       `;
     }
 
@@ -422,7 +458,7 @@ function renderCityCards() {
             `).join("")}
           </div>
           ${stages ? renderStageRoute(city, stages) : renderSceneList(city)}
-          ${renderBossChallenge(city, itemProgress)}
+          ${stages ? "" : renderBossChallenge(city, itemProgress)}
           <div class="log-list">${logsMarkup}</div>
         </div>
       `;
@@ -450,6 +486,13 @@ function renderCityCards() {
             return;
           }
           startSceneInteraction(scene);
+        });
+      });
+
+      document.querySelectorAll("[data-boss-stage-action]").forEach(button => {
+        button.addEventListener("click", () => {
+          if (button.disabled || city.bossStage?.stageStatus === "LOCKED") return;
+          startBossQuiz(Number(button.dataset.bossStageAction));
         });
       });
 
@@ -504,8 +547,12 @@ function renderCityCards() {
           </div>
         `;
       }
+      return renderActiveBossQuiz(city, "detail-actions quiz-box");
+    }
+
+    function renderActiveBossQuiz(city, className = "quiz-box") {
       return `
-        <div class="detail-actions quiz-box">
+        <div class="${className}">
           <strong>${escapeHtml(city.bossName)}：${escapeHtml(activeQuizQuestion?.question || city.bossQuestion || "回答首領問題")}</strong>
           <div class="quiz-timer" data-quiz-timer>剩餘 ${activeQuizQuestion?.seconds || difficultyConfig().seconds} 秒</div>
           <div class="quiz-options">

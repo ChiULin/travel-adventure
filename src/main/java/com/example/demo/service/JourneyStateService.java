@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import com.example.demo.dto.JourneyBossStageResponse;
 import com.example.demo.entity.Checkin;
 import com.example.demo.entity.City;
 import com.example.demo.entity.Scene;
@@ -114,6 +115,9 @@ public class JourneyStateService {
             dto.put("done", done);
             dto.put("total", scenes.size());
             dto.put("scenes", sceneDtos);
+            dto.put("bossStage", cityStagesConfigured
+                    ? buildBossStage(city, cityProgress, scenes, checkedSceneIds)
+                    : null);
             return dto;
         }).toList();
 
@@ -339,6 +343,44 @@ public class JourneyStateService {
             case EXPLORATION -> "接旅行委託";
             case IMAGE_RECOGNITION -> "觀察景點照片";
             default -> "開始答題";
+        };
+    }
+
+    private JourneyBossStageResponse buildBossStage(City city, UserProgress cityProgress,
+                                                     List<Scene> scenes, Set<Long> checkedSceneIds) {
+        boolean allLandmarksCompleted = scenes.stream()
+                .allMatch(scene -> checkedSceneIds.contains(scene.getId()));
+        boolean bossCompleted = cityProgress != null
+                && Boolean.TRUE.equals(cityProgress.getBossCompleted());
+        StageStatus status;
+        if (bossCompleted) {
+            status = StageStatus.COMPLETED;
+        } else if (allLandmarksCompleted) {
+            status = StageStatus.AVAILABLE;
+        } else {
+            status = StageStatus.LOCKED;
+        }
+
+        int stageOrder = landmarkStageRegistry.findByCityId(city.getId()).stream()
+                .mapToInt(stage -> stage.stageOrder())
+                .max()
+                .orElse(0) + 1;
+
+        return new JourneyBossStageResponse(
+                city.getId(),
+                city.getBossName(),
+                stageOrder,
+                "第 " + stageOrder + " 關",
+                status,
+                resolveBossActionLabel(status)
+        );
+    }
+
+    private String resolveBossActionLabel(StageStatus status) {
+        return switch (status) {
+            case LOCKED -> "完成前三關後解鎖";
+            case AVAILABLE -> "挑戰城市守護者";
+            case COMPLETED -> "再次挑戰守護者";
         };
     }
 

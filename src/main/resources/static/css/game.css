@@ -514,6 +514,21 @@
       cursor: not-allowed;
     }
 
+    .stage-node--boss .stage-node__content {
+      border-width: 2px;
+      background-image: linear-gradient(135deg, rgba(243, 180, 63, .08), rgba(217, 67, 78, .06));
+    }
+
+    .stage-node--boss.stage-node--available .stage-node__marker {
+      border-color: var(--red);
+      background: var(--red);
+    }
+
+    .stage-node--boss.stage-node--available .stage-node__content {
+      border-color: rgba(217, 67, 78, .46);
+      box-shadow: 0 10px 22px rgba(217, 67, 78, .12);
+    }
+
     .scene-card {
       display: grid;
       grid-template-columns: 84px minmax(0, 1fr);
