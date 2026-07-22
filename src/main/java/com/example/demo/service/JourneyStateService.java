@@ -430,19 +430,16 @@ public class JourneyStateService {
     }
 
     private CityBadge badgeFor(City city) {
-        if (city.getBadgeIcon() != null && city.getBadgeName() != null) {
-            return new CityBadge(city.getBadgeIcon(), city.getBadgeName());
-        }
-        String cityName = city.getName();
-        return switch (cityName) {
-            case "台北" -> new CityBadge("🏙️", "101 徽章");
-            case "台中" -> new CityBadge("🌅", "高美濕地徽章");
-            case "台南" -> new CityBadge("🏯", "古都徽章");
-            case "高雄" -> new CityBadge("🌊", "港都徽章");
-            case "花蓮" -> new CityBadge("⛰️", "山海徽章");
-            case "澎湖" -> new CityBadge("🏝️", "海島徽章");
-            default -> new CityBadge("🎒", cityName + "徽章");
-        };
+        String cityName = city.getName() == null || city.getName().isBlank()
+                ? "城市"
+                : city.getName();
+        String icon = city.getBadgeIcon() == null || city.getBadgeIcon().isBlank()
+                ? "🏅"
+                : city.getBadgeIcon();
+        String name = city.getBadgeName() == null || city.getBadgeName().isBlank()
+                ? cityName + "徽章"
+                : city.getBadgeName();
+        return new CityBadge(icon, name);
     }
 
     private record CityBadge(String icon, String name) {

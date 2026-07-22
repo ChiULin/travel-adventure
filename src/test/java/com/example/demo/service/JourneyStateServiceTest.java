@@ -101,6 +101,8 @@ class JourneyStateServiceTest {
         assertFalse((Boolean) scenes.getFirst().get("stageConfigured"));
         assertNull(scenes.getFirst().get("stageOrder"));
         assertNull(cityResponse.get("bossStage"));
+        assertEquals("🏅", cityResponse.get("badgeIcon"));
+        assertEquals("測試城徽章", cityResponse.get("badgeName"));
         verify(landmarkStageRegistry, never()).findByLandmarkId(903L);
     }
 

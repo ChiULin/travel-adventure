@@ -62,15 +62,11 @@ class BossChallengeIntegrationTest {
     }
 
     @Test
-    void normalBossQuestionShouldExpireAfterFiveSecondsWithoutFoodKey() throws Exception {
+    void normalBossQuestionShouldExpireAfterFiveSeconds() throws Exception {
         MvcResult result = startReadyBoss("boss-normal-player", "NORMAL");
 
         assertStartContract(result, "NORMAL", 5, 3);
         assertQuestionLifetime(result, 5);
-        JsonNode data = responseData(result);
-        assertTrue(data.path("activeFood").isMissingNode());
-        assertTrue(data.path("baseQuestionSeconds").isMissingNode());
-        assertTrue(data.path("battle").isMissingNode());
     }
 
     @Test

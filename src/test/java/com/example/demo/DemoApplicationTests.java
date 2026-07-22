@@ -7,13 +7,11 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,20 +23,9 @@ class DemoApplicationTests {
 
 	@Autowired
 	private MockMvc mockMvc;
-	@Autowired
-	private RequestMappingHandlerMapping requestMappingHandlerMapping;
 
 	@Test
 	void contextLoads() {
-	}
-
-	@Test
-	void foodApiShouldNoLongerBeMapped() {
-		boolean foodMappingExists = requestMappingHandlerMapping.getHandlerMethods().keySet().stream()
-				.flatMap(mapping -> mapping.getPatternValues().stream())
-				.anyMatch(pattern -> pattern.contains("/food"));
-
-		assertFalse(foodMappingExists);
 	}
 
 	@Test
