@@ -262,11 +262,126 @@ function renderCityCards() {
       });
     }
 
+    function configuredStages(city) {
+      const scenes = city?.scenes;
+      if (!Array.isArray(scenes) || scenes.length === 0
+          || !scenes.every(scene => scene.stageConfigured === true)) {
+        return null;
+      }
+
+      return [...scenes].sort((first, second) =>
+        Number(first.stageOrder) - Number(second.stageOrder)
+      );
+    }
+
+    function renderActiveSceneQuiz(scene) {
+      return `
+        <div class="quiz-box">
+          <strong>${escapeHtml(activeQuizQuestion?.question || scene.quizQuestion || "回答景點問題後完成打卡")}</strong>
+          <div class="quiz-timer" data-quiz-timer>剩餘 ${difficultyConfig().seconds} 秒</div>
+          <div class="quiz-options">
+            ${renderOptionButtons(activeQuizQuestion?.options || scene.quizOptions, "data-scene-id", scene.id)}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSceneList(city) {
+      return `
+        <div class="scene-list">
+          ${city.scenes.map(scene => {
+            const sceneActive = activeSceneQuizId === scene.id;
+            return `
+            <article class="scene-card ${scene.checked ? "done" : ""} ${sceneActive ? "active" : ""}">
+              <div class="scene-image" ${scene.imageUrl ? `style="background-image: linear-gradient(180deg, rgba(255,255,255,.08), rgba(11,35,71,.18)), url('${escapeHtml(scene.imageUrl)}')"` : ""}></div>
+              <div>
+                <h3>${scene.checked ? "✓ " : ""}${escapeHtml(scene.name)}</h3>
+                <p class="story-text">${escapeHtml(scene.story || scene.desc)}</p>
+                <div class="reward-row"><span>EXP +${scaledReward(scene.expReward)}</span><span>金幣 +${scaledReward(scene.coinReward)}</span></div>
+                ${scene.checked ? `
+                  <button class="btn full" type="button" data-view-scene-story="${scene.id}">
+                    ${escapeHtml(scene.actionLabel || "查看景點故事")}
+                  </button>
+                ` : sceneActive ? renderActiveSceneQuiz(scene) : `
+                  <button class="btn full" type="button" data-start-scene-interaction="${scene.id}" ${cityLives <= 0 ? "disabled" : ""}>
+                    ${escapeHtml(scene.actionLabel || "開始答題")}
+                  </button>
+                `}
+              </div>
+            </article>
+          `;
+          }).join("")}
+        </div>
+      `;
+    }
+
+    function renderStageRoute(city, stages) {
+      const completedCount = stages.filter(scene => scene.stageStatus === "COMPLETED").length;
+
+      return `
+        <section class="stage-route" id="stage-route" aria-label="${escapeHtml(city.name)}關卡路線">
+          <div class="stage-route__header">
+            <div>
+              <span class="stage-route__eyebrow">循序景點挑戰</span>
+              <h2>${escapeHtml(city.name)}關卡路線</h2>
+            </div>
+            <strong>${completedCount} / ${stages.length} 個景點完成</strong>
+          </div>
+          <div class="stage-route__list">
+            ${stages.map(scene => {
+              const stageStatus = scene.stageStatus || "LOCKED";
+              const statusClass = stageStatus.toLowerCase();
+              const completed = stageStatus === "COMPLETED";
+              const locked = stageStatus === "LOCKED";
+              const sceneActive = activeSceneQuizId === scene.id;
+              const marker = completed ? "✓" : locked ? "🔒" : "▶";
+              const statusLabel = completed ? "已完成" : locked ? "尚未解鎖" : "可挑戰";
+              const fallbackLabel = completed ? "查看故事" : locked ? "完成上一關後解鎖" : "開始挑戰";
+              const buttonDisabled = locked || (!completed && cityLives <= 0);
+
+              return `
+                <article class="stage-node stage-node--${statusClass} ${sceneActive ? "stage-node--active" : ""}">
+                  <div class="stage-node__rail" aria-hidden="true">
+                    <span class="stage-node__marker">${marker}</span>
+                  </div>
+                  <div class="stage-node__content">
+                    <div class="stage-node__heading">
+                      <span class="stage-node__label">${escapeHtml(scene.stageLabel || `第 ${scene.stageOrder} 關`)}</span>
+                      <span class="stage-node__status">${statusLabel}</span>
+                    </div>
+                    <h3>${escapeHtml(scene.name)}</h3>
+                    <p class="story-text">${escapeHtml(scene.story || scene.desc)}</p>
+                    <div class="reward-row"><span>EXP +${scaledReward(scene.expReward)}</span><span>金幣 +${scaledReward(scene.coinReward)}</span></div>
+                    ${completed ? `
+                      <button class="btn full stage-node__button" type="button" data-stage-action="${scene.id}">
+                        ${escapeHtml(scene.actionLabel || fallbackLabel)}
+                      </button>
+                    ` : sceneActive ? renderActiveSceneQuiz(scene) : `
+                      <button class="btn full stage-node__button" type="button" data-stage-action="${scene.id}" ${buttonDisabled ? "disabled" : ""}>
+                        ${escapeHtml(scene.actionLabel || fallbackLabel)}
+                      </button>
+                    `}
+                  </div>
+                </article>
+              `;
+            }).join("")}
+          </div>
+        </section>
+      `;
+    }
+
+    async function viewSceneStory(sceneId) {
+      await openCollection();
+      selectedCollectionId = `landmark-${sceneId}`;
+      renderCollection();
+    }
+
     function renderCityDetail(cityId) {
       if (!appState) return;
       const city = appState.cities.find(item => item.id === cityId) || activeCity();
       const itemProgress = progress(city);
       const status = cityStatus(city);
+      const stages = configuredStages(city);
       const logsMarkup = (logs.length ? logs : [{ time: "--:--", text: "歡迎來到台灣旅行冒險。" }])
         .map(log => `<div class="log"><strong>${escapeHtml(log.time)}</strong> ${escapeHtml(log.text)}</div>`)
         .join("");
@@ -292,7 +407,7 @@ function renderCityCards() {
             <p class="story-text">${escapeHtml(city.story || city.intro || "")}</p>
           </div>
           <div class="section-head">
-            <h2>景點列表</h2>
+            <h2>${stages ? "關卡旅程" : "景點列表"}</h2>
             <span class="status-pill ${status.key}">${status.text}</span>
           </div>
           <p class="city-copy">城市進度：${itemProgress.done} / ${itemProgress.total}，完成率 ${itemProgress.percent}%</p>
@@ -306,38 +421,7 @@ function renderCityCards() {
               </button>
             `).join("")}
           </div>
-          <div class="scene-list">
-            ${city.scenes.map(scene => {
-              const sceneActive = activeSceneQuizId === scene.id;
-              return `
-              <article class="scene-card ${scene.checked ? "done" : ""} ${sceneActive ? "active" : ""}">
-                <div class="scene-image" ${scene.imageUrl ? `style="background-image: linear-gradient(180deg, rgba(255,255,255,.08), rgba(11,35,71,.18)), url('${escapeHtml(scene.imageUrl)}')"` : ""}></div>
-                <div>
-                  <h3>${scene.checked ? "✓ " : ""}${escapeHtml(scene.name)}</h3>
-                  <p class="story-text">${escapeHtml(scene.story || scene.desc)}</p>
-                  <div class="reward-row"><span>EXP +${scaledReward(scene.expReward)}</span><span>金幣 +${scaledReward(scene.coinReward)}</span></div>
-                  ${scene.checked ? `
-                    <button class="btn full" type="button" data-view-scene-story="${scene.id}">
-                      ${escapeHtml(scene.actionLabel || "查看景點故事")}
-                    </button>
-                  ` : sceneActive ? `
-                    <div class="quiz-box">
-                      <strong>${escapeHtml(activeQuizQuestion?.question || scene.quizQuestion || "回答景點問題後完成打卡")}</strong>
-                      <div class="quiz-timer" data-quiz-timer>剩餘 ${difficultyConfig().seconds} 秒</div>
-                      <div class="quiz-options">
-                        ${renderOptionButtons(activeQuizQuestion?.options || scene.quizOptions, "data-scene-id", scene.id)}
-                      </div>
-                    </div>
-                  ` : `
-                    <button class="btn full" type="button" data-start-scene-interaction="${scene.id}" ${cityLives <= 0 ? "disabled" : ""}>
-                      ${escapeHtml(scene.actionLabel || "開始答題")}
-                    </button>
-                  `}
-                </div>
-              </article>
-            `;
-            }).join("")}
-          </div>
+          ${stages ? renderStageRoute(city, stages) : renderSceneList(city)}
           ${renderBossChallenge(city, itemProgress)}
           <div class="log-list">${logsMarkup}</div>
         </div>
@@ -352,9 +436,20 @@ function renderCityCards() {
 
       document.querySelectorAll("[data-view-scene-story]").forEach(button => {
         button.addEventListener("click", async () => {
-          await openCollection();
-          selectedCollectionId = `landmark-${button.dataset.viewSceneStory}`;
-          renderCollection();
+          await viewSceneStory(button.dataset.viewSceneStory);
+        });
+      });
+
+      document.querySelectorAll("[data-stage-action]").forEach(button => {
+        button.addEventListener("click", async () => {
+          if (button.disabled) return;
+          const scene = city.scenes.find(item => item.id === Number(button.dataset.stageAction));
+          if (!scene || scene.stageStatus === "LOCKED") return;
+          if (scene.stageStatus === "COMPLETED") {
+            await viewSceneStory(scene.id);
+            return;
+          }
+          startSceneInteraction(scene);
         });
       });
 
