@@ -100,14 +100,14 @@ class StageChallengeIntegrationTest {
     void unconfiguredCityKeepsExistingExplorationBehavior() throws Exception {
         String token = registerAndGetToken("stage-compatible");
         User user = userRepository.findByUsername("stage-compatible").orElseThrow();
-        var progress = userProgressRepository.findByUserIdAndCityId(user.getId(), 5L).orElseThrow();
+        var progress = userProgressRepository.findByUserIdAndCityId(user.getId(), 6L).orElseThrow();
         progress.setUnlocked(true);
         userProgressRepository.save(progress);
 
-        mockMvc.perform(get("/api/explorations/cities/5/random")
+        mockMvc.perform(get("/api/explorations/cities/6/random")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.missionId").value("HUALIEN-TAROKO-01"));
+                .andExpect(jsonPath("$.data.missionId").value("PENGHU-DOUBLE-HEART-01"));
     }
 
     @Test
@@ -183,8 +183,21 @@ class StageChallengeIntegrationTest {
                 .andExpect(jsonPath("$.data.cities[3].bossStage.cityId").value(4))
                 .andExpect(jsonPath("$.data.cities[3].bossStage.stageOrder").value(4))
                 .andExpect(jsonPath("$.data.cities[3].bossStage.stageStatus").value("LOCKED"))
-                .andExpect(jsonPath("$.data.cities[4].scenes[0].stageConfigured").value(false))
-                .andExpect(jsonPath("$.data.cities[4].bossStage").value((Object) null))
+                .andExpect(jsonPath("$.data.cities[4].scenes[0].id").value(13))
+                .andExpect(jsonPath("$.data.cities[4].scenes[0].stageConfigured").value(true))
+                .andExpect(jsonPath("$.data.cities[4].scenes[0].stageOrder").value(1))
+                .andExpect(jsonPath("$.data.cities[4].scenes[0].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[4].scenes[0].interactionType").value("EXPLORATION"))
+                .andExpect(jsonPath("$.data.cities[4].scenes[1].id").value(14))
+                .andExpect(jsonPath("$.data.cities[4].scenes[1].stageOrder").value(2))
+                .andExpect(jsonPath("$.data.cities[4].scenes[1].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[4].scenes[1].interactionType").value("QUIZ"))
+                .andExpect(jsonPath("$.data.cities[4].scenes[2].id").value(15))
+                .andExpect(jsonPath("$.data.cities[4].scenes[2].stageOrder").value(3))
+                .andExpect(jsonPath("$.data.cities[4].scenes[2].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[4].bossStage.cityId").value(5))
+                .andExpect(jsonPath("$.data.cities[4].bossStage.stageOrder").value(4))
+                .andExpect(jsonPath("$.data.cities[4].bossStage.stageStatus").value("LOCKED"))
                 .andExpect(jsonPath("$.data.cities[5].scenes[0].stageConfigured").value(false))
                 .andExpect(jsonPath("$.data.cities[5].bossStage").value((Object) null));
     }
@@ -492,6 +505,117 @@ class StageChallengeIntegrationTest {
         saveCheckin(user, 10L, false);
 
         assertLocked(get("/api/quizzes/landmarks/11/random?difficulty=NORMAL"), token);
+    }
+
+    @Test
+    void hualienChallengeApisEnforceStageOrderWithoutCreatingLockedExplorationState() throws Exception {
+        String token = registerAndGetToken("hualien-api-player");
+        User user = userRepository.findByUsername("hualien-api-player").orElseThrow();
+
+        mockMvc.perform(get("/api/explorations/cities/5/random")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/explorations/HUALIEN-TAROKO-01/investigate")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"LOCAL\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/explorations/HUALIEN-TAROKO-01/guess")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"sceneId\":13}"))
+                .andExpect(status().isForbidden());
+        assertNoCheckin(user.getId(), 13L);
+
+        unlockCity(user, 5L);
+
+        mockMvc.perform(get("/api/explorations/cities/5/random")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.missionId").value("HUALIEN-TAROKO-01"));
+
+        assertLocked(get("/api/quizzes/landmarks/14/random?difficulty=NORMAL"), token);
+        assertNoCheckin(user.getId(), 14L);
+
+        saveCheckin(user, 13L, true);
+
+        mockMvc.perform(get("/api/quizzes/landmarks/14/random?difficulty=NORMAL")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.questionId").isString());
+        assertLocked(get("/api/quizzes/landmarks/15/random?difficulty=NORMAL"), token);
+
+        saveCheckin(user, 14L, true);
+
+        mockMvc.perform(get("/api/quizzes/landmarks/15/random?difficulty=NORMAL")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.questionId").isString());
+        assertNoCheckin(user.getId(), 15L);
+    }
+
+    @Test
+    void hualienJourneyUnlocksStagesAndBossInOrder() throws Exception {
+        String token = registerAndGetToken("hualien-journey");
+        User user = userRepository.findByUsername("hualien-journey").orElseThrow();
+
+        unlockCity(user, 5L);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[4].scenes[0].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[4].scenes[1].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[4].scenes[2].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[4].bossStage.stageStatus").value("LOCKED"));
+
+        saveCheckin(user, 13L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[4].scenes[0].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[4].scenes[1].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[4].scenes[2].stageStatus").value("LOCKED"));
+
+        saveCheckin(user, 14L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[4].scenes[1].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[4].scenes[2].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[4].bossStage.stageStatus").value("LOCKED"));
+
+        saveCheckin(user, 15L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[4].scenes[2].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[4].bossStage.stageStatus").value("AVAILABLE"));
+    }
+
+    @Test
+    void anotherPlayersHualienCheckinDoesNotUnlockQixingtan() throws Exception {
+        registerAndGetToken("hualien-owner");
+        String otherToken = registerAndGetToken("hualien-other");
+        User owner = userRepository.findByUsername("hualien-owner").orElseThrow();
+        User other = userRepository.findByUsername("hualien-other").orElseThrow();
+        unlockCity(other, 5L);
+        saveCheckin(owner, 13L, true);
+
+        assertLocked(get("/api/quizzes/landmarks/14/random?difficulty=NORMAL"), otherToken);
+    }
+
+    @Test
+    void incompleteTarokoCheckinDoesNotUnlockQixingtan() throws Exception {
+        String token = registerAndGetToken("hualien-incomplete");
+        User user = userRepository.findByUsername("hualien-incomplete").orElseThrow();
+        unlockCity(user, 5L);
+        saveCheckin(user, 13L, false);
+
+        assertLocked(get("/api/quizzes/landmarks/14/random?difficulty=NORMAL"), token);
     }
 
     @Test

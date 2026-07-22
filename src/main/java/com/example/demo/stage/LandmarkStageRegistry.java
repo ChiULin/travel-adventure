@@ -27,6 +27,10 @@ public class LandmarkStageRegistry {
     private static final long PIER_2_ART_CENTER_ID = 10L;
     private static final long LOVE_RIVER_ID = 11L;
     private static final long DRAGON_TIGER_PAGODAS_ID = 12L;
+    private static final long HUALIEN_CITY_ID = 5L;
+    private static final long TAROKO_ID = 13L;
+    private static final long QIXINGTAN_ID = 14L;
+    private static final long QINGSHUI_CLIFF_ID = 15L;
 
     private final Map<Long, LandmarkStageDefinition> stagesByLandmarkId;
 
@@ -43,7 +47,10 @@ public class LandmarkStageRegistry {
                 new LandmarkStageDefinition(TAINAN_CITY_ID, TAINAN_CONFUCIUS_TEMPLE_ID, 3),
                 new LandmarkStageDefinition(KAOHSIUNG_CITY_ID, PIER_2_ART_CENTER_ID, 1),
                 new LandmarkStageDefinition(KAOHSIUNG_CITY_ID, LOVE_RIVER_ID, 2),
-                new LandmarkStageDefinition(KAOHSIUNG_CITY_ID, DRAGON_TIGER_PAGODAS_ID, 3)
+                new LandmarkStageDefinition(KAOHSIUNG_CITY_ID, DRAGON_TIGER_PAGODAS_ID, 3),
+                new LandmarkStageDefinition(HUALIEN_CITY_ID, TAROKO_ID, 1),
+                new LandmarkStageDefinition(HUALIEN_CITY_ID, QIXINGTAN_ID, 2),
+                new LandmarkStageDefinition(HUALIEN_CITY_ID, QINGSHUI_CLIFF_ID, 3)
         );
 
         validate(definitions);

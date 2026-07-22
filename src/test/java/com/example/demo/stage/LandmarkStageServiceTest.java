@@ -115,7 +115,7 @@ class LandmarkStageServiceTest {
 
     @Test
     void unconfiguredLandmarkKeepsExistingBehavior() {
-        service.validateStageAvailable(USER_ID, 13L);
+        service.validateStageAvailable(USER_ID, 16L);
     }
 
     private void taipeiUnlocked(boolean unlocked) {
