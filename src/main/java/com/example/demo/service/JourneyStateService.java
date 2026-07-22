@@ -79,12 +79,12 @@ public class JourneyStateService {
 
         List<Map<String, Object>> cityDtos = cities.stream().map(city -> {
             List<Scene> scenes = sceneRepository.findByCityId(city.getId());
+            boolean stageMode = landmarkStageRegistry.isCityFullyConfigured(city.getId());
             List<Map<String, Object>> sceneDtos = scenes.stream()
-                    .map(scene -> sceneDto(userId, scene, checkedSceneIds.contains(scene.getId())))
+                    .map(scene -> sceneDto(
+                            userId, scene, checkedSceneIds.contains(scene.getId()), stageMode))
                     .collect(Collectors.toCollection(ArrayList::new));
-            boolean cityStagesConfigured = !scenes.isEmpty() && scenes.stream()
-                    .allMatch(scene -> landmarkStageRegistry.findByLandmarkId(scene.getId()).isPresent());
-            if (cityStagesConfigured) {
+            if (stageMode) {
                 sceneDtos.sort(Comparator.comparingInt(scene -> (Integer) scene.get("stageOrder")));
             }
             long done = scenes.stream().filter(scene -> checkedSceneIds.contains(scene.getId())).count();
@@ -115,7 +115,7 @@ public class JourneyStateService {
             dto.put("done", done);
             dto.put("total", scenes.size());
             dto.put("scenes", sceneDtos);
-            dto.put("bossStage", cityStagesConfigured
+            dto.put("bossStage", stageMode
                     ? buildBossStage(city, cityProgress, scenes, checkedSceneIds)
                     : null);
             return dto;
@@ -282,7 +282,7 @@ public class JourneyStateService {
         return new LevelInfo(level, remainingExp, requiredExp, progressPercent);
     }
 
-    private Map<String, Object> sceneDto(Long userId, Scene scene, boolean checked) {
+    private Map<String, Object> sceneDto(Long userId, Scene scene, boolean checked, boolean stageMode) {
         Map<String, Object> dto = new LinkedHashMap<>();
         dto.put("id", scene.getId());
         dto.put("name", scene.getName());
@@ -307,12 +307,15 @@ public class JourneyStateService {
         }
         dto.put("interactionType", interactionType.name());
 
-        var stageDefinition = landmarkStageRegistry.findByLandmarkId(scene.getId());
-        boolean stageConfigured = stageDefinition.isPresent();
+        boolean stageConfigured = false;
         Integer stageOrder = null;
         String stageLabel = null;
         StageStatus stageStatus = null;
-        if (stageConfigured) {
+        if (stageMode) {
+            landmarkStageRegistry.findByLandmarkId(scene.getId())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "城市已啟用關卡模式，但景點缺少關卡設定"));
+            stageConfigured = true;
             LandmarkStageStatus result = landmarkStageService.getStageStatus(userId, scene.getId());
             stageOrder = result.stageOrder();
             stageLabel = "第 " + result.stageOrder() + " 關";
