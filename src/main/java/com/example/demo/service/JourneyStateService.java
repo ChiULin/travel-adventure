@@ -10,6 +10,10 @@ import com.example.demo.repository.CityRepository;
 import com.example.demo.repository.SceneRepository;
 import com.example.demo.repository.UserProgressRepository;
 import com.example.demo.repository.UserRepository;
+import com.example.demo.stage.LandmarkStageRegistry;
+import com.example.demo.stage.LandmarkStageService;
+import com.example.demo.stage.LandmarkStageStatus;
+import com.example.demo.stage.StageStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -17,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,11 +37,15 @@ public class JourneyStateService {
     private final UserProgressRepository userProgressRepository;
     private final ExplorationMissionRegistry explorationMissionRegistry;
     private final ImageRecognitionRegistry imageRecognitionRegistry;
+    private final LandmarkStageRegistry landmarkStageRegistry;
+    private final LandmarkStageService landmarkStageService;
 
     public JourneyStateService(UserRepository userRepository, CityRepository cityRepository, SceneRepository sceneRepository,
                                CheckinRepository checkinRepository, UserProgressRepository userProgressRepository,
                                ExplorationMissionRegistry explorationMissionRegistry,
-                               ImageRecognitionRegistry imageRecognitionRegistry) {
+                               ImageRecognitionRegistry imageRecognitionRegistry,
+                               LandmarkStageRegistry landmarkStageRegistry,
+                               LandmarkStageService landmarkStageService) {
         this.userRepository = userRepository;
         this.cityRepository = cityRepository;
         this.sceneRepository = sceneRepository;
@@ -44,6 +53,8 @@ public class JourneyStateService {
         this.userProgressRepository = userProgressRepository;
         this.explorationMissionRegistry = explorationMissionRegistry;
         this.imageRecognitionRegistry = imageRecognitionRegistry;
+        this.landmarkStageRegistry = landmarkStageRegistry;
+        this.landmarkStageService = landmarkStageService;
     }
 
     public Map<String, Object> state(Long userId) {
@@ -67,6 +78,14 @@ public class JourneyStateService {
 
         List<Map<String, Object>> cityDtos = cities.stream().map(city -> {
             List<Scene> scenes = sceneRepository.findByCityId(city.getId());
+            List<Map<String, Object>> sceneDtos = scenes.stream()
+                    .map(scene -> sceneDto(userId, scene, checkedSceneIds.contains(scene.getId())))
+                    .collect(Collectors.toCollection(ArrayList::new));
+            boolean cityStagesConfigured = !scenes.isEmpty() && scenes.stream()
+                    .allMatch(scene -> landmarkStageRegistry.findByLandmarkId(scene.getId()).isPresent());
+            if (cityStagesConfigured) {
+                sceneDtos.sort(Comparator.comparingInt(scene -> (Integer) scene.get("stageOrder")));
+            }
             long done = scenes.stream().filter(scene -> checkedSceneIds.contains(scene.getId())).count();
             UserProgress cityProgress = progressByCityId.get(city.getId());
             CityBadge badge = badgeFor(city);
@@ -94,7 +113,7 @@ public class JourneyStateService {
             dto.put("lastCompletedAt", cityProgress == null ? null : cityProgress.getLastCompletedAt());
             dto.put("done", done);
             dto.put("total", scenes.size());
-            dto.put("scenes", scenes.stream().map(scene -> sceneDto(scene, checkedSceneIds.contains(scene.getId()))).toList());
+            dto.put("scenes", sceneDtos);
             return dto;
         }).toList();
 
@@ -259,7 +278,7 @@ public class JourneyStateService {
         return new LevelInfo(level, remainingExp, requiredExp, progressPercent);
     }
 
-    private Map<String, Object> sceneDto(Scene scene, boolean checked) {
+    private Map<String, Object> sceneDto(Long userId, Scene scene, boolean checked) {
         Map<String, Object> dto = new LinkedHashMap<>();
         dto.put("id", scene.getId());
         dto.put("name", scene.getName());
@@ -283,14 +302,44 @@ public class JourneyStateService {
             interactionType = SceneInteractionType.QUIZ;
         }
         dto.put("interactionType", interactionType.name());
-        dto.put("actionLabel", checked
-                ? "查看景點故事"
-                : switch (interactionType) {
-                    case EXPLORATION -> "接旅行委託";
-                    case IMAGE_RECOGNITION -> "觀察景點照片";
-                    default -> "開始答題";
-                });
+
+        var stageDefinition = landmarkStageRegistry.findByLandmarkId(scene.getId());
+        boolean stageConfigured = stageDefinition.isPresent();
+        Integer stageOrder = null;
+        String stageLabel = null;
+        StageStatus stageStatus = null;
+        if (stageConfigured) {
+            LandmarkStageStatus result = landmarkStageService.getStageStatus(userId, scene.getId());
+            stageOrder = result.stageOrder();
+            stageLabel = "第 " + result.stageOrder() + " 關";
+            stageStatus = result.status();
+        }
+
+        dto.put("actionLabel", resolveActionLabel(checked, interactionType, stageStatus, stageConfigured));
+        dto.put("stageOrder", stageOrder);
+        dto.put("stageLabel", stageLabel);
+        dto.put("stageStatus", stageStatus);
+        dto.put("stageConfigured", stageConfigured);
         return dto;
+    }
+
+    private String resolveActionLabel(boolean checked, SceneInteractionType interactionType,
+                                      StageStatus stageStatus, boolean stageConfigured) {
+        if (stageConfigured) {
+            if (stageStatus == StageStatus.LOCKED) {
+                return "完成上一關後解鎖";
+            }
+            return checked ? "查看故事" : "開始挑戰";
+        }
+
+        if (checked) {
+            return "查看景點故事";
+        }
+        return switch (interactionType) {
+            case EXPLORATION -> "接旅行委託";
+            case IMAGE_RECOGNITION -> "觀察景點照片";
+            default -> "開始答題";
+        };
     }
 
     private Map<String, String> optionsDto(String optionA, String optionB, String optionC, String optionD) {

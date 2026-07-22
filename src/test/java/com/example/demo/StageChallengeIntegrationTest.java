@@ -110,6 +110,85 @@ class StageChallengeIntegrationTest {
                 .andExpect(jsonPath("$.data.missionId").value("TAINAN-ANPING-01"));
     }
 
+    @Test
+    void newPlayerJourneyReturnsOrderedTaipeiStageMetadata() throws Exception {
+        String token = registerAndGetToken("journey-new-user");
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[0].scenes[0].id").value(1))
+                .andExpect(jsonPath("$.data.cities[0].scenes[0].stageOrder").value(1))
+                .andExpect(jsonPath("$.data.cities[0].scenes[0].stageLabel").value("第 1 關"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[0].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[0].stageConfigured").value(true))
+                .andExpect(jsonPath("$.data.cities[0].scenes[0].actionLabel").value("開始挑戰"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[1].id").value(2))
+                .andExpect(jsonPath("$.data.cities[0].scenes[1].stageOrder").value(2))
+                .andExpect(jsonPath("$.data.cities[0].scenes[1].stageLabel").value("第 2 關"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[1].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[1].actionLabel").value("完成上一關後解鎖"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[2].id").value(3))
+                .andExpect(jsonPath("$.data.cities[0].scenes[2].stageOrder").value(3))
+                .andExpect(jsonPath("$.data.cities[0].scenes[2].stageLabel").value("第 3 關"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[2].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[2].actionLabel").value("完成上一關後解鎖"))
+                .andExpect(jsonPath("$.data.cities[1].scenes[0].stageConfigured").value(false))
+                .andExpect(jsonPath("$.data.cities[1].scenes[0].stageOrder").doesNotExist())
+                .andExpect(jsonPath("$.data.cities[1].scenes[0].stageLabel").doesNotExist())
+                .andExpect(jsonPath("$.data.cities[1].scenes[0].stageStatus").doesNotExist())
+                .andExpect(jsonPath("$.data.cities[1].scenes[0].interactionType").value("EXPLORATION"))
+                .andExpect(jsonPath("$.data.cities[1].scenes[0].actionLabel").value("接旅行委託"));
+    }
+
+    @Test
+    void journeyUnlocksPalaceMuseumAfterTaipei101Completion() throws Exception {
+        String token = registerAndGetToken("journey-one-user");
+        User user = userRepository.findByUsername("journey-one-user").orElseThrow();
+        saveCheckin(user, 1L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[0].scenes[0].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[0].actionLabel").value("查看故事"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[1].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[1].actionLabel").value("開始挑戰"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[2].stageStatus").value("LOCKED"));
+    }
+
+    @Test
+    void journeyUnlocksXimendingAfterPalaceMuseumCompletion() throws Exception {
+        String token = registerAndGetToken("journey-two-user");
+        User user = userRepository.findByUsername("journey-two-user").orElseThrow();
+        saveCheckin(user, 1L, true);
+        saveCheckin(user, 2L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[0].scenes[0].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[1].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[1].actionLabel").value("查看故事"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[2].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[2].actionLabel").value("開始挑戰"));
+    }
+
+    @Test
+    void onePlayersCompletionDoesNotChangeAnotherPlayersJourney() throws Exception {
+        registerAndGetToken("journey-owner");
+        String otherToken = registerAndGetToken("journey-other");
+        User owner = userRepository.findByUsername("journey-owner").orElseThrow();
+        saveCheckin(owner, 1L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + otherToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[0].scenes[0].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[1].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[2].stageStatus").value("LOCKED"));
+    }
+
     private void assertLocked(
             org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder request,
             String token

@@ -46,7 +46,7 @@ class ImageRecognitionIntegrationTest {
         mockMvc.perform(get("/api/journey/me").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.cities[0].scenes[1].interactionType").value("IMAGE_RECOGNITION"))
-                .andExpect(jsonPath("$.data.cities[0].scenes[1].actionLabel").value("觀察景點照片"));
+                .andExpect(jsonPath("$.data.cities[0].scenes[1].actionLabel").value("開始挑戰"));
 
         String firstBody = mockMvc.perform(get("/api/image-challenges/scenes/2?difficulty=NORMAL")
                         .header("Authorization", "Bearer " + token))
@@ -138,7 +138,7 @@ class ImageRecognitionIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.cities[0].done").value(3))
                 .andExpect(jsonPath("$.data.cities[0].bossUnlocked").value(true))
-                .andExpect(jsonPath("$.data.cities[0].scenes[1].actionLabel").value("查看景點故事"));
+                .andExpect(jsonPath("$.data.cities[0].scenes[1].actionLabel").value("查看故事"));
 
         mockMvc.perform(get("/api/image-challenges/scenes/2?difficulty=NORMAL")
                         .header("Authorization", "Bearer " + token))
