@@ -262,14 +262,21 @@ function renderCityCards() {
       });
     }
 
-    function configuredStages(city) {
+    function isStageModeCity(city) {
       const scenes = city?.scenes;
-      if (!Array.isArray(scenes) || scenes.length === 0
-          || !scenes.every(scene => scene.stageConfigured === true)) {
+
+      return Array.isArray(scenes)
+        && scenes.length === 3
+        && scenes.every(scene => scene.stageConfigured === true)
+        && city.bossStage != null;
+    }
+
+    function configuredStages(city) {
+      if (!isStageModeCity(city)) {
         return null;
       }
 
-      return [...scenes].sort((first, second) =>
+      return [...city.scenes].sort((first, second) =>
         Number(first.stageOrder) - Number(second.stageOrder)
       );
     }
