@@ -15,6 +15,8 @@ import com.example.demo.service.BossService;
 import com.example.demo.service.CheckinService;
 import com.example.demo.service.JourneyStateService;
 import com.example.demo.service.QuizQuestionService;
+import com.example.demo.service.food.FoodChallengeService;
+import com.example.demo.service.food.FoodRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,6 +50,10 @@ class GameRuleServiceTest {
     private JourneyStateService journeyStateService;
     @Mock
     private QuizQuestionService quizQuestionService;
+    @Mock
+    private FoodRegistry foodRegistry;
+    @Mock
+    private FoodChallengeService foodChallengeService;
 
     private CheckinService checkinService;
     private BossService bossService;
@@ -57,7 +63,7 @@ class GameRuleServiceTest {
         checkinService = new CheckinService(checkinRepository, userRepository, sceneRepository,
                 userProgressRepository, journeyStateService, quizQuestionService);
         bossService = new BossService(cityRepository, userRepository, userProgressRepository,
-                checkinRepository, sceneRepository, quizQuestionService);
+                checkinRepository, sceneRepository, quizQuestionService, foodRegistry, foodChallengeService);
     }
 
     @Test

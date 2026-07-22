@@ -55,14 +55,23 @@ public class QuizQuestionService {
         Scene scene = sceneRepository.findById(sceneId)
                 .orElseThrow(() -> new IllegalArgumentException("scene not found"));
         List<Question> questions = sceneQuestions(scene);
-        return issueQuestion(userId, sceneKey(userId, sceneId), questions, difficultyName);
+        return issueQuestion(userId, sceneKey(userId, sceneId), questions, difficultyName, 0);
     }
 
     public Map<String, Object> randomBossQuestion(Long userId, Long cityId, String difficultyName) {
+        return randomBossQuestion(userId, cityId, difficultyName, 0);
+    }
+
+    public Map<String, Object> randomBossQuestion(Long userId, Long cityId, String difficultyName,
+                                                  int extraSecondsPerQuestion) {
+        if (extraSecondsPerQuestion < 0 || extraSecondsPerQuestion > 60) {
+            throw new IllegalArgumentException("invalid extra question seconds");
+        }
         City city = cityRepository.findById(cityId)
                 .orElseThrow(() -> new IllegalArgumentException("city not found"));
         List<Question> questions = bossQuestions(city);
-        return issueQuestion(userId, bossKey(userId, cityId), questions, difficultyName);
+        return issueQuestion(userId, bossKey(userId, cityId), questions, difficultyName,
+                extraSecondsPerQuestion);
     }
 
     public boolean sceneAnswerCorrect(Long userId, Scene scene, String questionId, String answerText, String difficultyName) {
@@ -75,7 +84,8 @@ public class QuizQuestionService {
         return answerCorrect(bossQuestions(city), questionId, answerText);
     }
 
-    private Map<String, Object> issueQuestion(Long userId, String key, List<Question> questions, String difficultyName) {
+    private Map<String, Object> issueQuestion(Long userId, String key, List<Question> questions,
+                                              String difficultyName, int extraSecondsPerQuestion) {
         if (questions.isEmpty()) {
             throw new IllegalArgumentException("question bank is empty");
         }
@@ -96,7 +106,7 @@ public class QuizQuestionService {
                     .filter(question -> !question.id().equals(previousId)).toList();
             selected = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
 
-            Instant expiresAt = now.plusSeconds(difficulty.seconds() + 2L);
+            Instant expiresAt = now.plusSeconds(difficulty.seconds() + extraSecondsPerQuestion + 2L);
             issued = new IssuedQuestion(selected.id(), userId, difficulty, now, expiresAt);
             issuedQuestions.put(key, issued);
             lastQuestionIds.put(key, new LastQuestion(selected.id(), now.plus(LAST_QUESTION_RETENTION)));
@@ -104,7 +114,7 @@ public class QuizQuestionService {
 
         Map<String, Object> dto = questionDto(selected);
         dto.put("difficulty", difficulty.name());
-        dto.put("seconds", difficulty.seconds());
+        dto.put("seconds", difficulty.seconds() + extraSecondsPerQuestion);
         dto.put("lives", difficulty.lives());
         dto.put("rewardPercent", difficulty.rewardPercent());
         dto.put("issuedAt", issued.issuedAt());

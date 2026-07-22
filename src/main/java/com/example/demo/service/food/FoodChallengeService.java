@@ -129,6 +129,13 @@ public class FoodChallengeService {
         }
     }
 
+    public boolean isFoodUnlocked(Long userId, String foodKey) {
+        if (userId == null || foodKey == null || foodKey.isBlank()) {
+            return false;
+        }
+        return claimedFoods.contains(claimedKey(userId, foodKey));
+    }
+
     @Scheduled(fixedDelayString = "${game.food.cleanup-interval-ms:60000}")
     public void removeExpiredChallenges() {
         Instant now = clock.instant();

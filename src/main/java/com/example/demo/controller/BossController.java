@@ -2,6 +2,8 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.BattleResultRequest;
+import com.example.demo.dto.BossChallengeRequest;
+import com.example.demo.dto.BossStartResponse;
 import com.example.demo.service.BossService;
 import com.example.demo.service.UserService;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +26,20 @@ public class BossController {
     public BossController(BossService bossService, UserService userService) {
         this.bossService = bossService;
         this.userService = userService;
+    }
+
+    @PostMapping("/{cityId}/boss/start")
+    public ResponseEntity<ApiResponse<BossStartResponse>> start(
+            @PathVariable Long cityId,
+            @RequestBody(required = false) BossChallengeRequest request,
+            Authentication authentication) {
+        BossStartResponse result = bossService.startChallenge(
+                userService.userIdFor(authentication.getName()),
+                cityId,
+                request == null ? null : request.difficulty(),
+                request == null ? null : request.foodKey()
+        );
+        return ResponseEntity.ok(ApiResponse.success("守護者挑戰開始", result));
     }
 
     @PostMapping("/{cityId}/boss/challenge")

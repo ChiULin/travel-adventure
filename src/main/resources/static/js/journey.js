@@ -374,8 +374,22 @@ function renderCityCards() {
         button.addEventListener("click", () => checkin(Number(button.dataset.sceneId), button.dataset.answer, button.dataset.answerText));
       });
 
-      document.querySelectorAll("[data-start-boss-city-id]").forEach(button => {
-        button.addEventListener("click", () => startBossQuiz(Number(button.dataset.startBossCityId)));
+      document.querySelectorAll("[data-start-boss-city-id]:not([data-start-boss-food-key]):not([data-start-boss-no-food])").forEach(button => {
+        button.addEventListener("click", () => prepareBossChallenge(Number(button.dataset.startBossCityId)));
+      });
+
+      document.querySelectorAll("[data-start-boss-food-key]").forEach(button => {
+        button.addEventListener("click", () => startBossQuiz(
+          Number(button.dataset.startBossCityId),
+          button.dataset.startBossFoodKey || null
+        ));
+      });
+
+      document.querySelectorAll("[data-start-boss-no-food]").forEach(button => {
+        button.addEventListener("click", () => startBossQuiz(
+          Number(button.dataset.startBossCityId),
+          null
+        ));
       });
 
       document.querySelectorAll("[data-boss-city-id]").forEach(button => {
@@ -406,6 +420,9 @@ function renderCityCards() {
           </div>
         `;
       }
+      if (bossPreparationCityId === city.id && activeBossQuizCityId !== city.id) {
+        return renderBossPreparation(city);
+      }
       if (activeBossQuizCityId !== city.id) {
         return `
           <div class="detail-actions">
@@ -415,11 +432,52 @@ function renderCityCards() {
       }
       return `
         <div class="detail-actions quiz-box">
+          ${activeBossBattle?.activeFood ? `
+            <div class="boss-active-food">
+              <strong>已使用：${escapeHtml(activeBossBattle.activeFood.name)}</strong>
+              <span>本題時間：${activeBossBattle.questionSeconds} 秒</span>
+            </div>
+          ` : `
+            <div class="boss-active-food neutral">
+              <strong>本場未使用補給</strong>
+              <span>本題時間：${activeBossBattle?.questionSeconds || activeQuizQuestion?.seconds || difficultyConfig().seconds} 秒</span>
+            </div>
+          `}
           <strong>${escapeHtml(city.bossName)}：${escapeHtml(activeQuizQuestion?.question || city.bossQuestion || "回答首領問題")}</strong>
-          <div class="quiz-timer" data-quiz-timer>剩餘 ${difficultyConfig().seconds} 秒</div>
+          <div class="quiz-timer" data-quiz-timer>剩餘 ${activeQuizQuestion?.seconds || difficultyConfig().seconds} 秒</div>
           <div class="quiz-options">
             ${renderOptionButtons(activeQuizQuestion?.options || city.bossOptions, "data-boss-city-id", city.id)}
           </div>
+        </div>
+      `;
+    }
+
+    function renderBossPreparation(city) {
+      const event = Number(foodEventState.cityId) === Number(city.id) ? foodEventState.event : null;
+      const beefSoup = event?.foodKey === "TAINAN_BEEF_SOUP" ? event : null;
+      const unlocked = Boolean(beefSoup?.claimed);
+      return `
+        <div class="detail-actions boss-preparation">
+          <div>
+            <span class="status-pill challenge">守護者挑戰準備</span>
+            <h3>${escapeHtml(city.bossName)}</h3>
+            <p>選擇本場旅途補給，開始後無法切換。</p>
+          </div>
+          ${beefSoup ? `
+            <div class="boss-supply-option ${unlocked ? "unlocked" : "locked"}">
+              <div>
+                <strong>🥣 ${escapeHtml(beefSoup.name)}</strong>
+                <p>${unlocked ? escapeHtml(beefSoup.effect?.description) : "完成台南美食文化事件後解鎖"}</p>
+              </div>
+              <button class="btn" type="button" data-start-boss-city-id="${city.id}"
+                      data-start-boss-food-key="TAINAN_BEEF_SOUP" ${unlocked ? "" : "disabled"}>
+                ${unlocked ? "使用牛肉湯" : "尚未解鎖"}
+              </button>
+            </div>
+          ` : ""}
+          <button class="btn ghost full" type="button" data-start-boss-city-id="${city.id}" data-start-boss-no-food>
+            不使用補給
+          </button>
         </div>
       `;
     }

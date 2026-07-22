@@ -981,6 +981,44 @@
       background: #ffffff;
     }
 
+    .boss-preparation {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+      border: 1px solid #e6b25a;
+      border-radius: 14px;
+      background: linear-gradient(145deg, #fff7df, #ffffff);
+    }
+
+    .boss-supply-option,
+    .boss-active-food {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid #e6b25a;
+      border-radius: 12px;
+      background: #ffffff;
+    }
+
+    .boss-supply-option.locked {
+      color: #737d8d;
+      border-color: #c8ced8;
+      background: #f3f5f8;
+    }
+
+    .boss-active-food {
+      color: #704a0a;
+      background: #fff4cf;
+    }
+
+    .boss-active-food.neutral {
+      color: #566174;
+      border-color: #c8ced8;
+      background: #f3f5f8;
+    }
+
     @keyframes ambientSweep {
       from { background-position: -260px 0, 0 0; }
       to { background-position: 260px 0, 0 0; }
@@ -1028,6 +1066,7 @@
       .investigation-actions, .exploration-decision { grid-template-columns: 1fr; }
       .recognition-candidates { grid-template-columns: 1fr; }
       .food-options { grid-template-columns: 1fr; }
+      .boss-supply-option, .boss-active-food { align-items: stretch; flex-direction: column; }
       .recognition-image-frame { min-height: 190px; }
       .recognition-image-frame img { height: 240px; }
       .exploration-action-bar { align-items: flex-start; flex-direction: column; }

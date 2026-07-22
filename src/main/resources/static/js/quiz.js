@@ -17,7 +17,7 @@ function stopQuizTimer() {
       stopQuizTimer();
       if (overlayIsOpen()) return;
       quizTimerTarget = { type, targetId };
-      let seconds = difficultyConfig().seconds;
+      let seconds = Number(activeQuizQuestion?.seconds || difficultyConfig().seconds);
       updateQuizTimers(seconds);
       quizTimerId = setInterval(() => {
         seconds -= 1;
@@ -56,14 +56,30 @@ function stopQuizTimer() {
       }
     }
 
-    async function startBossQuiz(cityId) {
+    function prepareBossChallenge(cityId) {
+      if (cityLives <= 0) {
+        showCityFailedResult();
+        return;
+      }
+      bossPreparationCityId = cityId;
+      activeBossQuizCityId = null;
+      activeBossBattle = null;
+      renderCityDetail(activeCityId);
+    }
+
+    async function startBossQuiz(cityId, foodKey = null) {
       if (cityLives <= 0) {
         showCityFailedResult();
         return;
       }
       try {
-        activeQuizQuestion = await api(`/api/quizzes/cities/${cityId}/boss/random?difficulty=${selectedDifficulty}`);
+        activeBossBattle = await api(`/api/cities/${cityId}/boss/start`, {
+          method: "POST",
+          body: JSON.stringify({ difficulty: selectedDifficulty, foodKey })
+        });
+        activeQuizQuestion = activeBossBattle.question;
         difficultyLocked = true;
+        bossPreparationCityId = null;
         activeBossQuizCityId = cityId;
         activeSceneQuizId = null;
         renderCityDetail(activeCityId);
@@ -102,6 +118,8 @@ function stopQuizTimer() {
         const city = activeCity();
         activeBossQuizCityId = null;
         activeQuizQuestion = null;
+        activeBossBattle = null;
+        bossPreparationCityId = null;
         cityBattleStats.timeoutCount += 1;
         registerWrongAnswer();
         if (cityLives <= 0) {

@@ -5,11 +5,16 @@ import com.example.demo.entity.Scene;
 import com.example.demo.entity.User;
 import com.example.demo.entity.UserProgress;
 import com.example.demo.dto.BattleResultRequest;
+import com.example.demo.dto.BossStartResponse;
 import com.example.demo.repository.CheckinRepository;
 import com.example.demo.repository.CityRepository;
 import com.example.demo.repository.SceneRepository;
 import com.example.demo.repository.UserProgressRepository;
 import com.example.demo.repository.UserRepository;
+import com.example.demo.service.food.FoodChallengeService;
+import com.example.demo.service.food.FoodDefinition;
+import com.example.demo.service.food.FoodEffectType;
+import com.example.demo.service.food.FoodRegistry;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class BossService {
@@ -26,16 +32,66 @@ public class BossService {
     private final CheckinRepository checkinRepository;
     private final SceneRepository sceneRepository;
     private final QuizQuestionService quizQuestionService;
+    private final FoodRegistry foodRegistry;
+    private final FoodChallengeService foodChallengeService;
+    private final Map<String, BossBattleState> activeBattles = new ConcurrentHashMap<>();
 
     public BossService(CityRepository cityRepository, UserRepository userRepository, UserProgressRepository userProgressRepository,
                        CheckinRepository checkinRepository, SceneRepository sceneRepository,
-                       QuizQuestionService quizQuestionService) {
+                       QuizQuestionService quizQuestionService, FoodRegistry foodRegistry,
+                       FoodChallengeService foodChallengeService) {
         this.cityRepository = cityRepository;
         this.userRepository = userRepository;
         this.userProgressRepository = userProgressRepository;
         this.checkinRepository = checkinRepository;
         this.sceneRepository = sceneRepository;
         this.quizQuestionService = quizQuestionService;
+        this.foodRegistry = foodRegistry;
+        this.foodChallengeService = foodChallengeService;
+    }
+
+    public BossStartResponse startChallenge(Long userId, Long cityId,
+                                            GameDifficulty requestedDifficulty,
+                                            String foodKey) {
+        BossContext context = bossContext(userId, cityId);
+        GameDifficulty difficulty = requestedDifficulty == null
+                ? GameDifficulty.CASUAL : requestedDifficulty;
+        FoodDefinition food = resolveFoodEffect(userId, cityId, foodKey);
+        int extraSeconds = food == null ? 0 : food.effectValue();
+        BossBattleState state = new BossBattleState(
+                userId,
+                cityId,
+                difficulty,
+                food == null ? null : food.foodKey(),
+                extraSeconds
+        );
+        activeBattles.put(battleKey(userId, cityId), state);
+
+        Map<String, Object> question;
+        try {
+            question = quizQuestionService.randomBossQuestion(
+                    userId, cityId, difficulty.name(), extraSeconds);
+        } catch (RuntimeException exception) {
+            activeBattles.remove(battleKey(userId, cityId), state);
+            throw exception;
+        }
+
+        BossStartResponse.ActiveFood activeFood = food == null ? null
+                : new BossStartResponse.ActiveFood(
+                        food.foodKey(),
+                        food.name(),
+                        food.effectType().name(),
+                        food.effectValue(),
+                        "每題作答時間增加 %d 秒".formatted(food.effectValue())
+                );
+        return new BossStartResponse(
+                difficulty.name(),
+                difficulty.seconds(),
+                difficulty.seconds() + extraSeconds,
+                activeFood,
+                new BossStartResponse.Battle(difficulty.lives(), 0),
+                question
+        );
     }
 
     public boolean challenge(Long userId, Long cityId) {
@@ -54,24 +110,21 @@ public class BossService {
     @Transactional
     public Map<String, Object> challengeResult(Long userId, Long cityId, String selectedAnswer, String selectedAnswerText,
                                                String questionId, String difficultyName) {
-        Optional<User> optionalUser = userRepository.findById(userId);
-        Optional<City> optionalCity = cityRepository.findById(cityId);
-        if (optionalUser.isEmpty() || optionalCity.isEmpty()) {
-            throw new IllegalArgumentException("invalid user or city");
-        }
+        BossContext context = bossContext(userId, cityId);
+        User user = context.user();
+        City city = context.city();
+        UserProgress progress = context.progress();
 
-        User user = optionalUser.get();
-        City city = optionalCity.get();
-        UserProgress progress = userProgressRepository.findByUserIdAndCityId(userId, cityId)
-                .orElseThrow(() -> new IllegalArgumentException("city not unlocked"));
-        if (!Boolean.TRUE.equals(progress.getUnlocked())) {
-            throw new IllegalArgumentException("city not unlocked");
-        }
-
-        long cityDone = checkinRepository.countByUserIdAndSceneCityIdAndCompletedTrue(userId, cityId);
-        long cityTotal = sceneRepository.countByCityId(cityId);
-        if (cityTotal == 0 || cityDone < cityTotal) {
-            throw new IllegalArgumentException("complete all city scenes first");
+        BossBattleState battleState = null;
+        if (questionId != null && !questionId.isBlank()) {
+            battleState = activeBattles.remove(battleKey(userId, cityId));
+            if (battleState == null) {
+                throw new IllegalArgumentException("boss battle has not been started");
+            }
+            GameDifficulty submittedDifficulty = GameDifficulty.from(difficultyName);
+            if (battleState.difficulty() != submittedDifficulty) {
+                throw new IllegalArgumentException("boss difficulty does not match active battle");
+            }
         }
 
         int userPower = (user.getLevel() == null ? 1 : user.getLevel()) * 10
@@ -81,7 +134,8 @@ public class BossService {
                 ? bossAnswerCorrect(city, selectedAnswer, selectedAnswerText)
                 : quizQuestionService.bossAnswerCorrect(userId, city, questionId, selectedAnswerText, difficultyName);
         boolean win = answerCorrect && userPower >= bossPower;
-        GameDifficulty difficulty = GameDifficulty.from(difficultyName);
+        GameDifficulty difficulty = battleState == null
+                ? GameDifficulty.from(difficultyName) : battleState.difficulty();
         int earnedExp = 0;
         int earnedCoins = 0;
 
@@ -213,6 +267,7 @@ public class BossService {
         }
 
         checkinRepository.deleteIncompleteByUserIdAndCityId(userId, cityId);
+        activeBattles.remove(battleKey(userId, cityId));
         progress.setBossCompleted(false);
         progress.setCompletedAt(null);
         userProgressRepository.save(progress);
@@ -308,6 +363,52 @@ public class BossService {
         userRepository.save(user);
     }
 
+    private BossContext bossContext(Long userId, Long cityId) {
+        Optional<User> optionalUser = userRepository.findById(userId);
+        Optional<City> optionalCity = cityRepository.findById(cityId);
+        if (optionalUser.isEmpty() || optionalCity.isEmpty()) {
+            throw new IllegalArgumentException("invalid user or city");
+        }
+
+        UserProgress progress = userProgressRepository.findByUserIdAndCityId(userId, cityId)
+                .orElseThrow(() -> new IllegalArgumentException("city not unlocked"));
+        if (!Boolean.TRUE.equals(progress.getUnlocked())) {
+            throw new IllegalArgumentException("city not unlocked");
+        }
+
+        long cityDone = checkinRepository.countByUserIdAndSceneCityIdAndCompletedTrue(userId, cityId);
+        long cityTotal = sceneRepository.countByCityId(cityId);
+        if (cityTotal == 0 || cityDone < cityTotal) {
+            throw new IllegalArgumentException("complete all city scenes first");
+        }
+        if (!Boolean.TRUE.equals(progress.getBossUnlocked())) {
+            throw new IllegalArgumentException("city boss is not unlocked");
+        }
+        return new BossContext(optionalUser.get(), optionalCity.get(), progress);
+    }
+
+    private FoodDefinition resolveFoodEffect(Long userId, Long cityId, String foodKey) {
+        if (foodKey == null || foodKey.isBlank()) {
+            return null;
+        }
+        FoodDefinition food = foodRegistry.findByFoodKey(foodKey)
+                .orElseThrow(() -> new IllegalArgumentException("找不到指定美食"));
+        if (!food.cityId().equals(cityId)) {
+            throw new IllegalArgumentException("此美食不能用於目前城市");
+        }
+        if (!foodChallengeService.isFoodUnlocked(userId, food.foodKey())) {
+            throw new IllegalArgumentException("尚未解鎖此美食");
+        }
+        if (food.effectType() != FoodEffectType.EXTRA_TIME) {
+            throw new IllegalArgumentException("目前不支援此美食效果");
+        }
+        return food;
+    }
+
+    private String battleKey(Long userId, Long cityId) {
+        return "%d:%d".formatted(userId, cityId);
+    }
+
     private int rankScore(String rank) {
         return switch (rank == null ? "" : rank.trim().toUpperCase()) {
             case "S" -> 4;
@@ -320,5 +421,17 @@ public class BossService {
 
     private int valueOrZero(Integer value) {
         return value == null ? 0 : value;
+    }
+
+    private record BossContext(User user, City city, UserProgress progress) {
+    }
+
+    private record BossBattleState(
+            Long userId,
+            Long cityId,
+            GameDifficulty difficulty,
+            String activeFoodKey,
+            int extraSecondsPerQuestion
+    ) {
     }
 }
