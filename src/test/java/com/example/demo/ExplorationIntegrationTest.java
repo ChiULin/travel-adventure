@@ -269,9 +269,9 @@ class ExplorationIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.cities[0].scenes[0].interactionType").value("EXPLORATION"))
                 .andExpect(jsonPath("$.data.cities[1].scenes[0].interactionType").value("EXPLORATION"))
-                .andExpect(jsonPath("$.data.cities[1].scenes[0].actionLabel").value("接旅行委託"))
+                .andExpect(jsonPath("$.data.cities[1].scenes[0].actionLabel").value("開始挑戰"))
                 .andExpect(jsonPath("$.data.cities[1].scenes[1].interactionType").value("QUIZ"))
-                .andExpect(jsonPath("$.data.cities[1].scenes[1].actionLabel").value("開始答題"))
+                .andExpect(jsonPath("$.data.cities[1].scenes[1].actionLabel").value("完成上一關後解鎖"))
                 .andExpect(jsonPath("$.data.cities[2].scenes[1].interactionType").value("EXPLORATION"))
                 .andExpect(jsonPath("$.data.cities[3].scenes[0].interactionType").value("EXPLORATION"))
                 .andExpect(jsonPath("$.data.cities[4].scenes[0].interactionType").value("EXPLORATION"))
@@ -307,7 +307,7 @@ class ExplorationIntegrationTest {
 
         mockMvc.perform(get("/api/journey/me").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.cities[1].scenes[0].actionLabel").value("查看景點故事"))
+                .andExpect(jsonPath("$.data.cities[1].scenes[0].actionLabel").value("查看故事"))
                 .andExpect(jsonPath("$.data.cities[3].scenes[0].actionLabel").value("查看景點故事"))
                 .andExpect(jsonPath("$.data.cities[5].scenes[0].actionLabel").value("查看景點故事"));
 

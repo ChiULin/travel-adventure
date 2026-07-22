@@ -11,13 +11,25 @@ import java.util.stream.Collectors;
 @Component
 public class LandmarkStageRegistry {
 
+    private static final long TAIPEI_CITY_ID = 1L;
+    private static final long TAIPEI_101_ID = 1L;
+    private static final long NATIONAL_PALACE_MUSEUM_ID = 2L;
+    private static final long XIMENDING_ID = 3L;
+    private static final long TAICHUNG_CITY_ID = 2L;
+    private static final long GAOMEI_WETLANDS_ID = 4L;
+    private static final long NATIONAL_TAICHUNG_THEATER_ID = 5L;
+    private static final long RAINBOW_VILLAGE_ID = 6L;
+
     private final Map<Long, LandmarkStageDefinition> stagesByLandmarkId;
 
     public LandmarkStageRegistry() {
         List<LandmarkStageDefinition> definitions = List.of(
-                new LandmarkStageDefinition(1L, 1L, 1),
-                new LandmarkStageDefinition(1L, 2L, 2),
-                new LandmarkStageDefinition(1L, 3L, 3)
+                new LandmarkStageDefinition(TAIPEI_CITY_ID, TAIPEI_101_ID, 1),
+                new LandmarkStageDefinition(TAIPEI_CITY_ID, NATIONAL_PALACE_MUSEUM_ID, 2),
+                new LandmarkStageDefinition(TAIPEI_CITY_ID, XIMENDING_ID, 3),
+                new LandmarkStageDefinition(TAICHUNG_CITY_ID, GAOMEI_WETLANDS_ID, 1),
+                new LandmarkStageDefinition(TAICHUNG_CITY_ID, NATIONAL_TAICHUNG_THEATER_ID, 2),
+                new LandmarkStageDefinition(TAICHUNG_CITY_ID, RAINBOW_VILLAGE_ID, 3)
         );
 
         validate(definitions);

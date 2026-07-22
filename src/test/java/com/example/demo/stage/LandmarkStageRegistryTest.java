@@ -15,6 +15,7 @@ class LandmarkStageRegistryTest {
 
     private static final Long TAIPEI_CITY_ID = 1L;
     private static final Long TAICHUNG_CITY_ID = 2L;
+    private static final Long TAINAN_CITY_ID = 3L;
 
     @Autowired
     private LandmarkStageRegistry registry;
@@ -53,8 +54,26 @@ class LandmarkStageRegistryTest {
     }
 
     @Test
+    void taichungShouldBeFullyConfigured() {
+        assertTrue(registry.isCityFullyConfigured(TAICHUNG_CITY_ID));
+    }
+
+    @Test
+    void taichungStagesShouldUseConfiguredLandmarkOrder() {
+        var stages = registry.findByCityId(TAICHUNG_CITY_ID);
+
+        assertEquals(3, stages.size());
+        assertEquals(4L, stages.get(0).landmarkId());
+        assertEquals(1, stages.get(0).stageOrder());
+        assertEquals(5L, stages.get(1).landmarkId());
+        assertEquals(2, stages.get(1).stageOrder());
+        assertEquals(6L, stages.get(2).landmarkId());
+        assertEquals(3, stages.get(2).stageOrder());
+    }
+
+    @Test
     void unconfiguredCityShouldNotBeFullyConfigured() {
-        assertFalse(registry.isCityFullyConfigured(TAICHUNG_CITY_ID));
+        assertFalse(registry.isCityFullyConfigured(TAINAN_CITY_ID));
     }
 
     @Test

@@ -111,7 +111,7 @@ class StageChallengeIntegrationTest {
     }
 
     @Test
-    void newPlayerJourneyReturnsOrderedTaipeiStageMetadata() throws Exception {
+    void newPlayerJourneyReturnsOrderedConfiguredStageMetadata() throws Exception {
         String token = registerAndGetToken("journey-new-user");
 
         mockMvc.perform(get("/api/journey/me")
@@ -139,13 +139,127 @@ class StageChallengeIntegrationTest {
                 .andExpect(jsonPath("$.data.cities[0].bossStage.stageLabel").value("第 4 關"))
                 .andExpect(jsonPath("$.data.cities[0].bossStage.stageStatus").value("LOCKED"))
                 .andExpect(jsonPath("$.data.cities[0].bossStage.actionLabel").value("完成前三關後解鎖"))
-                .andExpect(jsonPath("$.data.cities[1].scenes[0].stageConfigured").value(false))
-                .andExpect(jsonPath("$.data.cities[1].scenes[0].stageOrder").doesNotExist())
-                .andExpect(jsonPath("$.data.cities[1].scenes[0].stageLabel").doesNotExist())
-                .andExpect(jsonPath("$.data.cities[1].scenes[0].stageStatus").doesNotExist())
+                .andExpect(jsonPath("$.data.cities[1].scenes[0].id").value(4))
+                .andExpect(jsonPath("$.data.cities[1].scenes[0].stageConfigured").value(true))
+                .andExpect(jsonPath("$.data.cities[1].scenes[0].stageOrder").value(1))
+                .andExpect(jsonPath("$.data.cities[1].scenes[0].stageStatus").value("LOCKED"))
                 .andExpect(jsonPath("$.data.cities[1].scenes[0].interactionType").value("EXPLORATION"))
-                .andExpect(jsonPath("$.data.cities[1].scenes[0].actionLabel").value("接旅行委託"))
-                .andExpect(jsonPath("$.data.cities[1].bossStage").value((Object) null));
+                .andExpect(jsonPath("$.data.cities[1].scenes[1].id").value(5))
+                .andExpect(jsonPath("$.data.cities[1].scenes[1].stageOrder").value(2))
+                .andExpect(jsonPath("$.data.cities[1].scenes[1].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[1].scenes[2].id").value(6))
+                .andExpect(jsonPath("$.data.cities[1].scenes[2].stageOrder").value(3))
+                .andExpect(jsonPath("$.data.cities[1].scenes[2].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[1].bossStage.cityId").value(2))
+                .andExpect(jsonPath("$.data.cities[1].bossStage.stageOrder").value(4))
+                .andExpect(jsonPath("$.data.cities[1].bossStage.stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[2].scenes[0].stageConfigured").value(false))
+                .andExpect(jsonPath("$.data.cities[2].bossStage").value((Object) null))
+                .andExpect(jsonPath("$.data.cities[3].scenes[0].stageConfigured").value(false))
+                .andExpect(jsonPath("$.data.cities[3].bossStage").value((Object) null))
+                .andExpect(jsonPath("$.data.cities[4].scenes[0].stageConfigured").value(false))
+                .andExpect(jsonPath("$.data.cities[4].bossStage").value((Object) null))
+                .andExpect(jsonPath("$.data.cities[5].scenes[0].stageConfigured").value(false))
+                .andExpect(jsonPath("$.data.cities[5].bossStage").value((Object) null));
+    }
+
+    @Test
+    void taichungChallengeApisEnforceStageOrder() throws Exception {
+        String token = registerAndGetToken("taichung-api-player");
+        User user = userRepository.findByUsername("taichung-api-player").orElseThrow();
+
+        mockMvc.perform(get("/api/explorations/cities/2/random")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest());
+        unlockCity(user, 2L);
+
+        mockMvc.perform(get("/api/explorations/cities/2/random")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.missionId").value("TAICHUNG-GAOMEI-01"));
+
+        assertLocked(get("/api/quizzes/landmarks/5/random?difficulty=NORMAL"), token);
+        assertNoCheckin(user.getId(), 5L);
+
+        saveCheckin(user, 4L, true);
+
+        mockMvc.perform(get("/api/quizzes/landmarks/5/random?difficulty=NORMAL")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.questionId").isString());
+        assertLocked(get("/api/quizzes/landmarks/6/random?difficulty=NORMAL"), token);
+
+        saveCheckin(user, 5L, true);
+
+        mockMvc.perform(get("/api/quizzes/landmarks/6/random?difficulty=NORMAL")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.questionId").isString());
+        assertNoCheckin(user.getId(), 6L);
+    }
+
+    @Test
+    void taichungJourneyUnlocksStagesAndBossInOrder() throws Exception {
+        String token = registerAndGetToken("taichung-journey");
+        User user = userRepository.findByUsername("taichung-journey").orElseThrow();
+
+        unlockCity(user, 2L);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[1].scenes[0].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[1].scenes[1].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[1].scenes[2].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[1].bossStage.stageStatus").value("LOCKED"));
+
+        saveCheckin(user, 4L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[1].scenes[0].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[1].scenes[1].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[1].scenes[2].stageStatus").value("LOCKED"));
+
+        saveCheckin(user, 5L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[1].scenes[1].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[1].scenes[2].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[1].bossStage.stageStatus").value("LOCKED"));
+
+        saveCheckin(user, 6L, true);
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[1].scenes[2].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[1].bossStage.stageStatus").value("AVAILABLE"));
+    }
+
+    @Test
+    void anotherPlayersTaichungCheckinDoesNotUnlockNextStage() throws Exception {
+        registerAndGetToken("taichung-owner");
+        String otherToken = registerAndGetToken("taichung-other");
+        User owner = userRepository.findByUsername("taichung-owner").orElseThrow();
+        User other = userRepository.findByUsername("taichung-other").orElseThrow();
+        unlockCity(other, 2L);
+        saveCheckin(owner, 4L, true);
+
+        assertLocked(get("/api/quizzes/landmarks/5/random?difficulty=NORMAL"), otherToken);
+    }
+
+    @Test
+    void incompleteTaichungCheckinDoesNotUnlockNextStage() throws Exception {
+        String token = registerAndGetToken("taichung-incomplete");
+        User user = userRepository.findByUsername("taichung-incomplete").orElseThrow();
+        unlockCity(user, 2L);
+        saveCheckin(user, 4L, false);
+
+        assertLocked(get("/api/quizzes/landmarks/5/random?difficulty=NORMAL"), token);
     }
 
     @Test
@@ -287,6 +401,12 @@ class StageChallengeIntegrationTest {
                 .earnedExp(0)
                 .earnedCoins(0)
                 .build());
+    }
+
+    private void unlockCity(User user, Long cityId) {
+        var progress = userProgressRepository.findByUserIdAndCityId(user.getId(), cityId).orElseThrow();
+        progress.setUnlocked(true);
+        userProgressRepository.save(progress);
     }
 
     private void assertNoCheckin(Long userId, Long sceneId) {
