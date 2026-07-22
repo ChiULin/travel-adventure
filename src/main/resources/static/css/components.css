@@ -937,88 +937,6 @@
       background: linear-gradient(135deg, #eefaf2, #ffffff);
     }
 
-    .food-event-card {
-      margin: 18px 0;
-      padding: 18px;
-      border: 1px solid #e6b25a;
-      border-radius: 14px;
-      background: linear-gradient(145deg, #fff7df, #ffffff);
-      box-shadow: 0 10px 26px rgba(136, 85, 12, .08);
-    }
-
-    .food-event-card.locked {
-      border-color: #c8ced8;
-      background: linear-gradient(145deg, #f3f5f8, #ffffff);
-    }
-
-    .food-event-card.claimed {
-      border-color: #86cca0;
-      background: linear-gradient(145deg, #edf9f1, #ffffff);
-    }
-
-    .food-event-card h2 { margin: 8px 0; }
-    .food-event-card .progress { margin-top: 12px; }
-
-    .food-challenge {
-      display: grid;
-      gap: 12px;
-      margin-top: 14px;
-      padding: 14px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, .78);
-    }
-
-    .food-options {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 9px;
-    }
-
-    .food-explanation {
-      margin-top: 12px;
-      padding: 12px;
-      border-radius: 10px;
-      background: #ffffff;
-    }
-
-    .boss-preparation {
-      display: grid;
-      gap: 12px;
-      padding: 18px;
-      border: 1px solid #e6b25a;
-      border-radius: 14px;
-      background: linear-gradient(145deg, #fff7df, #ffffff);
-    }
-
-    .boss-supply-option,
-    .boss-active-food {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 12px;
-      border: 1px solid #e6b25a;
-      border-radius: 12px;
-      background: #ffffff;
-    }
-
-    .boss-supply-option.locked {
-      color: #737d8d;
-      border-color: #c8ced8;
-      background: #f3f5f8;
-    }
-
-    .boss-active-food {
-      color: #704a0a;
-      background: #fff4cf;
-    }
-
-    .boss-active-food.neutral {
-      color: #566174;
-      border-color: #c8ced8;
-      background: #f3f5f8;
-    }
-
     @keyframes ambientSweep {
       from { background-position: -260px 0, 0 0; }
       to { background-position: 260px 0, 0 0; }
@@ -1065,8 +983,6 @@
       .exploration-clues, .exploration-candidates, .exploration-rewards { grid-template-columns: 1fr; }
       .investigation-actions, .exploration-decision { grid-template-columns: 1fr; }
       .recognition-candidates { grid-template-columns: 1fr; }
-      .food-options { grid-template-columns: 1fr; }
-      .boss-supply-option, .boss-active-food { align-items: stretch; flex-direction: column; }
       .recognition-image-frame { min-height: 190px; }
       .recognition-image-frame img { height: 240px; }
       .exploration-action-bar { align-items: flex-start; flex-direction: column; }

@@ -78,8 +78,6 @@ function renderBattleStatus() {
     function resetLocalBattleState() {
       activeSceneQuizId = null;
       activeBossQuizCityId = null;
-      bossPreparationCityId = null;
-      activeBossBattle = null;
       activeQuizQuestion = null;
       difficultyLocked = false;
       answerCombo = 0;
@@ -330,10 +328,7 @@ async function challengeBoss(answer, answerText) {
       stopQuizTimer();
       activeBossQuizCityId = null;
       const questionId = activeQuizQuestion?.questionId;
-      const activeFoodKey = activeBossBattle?.activeFood?.foodKey || null;
       activeQuizQuestion = null;
-      activeBossBattle = null;
-      bossPreparationCityId = null;
       const city = activeCity();
       try {
         const result = await api(`/api/cities/${city.id}/boss/challenge`, {
@@ -342,8 +337,7 @@ async function challengeBoss(answer, answerText) {
             answer,
             answerText,
             questionId,
-            difficulty: selectedDifficulty,
-            foodKey: activeFoodKey
+            difficulty: selectedDifficulty
           })
         });
         if (result.win) {

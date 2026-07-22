@@ -18,8 +18,6 @@ const SESSION_KEY = "travelAdventureApiSession";
     let quizTimerTarget = null;
     let activeSceneQuizId = null;
     let activeBossQuizCityId = null;
-    let bossPreparationCityId = null;
-    let activeBossBattle = null;
     let answerCombo = 0;
     let cityLives = DIFFICULTIES[selectedDifficulty].lives;
     let cityFailedPending = false;
@@ -31,7 +29,6 @@ const SESSION_KEY = "travelAdventureApiSession";
     let selectedCollectionId = null;
     let explorationState = createExplorationState();
     let imageRecognitionState = createImageRecognitionState();
-    let foodEventState = createFoodEventState();
 
     function createExplorationState() {
       return {
@@ -72,17 +69,6 @@ const SESSION_KEY = "travelAdventureApiSession";
         loading: false,
         submitting: false,
         expired: false,
-        result: null,
-        error: null
-      };
-    }
-
-    function createFoodEventState() {
-      return {
-        cityId: null,
-        event: null,
-        loading: false,
-        submitting: false,
         result: null,
         error: null
       };

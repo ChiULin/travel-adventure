@@ -56,30 +56,18 @@ function stopQuizTimer() {
       }
     }
 
-    function prepareBossChallenge(cityId) {
-      if (cityLives <= 0) {
-        showCityFailedResult();
-        return;
-      }
-      bossPreparationCityId = cityId;
-      activeBossQuizCityId = null;
-      activeBossBattle = null;
-      renderCityDetail(activeCityId);
-    }
-
-    async function startBossQuiz(cityId, foodKey = null) {
+    async function startBossQuiz(cityId) {
       if (cityLives <= 0) {
         showCityFailedResult();
         return;
       }
       try {
-        activeBossBattle = await api(`/api/cities/${cityId}/boss/start`, {
+        const battle = await api(`/api/cities/${cityId}/boss/start`, {
           method: "POST",
-          body: JSON.stringify({ difficulty: selectedDifficulty, foodKey })
+          body: JSON.stringify({ difficulty: selectedDifficulty, foodKey: null })
         });
-        activeQuizQuestion = activeBossBattle.question;
+        activeQuizQuestion = battle.question;
         difficultyLocked = true;
-        bossPreparationCityId = null;
         activeBossQuizCityId = cityId;
         activeSceneQuizId = null;
         renderCityDetail(activeCityId);
@@ -118,8 +106,6 @@ function stopQuizTimer() {
         const city = activeCity();
         activeBossQuizCityId = null;
         activeQuizQuestion = null;
-        activeBossBattle = null;
-        bossPreparationCityId = null;
         cityBattleStats.timeoutCount += 1;
         registerWrongAnswer();
         if (cityLives <= 0) {

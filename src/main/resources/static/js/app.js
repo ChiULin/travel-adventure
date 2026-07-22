@@ -44,10 +44,7 @@ document.getElementById("loginForm").addEventListener("submit", async event => {
       explorationState = createExplorationState();
       stopImageRecognitionTimer();
       imageRecognitionState = createImageRecognitionState();
-      foodEventState = createFoodEventState();
       activeCityId = null;
-      bossPreparationCityId = null;
-      activeBossBattle = null;
       finalEndingShown = false;
       logs = [];
       document.getElementById("tutorial").classList.add("hidden");
