@@ -5,6 +5,8 @@ import com.example.demo.entity.UserProgress;
 import com.example.demo.repository.CheckinRepository;
 import com.example.demo.repository.SceneRepository;
 import com.example.demo.repository.UserProgressRepository;
+import com.example.demo.stage.LandmarkStageService;
+import com.example.demo.stage.StageLockedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -23,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -31,6 +35,7 @@ class ImageRecognitionServiceTest {
     private CheckinRepository checkinRepository;
     private UserProgressRepository progressRepository;
     private CheckinService checkinService;
+    private LandmarkStageService stageService;
     private MutableClock clock;
     private ImageRecognitionService service;
 
@@ -41,6 +46,7 @@ class ImageRecognitionServiceTest {
         checkinService = mock(CheckinService.class);
         SceneRepository sceneRepository = mock(SceneRepository.class);
         clock = new MutableClock(Instant.parse("2026-07-22T00:00:00Z"));
+        stageService = mock(LandmarkStageService.class);
         when(progressRepository.findByUserIdAndCityId(1L, 1L))
                 .thenReturn(Optional.of(UserProgress.builder().unlocked(true).build()));
         when(checkinRepository.findByUserIdAndSceneId(1L, 2L)).thenReturn(Optional.empty());
@@ -54,7 +60,7 @@ class ImageRecognitionServiceTest {
         });
         service = new ImageRecognitionService(
                 new ImageRecognitionRegistry(), sceneRepository, checkinRepository,
-                progressRepository, checkinService, clock);
+                progressRepository, checkinService, clock, stageService);
     }
 
     @Test
@@ -114,6 +120,21 @@ class ImageRecognitionServiceTest {
         assertEquals("圖片辨識難度與簽發時不符", exception.getMessage());
         assertEquals(156, completed.experienceGained());
         assertEquals(132, completed.coinsGained());
+    }
+
+    @Test
+    void lockedStageDoesNotCreateImageChallengeState() {
+        doThrow(new StageLockedException("請先完成上一個景點關卡"))
+                .when(stageService).validateStageAvailable(1L, 2L);
+
+        assertThrows(StageLockedException.class, () -> service.issue(1L, 2L, "NORMAL"));
+        clock.advanceSeconds(1);
+        doNothing().when(stageService).validateStageAvailable(1L, 2L);
+
+        var challenge = service.issue(1L, 2L, "NORMAL");
+
+        assertEquals(clock.instant(), challenge.issuedAt());
+        verifyNoInteractions(checkinService);
     }
 
     private static final class MutableClock extends Clock {

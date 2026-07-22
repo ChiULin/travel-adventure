@@ -105,12 +105,17 @@ class LandmarkStageServiceTest {
 
     @Test
     void validatingLockedStageFails() {
-        IllegalStateException exception = assertThrows(
-                IllegalStateException.class,
+        StageLockedException exception = assertThrows(
+                StageLockedException.class,
                 () -> service.validateStageAvailable(USER_ID, PALACE_MUSEUM_ID)
         );
 
         assertEquals("請先完成上一個景點關卡", exception.getMessage());
+    }
+
+    @Test
+    void unconfiguredLandmarkKeepsExistingBehavior() {
+        service.validateStageAvailable(USER_ID, 4L);
     }
 
     private void taipeiUnlocked(boolean unlocked) {

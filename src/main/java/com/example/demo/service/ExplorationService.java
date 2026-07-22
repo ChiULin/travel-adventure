@@ -4,6 +4,8 @@ import com.example.demo.entity.Scene;
 import com.example.demo.repository.CheckinRepository;
 import com.example.demo.repository.SceneRepository;
 import com.example.demo.repository.UserProgressRepository;
+import com.example.demo.stage.LandmarkStageRegistry;
+import com.example.demo.stage.LandmarkStageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -35,6 +37,7 @@ public class ExplorationService {
     private final CheckinService checkinService;
     private final ExplorationMissionRegistry missionRegistry;
     private final SceneRepository sceneRepository;
+    private final LandmarkStageService stageService;
     private final Clock clock;
     private final Map<String, ExplorationState> explorationStates = new ConcurrentHashMap<>();
 
@@ -43,9 +46,10 @@ public class ExplorationService {
                               UserProgressRepository userProgressRepository,
                               CheckinService checkinService,
                               ExplorationMissionRegistry missionRegistry,
-                              SceneRepository sceneRepository) {
+                              SceneRepository sceneRepository,
+                              LandmarkStageService stageService) {
         this(checkinRepository, userProgressRepository, checkinService,
-                missionRegistry, sceneRepository, Clock.systemUTC());
+                missionRegistry, sceneRepository, Clock.systemUTC(), stageService);
     }
 
     ExplorationService(CheckinRepository checkinRepository,
@@ -54,12 +58,25 @@ public class ExplorationService {
                        ExplorationMissionRegistry missionRegistry,
                        SceneRepository sceneRepository,
                        Clock clock) {
+        this(checkinRepository, userProgressRepository, checkinService, missionRegistry,
+                sceneRepository, clock,
+                new LandmarkStageService(new LandmarkStageRegistry(), checkinRepository, userProgressRepository));
+    }
+
+    ExplorationService(CheckinRepository checkinRepository,
+                       UserProgressRepository userProgressRepository,
+                       CheckinService checkinService,
+                       ExplorationMissionRegistry missionRegistry,
+                       SceneRepository sceneRepository,
+                       Clock clock,
+                       LandmarkStageService stageService) {
         this.checkinRepository = checkinRepository;
         this.userProgressRepository = userProgressRepository;
         this.checkinService = checkinService;
         this.missionRegistry = missionRegistry;
         this.sceneRepository = sceneRepository;
         this.clock = clock;
+        this.stageService = stageService;
     }
 
     public ExplorationMissionView randomMission(Long userId, Long cityId) {
@@ -83,6 +100,7 @@ public class ExplorationService {
                 .findFirst()
                 .orElse(null);
         if (existing != null) {
+            stageService.validateStageAvailable(userId, existing.mission.targetSceneId());
             synchronized (existing) {
                 return missionView(existing);
             }
@@ -90,6 +108,7 @@ public class ExplorationService {
 
         ExplorationMissionDefinition selected = available.get(
                 ThreadLocalRandom.current().nextInt(available.size()));
+        stageService.validateStageAvailable(userId, selected.targetSceneId());
         String key = stateKey(userId, selected.missionKey());
         ExplorationState state = explorationStates.compute(key, (ignored, current) -> {
             if (current == null || current.completed || !now.isBefore(current.expiresAt)) {

@@ -4,6 +4,7 @@ import com.example.demo.entity.City;
 import com.example.demo.entity.Scene;
 import com.example.demo.repository.CityRepository;
 import com.example.demo.repository.SceneRepository;
+import com.example.demo.stage.LandmarkStageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -26,6 +27,7 @@ public class QuizQuestionService {
 
     private final SceneRepository sceneRepository;
     private final CityRepository cityRepository;
+    private final LandmarkStageService stageService;
     private final Map<String, IssuedQuestion> issuedQuestions = new ConcurrentHashMap<>();
     private final Map<String, LastQuestion> lastQuestionIds = new ConcurrentHashMap<>();
     private final int maxPendingQuestionsPerPlayer;
@@ -36,17 +38,21 @@ public class QuizQuestionService {
     public QuizQuestionService(
             SceneRepository sceneRepository,
             CityRepository cityRepository,
+            LandmarkStageService stageService,
             @Value("${game.quiz.max-pending-per-player:5}") int maxPendingQuestionsPerPlayer) {
-        this(sceneRepository, cityRepository, maxPendingQuestionsPerPlayer, Clock.systemUTC());
+        this(sceneRepository, cityRepository, stageService,
+                maxPendingQuestionsPerPlayer, Clock.systemUTC());
     }
 
     QuizQuestionService(SceneRepository sceneRepository, CityRepository cityRepository,
+                        LandmarkStageService stageService,
                         int maxPendingQuestionsPerPlayer, Clock clock) {
         if (maxPendingQuestionsPerPlayer < 1) {
             throw new IllegalArgumentException("max pending questions per player must be positive");
         }
         this.sceneRepository = sceneRepository;
         this.cityRepository = cityRepository;
+        this.stageService = stageService;
         this.maxPendingQuestionsPerPlayer = maxPendingQuestionsPerPlayer;
         this.clock = clock;
     }
@@ -54,6 +60,7 @@ public class QuizQuestionService {
     public Map<String, Object> randomSceneQuestion(Long userId, Long sceneId, String difficultyName) {
         Scene scene = sceneRepository.findById(sceneId)
                 .orElseThrow(() -> new IllegalArgumentException("scene not found"));
+        stageService.validateStageAvailable(userId, sceneId);
         List<Question> questions = sceneQuestions(scene);
         return issueQuestion(userId, sceneKey(userId, sceneId), questions, difficultyName, true);
     }

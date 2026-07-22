@@ -4,6 +4,7 @@ import com.example.demo.entity.Scene;
 import com.example.demo.repository.CheckinRepository;
 import com.example.demo.repository.SceneRepository;
 import com.example.demo.repository.UserProgressRepository;
+import com.example.demo.stage.LandmarkStageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -28,6 +29,7 @@ public class ImageRecognitionService {
     private final CheckinRepository checkinRepository;
     private final UserProgressRepository userProgressRepository;
     private final CheckinService checkinService;
+    private final LandmarkStageService stageService;
     private final Clock clock;
     private final Map<String, PendingImageChallenge> challenges = new ConcurrentHashMap<>();
     private final Map<String, String> activeChallengeIds = new ConcurrentHashMap<>();
@@ -38,9 +40,10 @@ public class ImageRecognitionService {
                                    SceneRepository sceneRepository,
                                    CheckinRepository checkinRepository,
                                    UserProgressRepository userProgressRepository,
-                                   CheckinService checkinService) {
+                                   CheckinService checkinService,
+                                   LandmarkStageService stageService) {
         this(registry, sceneRepository, checkinRepository, userProgressRepository,
-                checkinService, Clock.systemUTC());
+                checkinService, Clock.systemUTC(), stageService);
     }
 
     ImageRecognitionService(ImageRecognitionRegistry registry,
@@ -48,13 +51,15 @@ public class ImageRecognitionService {
                             CheckinRepository checkinRepository,
                             UserProgressRepository userProgressRepository,
                             CheckinService checkinService,
-                            Clock clock) {
+                            Clock clock,
+                            LandmarkStageService stageService) {
         this.registry = registry;
         this.sceneRepository = sceneRepository;
         this.checkinRepository = checkinRepository;
         this.userProgressRepository = userProgressRepository;
         this.checkinService = checkinService;
         this.clock = clock;
+        this.stageService = stageService;
     }
 
     public ImageChallengeView issue(Long userId, Long sceneId, String difficultyName) {
@@ -62,6 +67,7 @@ public class ImageRecognitionService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "這個景點沒有圖片辨識挑戰"));
         validateCityUnlocked(userId, definition.cityId());
+        stageService.validateStageAvailable(userId, definition.targetSceneId());
         validateSceneNotCompleted(userId, definition.targetSceneId());
         GameDifficulty difficulty = GameDifficulty.from(difficultyName);
         Instant now = clock.instant();

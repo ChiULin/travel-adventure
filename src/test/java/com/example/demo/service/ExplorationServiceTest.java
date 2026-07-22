@@ -5,6 +5,8 @@ import com.example.demo.entity.UserProgress;
 import com.example.demo.repository.CheckinRepository;
 import com.example.demo.repository.SceneRepository;
 import com.example.demo.repository.UserProgressRepository;
+import com.example.demo.stage.LandmarkStageService;
+import com.example.demo.stage.StageLockedException;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -23,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -229,6 +233,30 @@ class ExplorationServiceTest {
         assertEquals(ClueType.VISUAL, service.randomMission(1L, 5L).discoveredClues().getFirst().type());
         assertEquals(3, service.randomMission(1L, 1L).remainingActions());
         assertEquals(3, service.randomMission(1L, 5L).remainingActions());
+    }
+
+    @Test
+    void lockedStageDoesNotCreateExplorationState() {
+        CheckinRepository checkinRepository = mock(CheckinRepository.class);
+        UserProgressRepository progressRepository = mock(UserProgressRepository.class);
+        LandmarkStageService stageService = mock(LandmarkStageService.class);
+        MutableClock clock = new MutableClock(Instant.parse("2026-07-21T12:00:00Z"));
+        ExplorationService service = new ExplorationService(
+                checkinRepository, progressRepository, mock(CheckinService.class),
+                new ExplorationMissionRegistry(), sceneRepository(), clock, stageService);
+        when(progressRepository.findByUserIdAndCityId(1L, 1L))
+                .thenReturn(Optional.of(UserProgress.builder().unlocked(true).build()));
+        when(checkinRepository.findByUserIdAndSceneId(1L, 1L)).thenReturn(Optional.empty());
+        doThrow(new StageLockedException("請先完成上一個景點關卡"))
+                .when(stageService).validateStageAvailable(1L, 1L);
+
+        assertThrows(StageLockedException.class, () -> service.randomMission(1L, 1L));
+        clock.advance(Duration.ofSeconds(1));
+        doNothing().when(stageService).validateStageAvailable(1L, 1L);
+
+        var mission = service.randomMission(1L, 1L);
+
+        assertEquals(clock.instant(), mission.createdAt());
     }
 
     private SceneRepository sceneRepository() {

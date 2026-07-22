@@ -50,9 +50,13 @@ public class LandmarkStageService {
     }
 
     public void validateStageAvailable(Long userId, Long landmarkId) {
+        if (stageRegistry.findByLandmarkId(landmarkId).isEmpty()) {
+            return;
+        }
+
         LandmarkStageStatus stage = getStageStatus(userId, landmarkId);
         if (stage.status() == StageStatus.LOCKED) {
-            throw new IllegalStateException("請先完成上一個景點關卡");
+            throw new StageLockedException("請先完成上一個景點關卡");
         }
     }
 
