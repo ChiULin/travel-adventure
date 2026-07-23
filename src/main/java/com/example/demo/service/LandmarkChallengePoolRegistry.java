@@ -2,13 +2,15 @@ package com.example.demo.service;
 
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Component
 public class LandmarkChallengePoolRegistry {
 
-    private final Map<LandmarkStageKey, List<MysteryChallengeType>> pools = Map.of(
+    private final Map<LandmarkStageKey, List<MysteryChallengeType>> pools = merge(
+            Map.of(
             new LandmarkStageKey(1, 1),
             List.of(
                     MysteryChallengeType.EXPLORATION,
@@ -65,6 +67,28 @@ public class LandmarkChallengePoolRegistry {
                     MysteryChallengeType.IMAGE_RECOGNITION,
                     MysteryChallengeType.PUZZLE
             )
+            ),
+            Map.of(
+            new LandmarkStageKey(4, 1),
+            List.of(
+                    MysteryChallengeType.EXPLORATION,
+                    MysteryChallengeType.QUIZ,
+                    MysteryChallengeType.IMAGE_RECOGNITION,
+                    MysteryChallengeType.PUZZLE
+            ),
+            new LandmarkStageKey(4, 2),
+            List.of(
+                    MysteryChallengeType.QUIZ,
+                    MysteryChallengeType.IMAGE_RECOGNITION,
+                    MysteryChallengeType.PUZZLE
+            ),
+            new LandmarkStageKey(4, 3),
+            List.of(
+                    MysteryChallengeType.QUIZ,
+                    MysteryChallengeType.IMAGE_RECOGNITION,
+                    MysteryChallengeType.PUZZLE
+            )
+            )
     );
 
     public List<MysteryChallengeType> getAvailableTypes(int cityOrder, int stageOrder) {
@@ -77,5 +101,11 @@ public class LandmarkChallengePoolRegistry {
 
     public Map<LandmarkStageKey, List<MysteryChallengeType>> findAll() {
         return pools;
+    }
+
+    private static <K, V> Map<K, V> merge(Map<K, V> first, Map<K, V> second) {
+        Map<K, V> merged = new HashMap<>(first);
+        merged.putAll(second);
+        return Map.copyOf(merged);
     }
 }

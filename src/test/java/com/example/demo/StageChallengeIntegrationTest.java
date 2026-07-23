@@ -179,14 +179,18 @@ class StageChallengeIntegrationTest {
                 .andExpect(jsonPath("$.data.cities[3].scenes[0].stageConfigured").value(true))
                 .andExpect(jsonPath("$.data.cities[3].scenes[0].stageOrder").value(1))
                 .andExpect(jsonPath("$.data.cities[3].scenes[0].stageStatus").value("LOCKED"))
-                .andExpect(jsonPath("$.data.cities[3].scenes[0].interactionType").value("EXPLORATION"))
+                .andExpect(jsonPath("$.data.cities[3].scenes[0].mysteryChallengeEnabled").value(true))
+                .andExpect(jsonPath("$.data.cities[3].scenes[0].interactionType").value("MYSTERY"))
                 .andExpect(jsonPath("$.data.cities[3].scenes[1].id").value(11))
                 .andExpect(jsonPath("$.data.cities[3].scenes[1].stageOrder").value(2))
                 .andExpect(jsonPath("$.data.cities[3].scenes[1].stageStatus").value("LOCKED"))
-                .andExpect(jsonPath("$.data.cities[3].scenes[1].interactionType").value("QUIZ"))
+                .andExpect(jsonPath("$.data.cities[3].scenes[1].mysteryChallengeEnabled").value(true))
+                .andExpect(jsonPath("$.data.cities[3].scenes[1].interactionType").value("MYSTERY"))
                 .andExpect(jsonPath("$.data.cities[3].scenes[2].id").value(12))
                 .andExpect(jsonPath("$.data.cities[3].scenes[2].stageOrder").value(3))
                 .andExpect(jsonPath("$.data.cities[3].scenes[2].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[3].scenes[2].mysteryChallengeEnabled").value(true))
+                .andExpect(jsonPath("$.data.cities[3].scenes[2].interactionType").value("MYSTERY"))
                 .andExpect(jsonPath("$.data.cities[3].bossStage.cityId").value(4))
                 .andExpect(jsonPath("$.data.cities[3].bossStage.stageOrder").value(4))
                 .andExpect(jsonPath("$.data.cities[3].bossStage.stageStatus").value("LOCKED"))
@@ -428,37 +432,39 @@ class StageChallengeIntegrationTest {
     }
 
     @Test
-    void kaohsiungChallengeApisEnforceStageOrder() throws Exception {
+    void kaohsiungMysteryApisEnforceCityAndStageOrder() throws Exception {
         String token = registerAndGetToken("kaohsiung-api-player");
         User user = userRepository.findByUsername("kaohsiung-api-player").orElseThrow();
 
-        mockMvc.perform(get("/api/explorations/cities/4/random")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isBadRequest());
+        assertLocked(mysteryStart(10L), token);
         unlockCity(user, 4L);
 
-        mockMvc.perform(get("/api/explorations/cities/4/random")
+        mockMvc.perform(mysteryStart(10L)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.missionId").value("KAOHSIUNG-PIER2-01"));
+                .andExpect(jsonPath("$.data.challengeSessionId").isString());
 
-        assertLocked(get("/api/quizzes/landmarks/11/random?difficulty=NORMAL"), token);
+        assertLocked(mysteryStart(11L), token);
+        assertMysteryOnly(get("/api/explorations/cities/4/random"), token,
+                "此城市的探索已啟用未知挑戰，請由未知挑戰入口開始");
+        assertMysteryOnly(get("/api/quizzes/landmarks/10/random?difficulty=NORMAL"), token);
+        assertMysteryOnly(get("/api/image-challenges/scenes/10?difficulty=NORMAL"), token);
         assertNoCheckin(user.getId(), 11L);
 
         saveCheckin(user, 10L, true);
 
-        mockMvc.perform(get("/api/quizzes/landmarks/11/random?difficulty=NORMAL")
+        mockMvc.perform(mysteryStart(11L)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.questionId").isString());
-        assertLocked(get("/api/quizzes/landmarks/12/random?difficulty=NORMAL"), token);
+                .andExpect(jsonPath("$.data.challengeSessionId").isString());
+        assertLocked(mysteryStart(12L), token);
 
         saveCheckin(user, 11L, true);
 
-        mockMvc.perform(get("/api/quizzes/landmarks/12/random?difficulty=NORMAL")
+        mockMvc.perform(mysteryStart(12L)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.questionId").isString());
+                .andExpect(jsonPath("$.data.challengeSessionId").isString());
         assertNoCheckin(user.getId(), 12L);
     }
 
@@ -513,7 +519,7 @@ class StageChallengeIntegrationTest {
         unlockCity(other, 4L);
         saveCheckin(owner, 10L, true);
 
-        assertLocked(get("/api/quizzes/landmarks/11/random?difficulty=NORMAL"), otherToken);
+        assertLocked(mysteryStart(11L), otherToken);
     }
 
     @Test
@@ -523,7 +529,7 @@ class StageChallengeIntegrationTest {
         unlockCity(user, 4L);
         saveCheckin(user, 10L, false);
 
-        assertLocked(get("/api/quizzes/landmarks/11/random?difficulty=NORMAL"), token);
+        assertLocked(mysteryStart(11L), token);
     }
 
     @Test

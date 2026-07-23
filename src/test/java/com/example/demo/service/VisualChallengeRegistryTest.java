@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 class VisualChallengeRegistryTest {
 
     @Test
-    void taipeiTaichungAndTainanLandmarksShareStableVisualDefinitions() {
+    void firstFourCitiesShareStableVisualDefinitions() {
         VisualChallengeRegistry registry = new VisualChallengeRegistry();
         VisualChallengeDefinition taipei = registry.findRequired(new VisualChallengeKey(1, 1));
         VisualChallengeDefinition palace = registry.findRequired(new VisualChallengeKey(1, 2));
@@ -43,8 +43,14 @@ class VisualChallengeRegistryTest {
                 registry.findRequired(new VisualChallengeKey(3, 2));
         VisualChallengeDefinition confucius =
                 registry.findRequired(new VisualChallengeKey(3, 3));
+        VisualChallengeDefinition pier2 =
+                registry.findRequired(new VisualChallengeKey(4, 1));
+        VisualChallengeDefinition loveRiver =
+                registry.findRequired(new VisualChallengeKey(4, 2));
+        VisualChallengeDefinition dragonTiger =
+                registry.findRequired(new VisualChallengeKey(4, 3));
 
-        assertEquals(9, registry.findAll().size());
+        assertEquals(12, registry.findAll().size());
         assertEquals("/images/challenges/taipei101-focus.jpg", taipei.focusImageUrl());
         assertEquals(taipei.focusImageUrl(), taipei.puzzleImageUrl());
         assertEquals("/images/challenges/palace-focus.jpg", palace.focusImageUrl());
@@ -69,6 +75,12 @@ class VisualChallengeRegistryTest {
         assertEquals("/images/challenges/anping-puzzle.jpg", anping.puzzleImageUrl());
         assertEquals("/images/challenges/confucius-focus.jpg", confucius.focusImageUrl());
         assertEquals("/images/challenges/confucius-puzzle.jpg", confucius.puzzleImageUrl());
+        assertEquals("/images/challenges/pier2-focus.jpg", pier2.focusImageUrl());
+        assertEquals("/images/challenges/pier2-puzzle.jpg", pier2.puzzleImageUrl());
+        assertEquals("/images/challenges/love-river-focus.jpg", loveRiver.focusImageUrl());
+        assertEquals("/images/challenges/love-river-puzzle.jpg", loveRiver.puzzleImageUrl());
+        assertEquals("/images/challenges/dragon-tiger-focus.jpg", dragonTiger.focusImageUrl());
+        assertEquals("/images/challenges/dragon-tiger-puzzle.jpg", dragonTiger.puzzleImageUrl());
         registry.findAll().forEach((key, definition) -> {
             assertEquals(4, definition.candidateStages().size());
             assertEquals(4, definition.candidateStages().stream().distinct().count());

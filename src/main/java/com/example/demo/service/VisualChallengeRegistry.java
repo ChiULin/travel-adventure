@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -12,7 +13,8 @@ public class VisualChallengeRegistry {
     private final Map<VisualChallengeKey, VisualChallengeDefinition> definitions;
 
     public VisualChallengeRegistry() {
-        this(Map.of(
+        this(merge(
+                Map.of(
                 new VisualChallengeKey(1, 1),
                 new VisualChallengeDefinition(
                         "TAIPEI-101-VISUAL",
@@ -148,6 +150,54 @@ public class VisualChallengeRegistry {
                         ),
                         new VisualChallengeKey(3, 3)
                 )
+                ),
+                Map.of(
+                        new VisualChallengeKey(4, 1),
+                        new VisualChallengeDefinition(
+                                "KAOHSIUNG-PIER2-VISUAL",
+                                "/images/challenges/pier2-focus.jpg",
+                                "/images/challenges/pier2-puzzle.jpg",
+                                "觀察紅磚倉庫、鐵窗、舊鐵道與公共藝術局部，找出正確景點。",
+                                "駁二藝術特區由港區舊倉庫轉型，保留鐵道與工業建築並融入公共藝術。",
+                                List.of(
+                                        candidate(4, 1),
+                                        candidate(2, 3),
+                                        candidate(1, 3),
+                                        candidate(2, 2)
+                                ),
+                                new VisualChallengeKey(4, 1)
+                        ),
+                        new VisualChallengeKey(4, 2),
+                        new VisualChallengeDefinition(
+                                "KAOHSIUNG-LOVE-RIVER-VISUAL",
+                                "/images/challenges/love-river-focus.jpg",
+                                "/images/challenges/love-river-puzzle.jpg",
+                                "觀察河岸步道、橋梁與夜間燈光倒影，找出正確景點。",
+                                "愛河是高雄重要城市水岸，河岸步道、橋梁與夜景承載市民生活記憶。",
+                                List.of(
+                                        candidate(4, 2),
+                                        candidate(2, 1),
+                                        candidate(5, 2),
+                                        candidate(6, 2)
+                                ),
+                                new VisualChallengeKey(4, 2)
+                        ),
+                        new VisualChallengeKey(4, 3),
+                        new VisualChallengeDefinition(
+                                "KAOHSIUNG-DRAGON-TIGER-PAGODAS-VISUAL",
+                                "/images/challenges/dragon-tiger-focus.jpg",
+                                "/images/challenges/dragon-tiger-puzzle.jpg",
+                                "觀察龍虎入口、七層塔身、彩繪屋簷與九曲橋局部，找出正確景點。",
+                                "龍虎塔以雙塔、龍虎入口與九曲橋構成蓮池潭代表性的傳統建築景觀。",
+                                List.of(
+                                        candidate(4, 3),
+                                        candidate(3, 1),
+                                        candidate(3, 3),
+                                        candidate(1, 2)
+                                ),
+                                new VisualChallengeKey(4, 3)
+                        )
+                )
         ));
     }
 
@@ -175,5 +225,11 @@ public class VisualChallengeRegistry {
 
     private static VisualCandidate candidate(int cityOrder, int stageOrder) {
         return new VisualCandidate(new VisualChallengeKey(cityOrder, stageOrder));
+    }
+
+    private static <K, V> Map<K, V> merge(Map<K, V> first, Map<K, V> second) {
+        Map<K, V> merged = new HashMap<>(first);
+        merged.putAll(second);
+        return Map.copyOf(merged);
     }
 }
