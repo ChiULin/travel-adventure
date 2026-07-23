@@ -281,7 +281,7 @@ function renderBattleStatus() {
       );
       document.getElementById("finalMapBtn").addEventListener("click", () => {
         closeFinalEnding();
-        document.getElementById("city-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        openTaiwanMapView();
       });
     }
 
@@ -295,10 +295,8 @@ function renderBattleStatus() {
       const finalCity = [...(appState?.cities || [])]
         .sort((first, second) => Number(second.unlockOrder) - Number(first.unlockOrder))[0];
       if (!finalCity) return;
-      activeCityId = finalCity.id;
       closeFinalEnding();
-      renderCityCards();
-      document.getElementById("city-detail")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      openCityStageView(finalCity);
       await startBossQuiz(finalCity.id);
     }
 

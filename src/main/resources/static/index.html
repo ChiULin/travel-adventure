@@ -137,12 +137,39 @@
       <div class="main-stack">
         <section id="player-summary"></section>
         <section id="journey-progress"></section>
-        <section id="exploration-mission"></section>
-        <section id="image-recognition"></section>
+
+        <section id="taiwan-map-view" class="taiwan-map-view" aria-labelledby="taiwanMapTitle">
+          <div class="taiwan-map-header">
+            <div>
+              <span class="taiwan-map-eyebrow">六城主線</span>
+              <h2 id="taiwanMapTitle">臺灣文化冒險地圖</h2>
+              <p>選擇已解鎖的城市，繼續你的旅程。</p>
+            </div>
+            <strong id="taiwan-map-summary">0 / 6 城市完成</strong>
+          </div>
+          <div id="taiwan-map" class="taiwan-map">
+            <div class="taiwan-map-shape" aria-hidden="true"></div>
+            <div id="taiwan-city-nodes" class="taiwan-city-nodes"></div>
+          </div>
+          <p id="taiwan-map-message" class="taiwan-map-message" role="status" aria-live="polite"></p>
+          <div class="taiwan-map-legend" aria-label="城市狀態圖例">
+            <span>📍 進行中</span>
+            <span>🏅 已完成</span>
+            <span>🔒 尚未解鎖</span>
+          </div>
+        </section>
+
+        <section id="city-stage-view" class="city-stage-view" hidden>
+          <button type="button" id="back-to-taiwan-map" class="btn ghost back-map-button">
+            ← 返回臺灣地圖
+          </button>
+          <section id="exploration-mission"></section>
+          <section id="image-recognition"></section>
+          <section id="city-detail"></section>
+        </section>
+
         <section id="daily-missions"></section>
         <section id="achievements"></section>
-        <section id="city-list"></section>
-        <section id="city-detail"></section>
       </div>
     </div>
   </main>
@@ -153,6 +180,7 @@
   <script defer src="/js/exploration.js"></script>
   <script defer src="/js/image-recognition.js"></script>
   <script defer src="/js/journey.js"></script>
+  <script defer src="/js/map.js"></script>
   <script defer src="/js/quiz.js"></script>
   <script defer src="/js/boss.js"></script>
   <script defer src="/js/missions.js"></script>

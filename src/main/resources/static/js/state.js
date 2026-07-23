@@ -13,6 +13,7 @@ const SESSION_KEY = "travelAdventureApiSession";
     let missionsState = null;
     let achievementsState = null;
     let activeCityId = null;
+    let journeyView = "map";
     let logs = [];
     let quizTimerId = null;
     let quizTimerTarget = null;

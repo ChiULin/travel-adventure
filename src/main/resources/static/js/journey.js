@@ -215,51 +215,7 @@ async function refreshState() {
     }
 
 function renderCityCards() {
-      document.getElementById("city-list").innerHTML = `
-        <div class="section-head">
-          <h2>城市旅程</h2>
-          <strong>點選城市查看景點</strong>
-        </div>
-        <div class="city-grid">
-          ${appState.cities.map(city => {
-            const itemProgress = progress(city);
-            const status = cityStatus(city);
-            const active = city.id === activeCityId;
-            const icon = city.unlocked ? city.badgeIcon || "🎒" : "🔒";
-            const bestRank = city.bestRank || "";
-            const rankClass = bestRank ? `rank-${bestRank.toLowerCase()}` : "";
-            const progressMarkup = city.unlocked ? `
-              <p class="city-copy">城市進度：${itemProgress.done} / ${itemProgress.total}</p>
-              <div class="progress" aria-label="${escapeHtml(city.name)} 進度"><span style="--w:${itemProgress.percent}%"></span></div>
-              <div class="city-record">
-                <span class="rank-badge ${rankClass}">最佳評價：${bestRank || "尚未通關"}</span>
-                <span>最高 Combo：${city.bestCombo || 0}</span>
-              </div>
-              <div class="city-badge-line">🏅 ${escapeHtml(city.badgeName || city.name + "徽章")}</div>
-            ` : `
-              <p class="city-copy">${status.note}</p>
-            `;
-
-            return `
-              <button class="city-card ${status.key} ${active ? "active" : ""}" type="button" data-city-id="${city.id}">
-                <div class="city-title"><span class="city-icon">${icon}</span>${escapeHtml(city.name)}</div>
-                ${progressMarkup}
-                <span class="status-pill ${status.key}">狀態：${status.text}</span>
-              </button>
-            `;
-          }).join("")}
-        </div>
-      `;
-
-      document.querySelectorAll("[data-city-id]").forEach(button => {
-        button.addEventListener("click", () => {
-          activeCityId = Number(button.dataset.cityId);
-          resetLocalBattleState();
-          renderCityCards();
-          renderPlayerSummary();
-          renderCityDetail(activeCityId);
-        });
-      });
+      renderTaiwanMap(appState?.cities);
     }
 
     function isStageModeCity(city) {
@@ -586,4 +542,5 @@ function renderCityCards() {
       renderAchievements();
       renderCityCards();
       renderCityDetail(activeCityId);
+      syncJourneyView();
     }

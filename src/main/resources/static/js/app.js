@@ -60,6 +60,7 @@ loginForm.addEventListener("submit", async event => {
     });
 
     document.getElementById("startAdventureBtn").addEventListener("click", completeTutorial);
+    document.getElementById("back-to-taiwan-map").addEventListener("click", openTaiwanMapView);
 
     if (session?.token) {
       document.getElementById("login").classList.add("hidden");

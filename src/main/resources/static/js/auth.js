@@ -42,6 +42,7 @@ function clearAuthState() {
       explorationState = createExplorationState();
       imageRecognitionState = createImageRecognitionState();
       activeCityId = null;
+      journeyView = "map";
       answerSubmitting = false;
       finalEndingShown = false;
       logs = [];

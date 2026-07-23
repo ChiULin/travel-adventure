@@ -238,7 +238,7 @@ async function loadExplorationMission(cityId = activeCityId || 1) {
         </article>
       `;
       document.getElementById("viewExplorationStoryBtn").addEventListener("click", () => focusExplorationCity("city-detail"));
-      document.getElementById("returnExplorationMapBtn").addEventListener("click", () => focusExplorationCity("city-list"));
+      document.getElementById("returnExplorationMapBtn").addEventListener("click", openTaiwanMapView);
     }
 
     function bindExplorationEvents() {
@@ -399,9 +399,7 @@ async function loadExplorationMission(cityId = activeCityId || 1) {
       const cityId = Number(explorationState.mission?.cityId || explorationState.cityId);
       const city = appState?.cities.find(item => item.id === cityId);
       if (city) {
-        activeCityId = city.id;
-        renderCityCards();
-        renderCityDetail(activeCityId);
+        openCityStageView(city);
       }
       document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
