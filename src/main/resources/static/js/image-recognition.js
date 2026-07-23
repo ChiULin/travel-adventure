@@ -205,7 +205,7 @@ function stopImageRecognitionTimer() {
         imageRecognitionState.result = result;
         if (result.correct) {
           addLog(`${result.sceneName}圖片辨識成功，完成打卡。`);
-          await refreshState();
+          await refreshCityMapWithAnimation(imageRecognitionState.cityId || activeCityId);
         } else {
           addLog(`${result.sceneName}圖片辨識錯誤，本題已失效。`);
         }

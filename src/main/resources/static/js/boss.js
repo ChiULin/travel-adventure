@@ -202,7 +202,8 @@ function renderBattleStatus() {
     }
 
     function maybeShowFinalEnding() {
-      if (!appState || finalEndingShown || !tutorialIsCompleted() || overlayIsOpen()) return;
+      if (!appState || finalEndingShown || cityStageTransitionPlaying
+          || pendingCityStageTransition || !tutorialIsCompleted() || overlayIsOpen()) return;
       if (shouldShowFinalEnding()) {
         showFinalEnding();
       }
@@ -340,7 +341,11 @@ async function challengeBoss(answer, answerText) {
           showBossFailedResult(city);
           addLog(`${city.bossName} 太強了，請提升實力後再挑戰。`);
         }
-        await refreshState();
+        if (result.win) {
+          await refreshCityMapWithAnimation(city.id);
+        } else {
+          await refreshState();
+        }
       } catch (error) {
         addLog(error.message);
       } finally {

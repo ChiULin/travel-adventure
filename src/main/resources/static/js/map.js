@@ -154,6 +154,50 @@ function findCurrentStage(stages) {
         .sort((first, second) => second.order - first.order)[0] ?? null;
     }
 
+function createCityStageSnapshot(city) {
+      if (!city) return null;
+      const stages = buildCityRouteStages(city);
+
+      return {
+        cityId: city.id,
+        cityUnlocked: city.unlocked,
+        currentStageOrder: findCurrentStage(stages)?.order ?? null,
+        stages: Object.fromEntries(stages.map(stage => [
+          stage.order,
+          {
+            status: stage.status,
+            type: stage.type,
+            name: stage.name
+          }
+        ]))
+      };
+    }
+
+function detectCityStageChanges(previous, currentCity) {
+      const currentStages = buildCityRouteStages(currentCity);
+      const changes = [];
+
+      currentStages.forEach(stage => {
+        const oldStage = previous?.stages?.[stage.order];
+        if (!oldStage || oldStage.status === stage.status) return;
+
+        changes.push({
+          order: stage.order,
+          name: stage.name,
+          type: stage.type,
+          from: oldStage.status,
+          to: stage.status
+        });
+      });
+
+      return {
+        stages: currentStages,
+        changes,
+        previousStageOrder: previous?.currentStageOrder ?? null,
+        currentStageOrder: findCurrentStage(currentStages)?.order ?? null
+      };
+    }
+
 function getRouteStageStatusText(status) {
       if (status === "COMPLETED") return "已完成";
       if (status === "AVAILABLE") return "可以挑戰";
@@ -201,6 +245,7 @@ function renderCityRouteNode(stage, currentStage) {
           type="button"
           class="city-route-node city-route-node--${status} ${stage.type === "BOSS" ? "city-route-node--boss" : ""} ${isCurrent ? "city-route-node--current" : ""}"
           data-city-route-stage="${escapeHtml(stage.id)}"
+          data-city-stage-order="${stage.order}"
           style="left:${position.left}; top:${position.top};"
           aria-label="${escapeHtml(stage.label || `第 ${stage.order} 關`)}，${escapeHtml(stage.name)}，${getRouteStageStatusText(stage.status)}"
           aria-disabled="${stage.status === "LOCKED"}"
@@ -213,7 +258,23 @@ function renderCityRouteNode(stage, currentStage) {
       `;
     }
 
-function renderCityAdventureMap(city) {
+function renderPlayerMarker(stages, initialStageOrder = null) {
+      const currentStage = findCurrentStage(stages);
+      const stageOrder = initialStageOrder ?? currentStage?.order;
+      const position = CITY_ROUTE_POSITIONS[stageOrder];
+      if (!position) return "";
+
+      return `
+        <div id="city-player-marker"
+             class="city-route-player player-map-marker"
+             style="left:${position.left}; top:${position.top};"
+             aria-label="玩家目前位置">
+          <span aria-hidden="true">🎒</span>
+        </div>
+      `;
+    }
+
+function renderCityAdventureMap(city, options = {}) {
       const container = document.getElementById("city-detail");
       if (!container || !city) return;
 
@@ -222,7 +283,6 @@ function renderCityAdventureMap(city) {
       const currentStage = findCurrentStage(stages);
       const status = cityStatus(city);
       const completedCount = stages.filter(stage => stage.status === "COMPLETED").length;
-      const currentPosition = currentStage ? CITY_ROUTE_POSITIONS[currentStage.order] : null;
       const activeLandmark = stages.find(stage =>
         stage.type === "LANDMARK" && Number(stage.id) === Number(activeSceneQuizId)
       );
@@ -287,12 +347,7 @@ function renderCityAdventureMap(city) {
                 <path d="M22 78 C39 72, 55 65, 70 59 C56 52, 42 43, 30 37 C46 29, 61 22, 72 16"></path>
               </svg>
               ${stages.map(stage => renderCityRouteNode(stage, currentStage)).join("")}
-              ${currentStage && currentPosition ? `
-                <div class="city-route-player" style="left:${currentPosition.left}; top:${currentPosition.top};"
-                     aria-label="玩家目前在${escapeHtml(currentStage.label)}">
-                  <span aria-hidden="true">🎒</span>
-                </div>
-              ` : ""}
+              ${renderPlayerMarker(stages, options.initialPlayerOrder)}
             </div>
             <div class="city-route-legend" aria-label="關卡狀態圖例">
               <span>🔍／🖼️／❓ 可挑戰</span>
@@ -389,6 +444,7 @@ function closeCityRouteStageInfo() {
 function bindCityAdventureMapEvents(city, stages) {
       document.querySelectorAll("[data-city-route-stage]").forEach(button => {
         button.addEventListener("click", () => {
+          if (cityStageTransitionPlaying) return;
           const stage = stages.find(item => String(item.id) === button.dataset.cityRouteStage);
           openCityRouteStageInfo(city, stage, stages);
         });
@@ -400,6 +456,7 @@ function bindCityAdventureMapEvents(city, stages) {
 
       document.querySelectorAll("[data-route-difficulty]").forEach(button => {
         button.addEventListener("click", () => {
+          if (cityStageTransitionPlaying) return;
           selectedDifficulty = button.dataset.routeDifficulty;
           resetLocalBattleState();
           renderPlayerSummary();
@@ -408,15 +465,21 @@ function bindCityAdventureMapEvents(city, stages) {
       });
 
       document.querySelectorAll("[data-scene-id]").forEach(button => {
-        button.addEventListener("click", () => runWithButtonLock(button, () =>
-          checkin(Number(button.dataset.sceneId), button.dataset.answer, button.dataset.answerText)
-        ));
+        button.addEventListener("click", () => {
+          if (cityStageTransitionPlaying) return;
+          runWithButtonLock(button, () =>
+            checkin(Number(button.dataset.sceneId), button.dataset.answer, button.dataset.answerText)
+          );
+        });
       });
 
       document.querySelectorAll("[data-boss-city-id]").forEach(button => {
-        button.addEventListener("click", () => runWithButtonLock(button, () =>
-          challengeBoss(button.dataset.answer, button.dataset.answerText)
-        ));
+        button.addEventListener("click", () => {
+          if (cityStageTransitionPlaying) return;
+          runWithButtonLock(button, () =>
+            challengeBoss(button.dataset.answer, button.dataset.answerText)
+          );
+        });
       });
     }
 
@@ -426,6 +489,211 @@ function dispatchLandmarkInteraction(scene) {
 
 function openBossDifficultySelection(cityId) {
       return startBossQuiz(Number(cityId));
+    }
+
+function prefersReducedCityMotion() {
+      return typeof window.matchMedia === "function"
+        && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    }
+
+function waitForCityAnimation(milliseconds) {
+      if (prefersReducedCityMotion()) return Promise.resolve();
+      return new Promise(resolve => window.setTimeout(resolve, milliseconds));
+    }
+
+async function playStageCompleted(order) {
+      const node = document.querySelector(`[data-city-stage-order="${order}"]`);
+      if (!node) return;
+
+      node.classList.add("city-stage-node--just-completed");
+      await waitForCityAnimation(700);
+      node.classList.remove("city-stage-node--just-completed");
+    }
+
+async function movePlayerToStage(stageOrder) {
+      const marker = document.getElementById("city-player-marker");
+      const position = CITY_ROUTE_POSITIONS[stageOrder];
+      if (!marker || !position) return;
+
+      marker.classList.add("player-map-marker--moving");
+      await waitForCityAnimation(250);
+      marker.style.left = position.left;
+      marker.style.top = position.top;
+      await waitForCityAnimation(800);
+      marker.classList.remove("player-map-marker--moving");
+    }
+
+async function playStageUnlocked(order) {
+      const node = document.querySelector(`[data-city-stage-order="${order}"]`);
+      if (!node) return;
+
+      node.classList.add("city-stage-node--just-unlocked");
+      await waitForCityAnimation(850);
+      node.classList.remove("city-stage-node--just-unlocked");
+    }
+
+function showCityRouteMessage(message) {
+      window.clearTimeout(cityRouteMessageTimer);
+      document.getElementById("city-route-message")?.remove();
+
+      const toast = document.createElement("div");
+      toast.id = "city-route-message";
+      toast.className = "city-route-message";
+      toast.setAttribute("role", "status");
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      cityRouteMessageTimer = window.setTimeout(() => toast.remove(), 2600);
+    }
+
+async function playBossUnlockedAnimation(city, change) {
+      const board = document.querySelector(".city-route-board");
+      const bossNode = document.querySelector(`[data-city-stage-order="${change.order}"]`);
+
+      board?.classList.add("city-route-board--boss-reveal");
+      bossNode?.classList.add("city-stage-node--boss-revealed");
+      await waitForCityAnimation(1100);
+      showCityRouteMessage(`${city.name}守護者已現身！`);
+      board?.classList.remove("city-route-board--boss-reveal");
+      bossNode?.classList.remove("city-stage-node--boss-revealed");
+    }
+
+function showCityCompletionModal(city) {
+      document.getElementById("city-completion-overlay")?.remove();
+      const overlay = document.createElement("div");
+      overlay.id = "city-completion-overlay";
+      overlay.className = "city-completion-overlay";
+      overlay.setAttribute("role", "status");
+      overlay.innerHTML = `
+        <section class="city-completion-card">
+          <span class="city-completion-card__badge" aria-hidden="true">${escapeHtml(city.badgeIcon || "🏅")}</span>
+          <span class="city-route-kicker">守護者擊敗</span>
+          <h2>${escapeHtml(city.name)}城市完成！</h2>
+          <p>${escapeHtml(city.badgeName || `${city.name}徽章`)}已加入收藏。</p>
+        </section>
+      `;
+      document.body.appendChild(overlay);
+      return overlay;
+    }
+
+async function playCityCompletedAnimation(city) {
+      const overlay = showCityCompletionModal(city);
+      await waitForCityAnimation(1800);
+      overlay.remove();
+
+      if (appState?.journeyCompleted === true) {
+        showFinalEnding();
+        return;
+      }
+
+      openTaiwanMapView();
+      renderTaiwanMap(appState?.cities);
+    }
+
+async function playCityStageTransition(city, transition) {
+      const completedChange = transition.changes.find(change => change.to === "COMPLETED");
+      const unlockedChange = transition.changes.find(change =>
+        change.from === "LOCKED" && change.to === "AVAILABLE"
+      );
+      const bossCompleted = transition.changes.find(change =>
+        change.type === "BOSS" && change.to === "COMPLETED"
+      );
+      const board = document.querySelector(".city-route-board");
+
+      board?.classList.add("city-route-board--route-progress");
+
+      if (completedChange) {
+        await playStageCompleted(completedChange.order);
+      }
+
+      if (transition.previousStageOrder !== transition.currentStageOrder
+          && transition.currentStageOrder != null) {
+        await movePlayerToStage(transition.currentStageOrder);
+      }
+
+      if (bossCompleted) {
+        board?.classList.remove("city-route-board--route-progress");
+        await playCityCompletedAnimation(city);
+        return;
+      }
+
+      if (unlockedChange?.type === "BOSS") {
+        await playBossUnlockedAnimation(city, unlockedChange);
+      } else if (unlockedChange) {
+        await playStageUnlocked(unlockedChange.order);
+        showCityRouteMessage(`${unlockedChange.name}已解鎖！`);
+      }
+
+      board?.classList.remove("city-route-board--route-progress");
+    }
+
+function clearCityStageTransition() {
+      pendingCityStageTransition = null;
+      cityStageTransitionPlaying = false;
+      document.documentElement.removeAttribute("data-city-stage-transition");
+    }
+
+async function runCityStageTransition(city, transition) {
+      try {
+        document.querySelector(".city-route-board")?.scrollIntoView({
+          behavior: prefersReducedCityMotion() ? "auto" : "smooth",
+          block: "center"
+        });
+        await playCityStageTransition(city, transition);
+      } finally {
+        clearCityStageTransition();
+      }
+    }
+
+async function playPendingCityStageTransition() {
+      const pending = pendingCityStageTransition;
+      if (!pending) {
+        clearCityStageTransition();
+        return;
+      }
+      await runCityStageTransition(pending.city, pending.transition);
+    }
+
+async function refreshCityMapWithAnimation(cityId) {
+      if (cityStageTransitionPlaying) return;
+
+      const oldCity = appState?.cities?.find(item => Number(item.id) === Number(cityId));
+      const previousSnapshot = createCityStageSnapshot(oldCity);
+      cityStageTransitionPlaying = true;
+      document.documentElement.setAttribute("data-city-stage-transition", "playing");
+
+      try {
+        await refreshState();
+        const refreshedCity = appState?.cities?.find(item => Number(item.id) === Number(cityId));
+        if (!refreshedCity) {
+          clearCityStageTransition();
+          openTaiwanMapView();
+          return;
+        }
+
+        activeCityId = Number(refreshedCity.id);
+        journeyView = "city";
+        const transition = detectCityStageChanges(previousSnapshot, refreshedCity);
+        if (!previousSnapshot || transition.changes.length === 0) {
+          clearCityStageTransition();
+          return;
+        }
+
+        renderCityAdventureMap(refreshedCity, {
+          initialPlayerOrder: transition.previousStageOrder
+        });
+        syncJourneyView();
+
+        if (overlayIsOpen()) {
+          pendingCityStageTransition = { city: refreshedCity, transition };
+          return;
+        }
+
+        await runCityStageTransition(refreshedCity, transition);
+      } catch (error) {
+        clearCityStageTransition();
+        throw error;
+      }
     }
 
 async function refreshCurrentCityAdventureMap(cityId) {

@@ -154,7 +154,7 @@ async function checkin(sceneId, answer, answerText) {
           showSceneResult(city, rewardedScene);
         }
         addLog(`${scene?.name || "景點"}探索完成。`);
-        await refreshState();
+        await refreshCityMapWithAnimation(city?.id || activeCityId);
       } catch (error) {
         addLog(error.message);
       } finally {

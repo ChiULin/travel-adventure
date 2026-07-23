@@ -94,8 +94,12 @@ function formatNumber(value) {
         renderPlayerSummary();
       }
       if (appState) {
-        renderCityDetail(activeCityId);
-        setTimeout(maybeShowFinalEnding, 0);
+        if (pendingCityStageTransition) {
+          setTimeout(() => playPendingCityStageTransition(), 0);
+        } else {
+          renderCityDetail(activeCityId);
+          setTimeout(maybeShowFinalEnding, 0);
+        }
       }
     }
 

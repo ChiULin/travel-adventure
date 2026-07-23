@@ -377,7 +377,7 @@ async function loadExplorationMission(cityId = activeCityId || 1) {
         }
         explorationState.completion = result;
         addLog(`${result.sceneName}探索完成，獲得 ${result.explorationGrade} 評價。`);
-        await refreshState();
+        await refreshCityMapWithAnimation(mission.cityId || explorationState.cityId || activeCityId);
       } catch (error) {
         explorationState.cultureChallenge = null;
         explorationState.challengeStarted = false;
