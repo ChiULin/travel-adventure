@@ -1,11 +1,14 @@
 const CITY_MAP_POSITIONS = Object.freeze({
-      1: { top: "18%", left: "67%" },
-      2: { top: "37%", left: "59%" },
-      3: { top: "62%", left: "54%" },
-      4: { top: "78%", left: "61%" },
-      5: { top: "50%", left: "74%" },
-      6: { top: "67%", left: "42%" }
+      1: { top: 16, left: 69 },
+      2: { top: 36, left: 55 },
+      3: { top: 60, left: 50 },
+      4: { top: 80, left: 64 },
+      5: { top: 48, left: 82 },
+      6: { top: 70, left: 28 }
     });
+
+let worldMapHasRendered = false;
+let previousWorldMapStatuses = new Map();
 
 const CITY_ROUTE_POSITIONS = Object.freeze({
       1: { left: "22%", top: "78%" },
@@ -884,104 +887,269 @@ async function refreshCurrentCityAdventureMap(cityId) {
     }
 
 function getCityMapStatus(city) {
+      const apiStatus = String(city?.status || "").toUpperCase();
+      if (["LOCKED", "AVAILABLE", "COMPLETED"].includes(apiStatus)) {
+        return apiStatus;
+      }
       if (!city?.unlocked) return "LOCKED";
-      if (city.bossStage?.stageStatus === "COMPLETED" || city.defeated) return "COMPLETED";
+      if (city.defeated) return "COMPLETED";
       return "AVAILABLE";
     }
 
-function getCityStatusIcon(status) {
-      if (status === "LOCKED") return "🔒";
-      if (status === "COMPLETED") return "🏅";
-      return "📍";
+function getCityMapId(city) {
+      return Number(city?.cityId ?? city?.id);
     }
 
-function getCityStatusText(status) {
-      if (status === "LOCKED") return "尚未解鎖";
-      if (status === "COMPLETED") return "城市已完成";
-      return "可以進入";
+function getCityMapName(city) {
+      return String(city?.cityName ?? city?.name ?? "未命名城市");
+    }
+
+function getCityMapOrder(city) {
+      return Number(city?.unlockOrder ?? 0);
+    }
+
+function getCityProgressData(city) {
+      const suppliedCompleted = Number(city?.completedStageCount);
+      const suppliedTotal = Number(city?.totalStageCount);
+      const completed = Number.isFinite(suppliedCompleted)
+        ? suppliedCompleted
+        : Number(city?.done || 0) + (city?.defeated ? 1 : 0);
+      const total = Number.isFinite(suppliedTotal)
+        ? suppliedTotal
+        : Number(city?.total || 0) + (city?.bossStage ? 1 : 0);
+
+      return {
+        completed: Math.max(0, Math.min(completed, total || completed)),
+        total: Math.max(0, total)
+      };
     }
 
 function getCityProgressText(city) {
-      if (!city?.unlocked) return "尚未解鎖";
-
-      const completedScenes = Array.isArray(city.scenes)
-        ? city.scenes.filter(scene => scene.stageStatus === "COMPLETED" || scene.checked).length
-        : Number(city.done || 0);
-      const bossCompleted = city.bossStage?.stageStatus === "COMPLETED" || city.defeated ? 1 : 0;
-      return `${Math.min(completedScenes + bossCompleted, 4)} / 4`;
+      const progress = getCityProgressData(city);
+      return `${progress.completed} / ${progress.total}`;
     }
 
-function renderCityMapNode(city) {
-      const position = CITY_MAP_POSITIONS[Number(city.unlockOrder)];
-      if (!position) return "";
+function getCityUnlockHint(city, cities) {
+      const cityOrder = getCityMapOrder(city);
+      const previousCity = cities.find(item => getCityMapOrder(item) === cityOrder - 1);
+      return previousCity
+        ? `完成${getCityMapName(previousCity)}守護者後解鎖`
+        : "完成前一座城市守護者後解鎖";
+    }
+
+function renderCityIllustration(city, status) {
+      const emblem = escapeHtml(city?.badgeIcon || "✦");
+      return `
+        <span class="city-node__emblem" aria-hidden="true">${emblem}</span>
+        ${status === "LOCKED" ? '<span class="city-node__lock-icon" aria-hidden="true">🔒</span>' : ""}
+      `;
+    }
+
+function renderCityStatus(city, cities) {
+      const status = getCityMapStatus(city);
+      const progress = getCityProgressData(city);
+      const progressPercent = progress.total
+        ? Math.round(progress.completed / progress.total * 100)
+        : 0;
+
+      if (status === "LOCKED") {
+        return `
+          <span class="city-node__status city-node__status--locked">🔒 尚未解鎖</span>
+          <span class="city-node__hint">${escapeHtml(getCityUnlockHint(city, cities))}</span>
+        `;
+      }
+
+      if (status === "COMPLETED") {
+        return `
+          <span class="city-node__status city-node__status--completed">✓ 城市完成</span>
+          <span class="city-node__progress">
+            <span>${progress.completed} / ${progress.total}</span>
+            <i style="--city-progress:${progressPercent}%"></i>
+          </span>
+          <span class="city-node__action">重新進入回顧</span>
+        `;
+      }
+
+      return `
+        <span class="city-node__status city-node__status--available">目前可挑戰</span>
+        <span class="city-node__progress">
+          <span>${progress.completed} / ${progress.total}</span>
+          <i style="--city-progress:${progressPercent}%"></i>
+        </span>
+        <span class="city-node__action">進入城市</span>
+      `;
+    }
+
+function renderCityNode(city, cities, options = {}) {
+      const cityId = getCityMapId(city);
+      const cityOrder = getCityMapOrder(city);
+      const position = CITY_MAP_POSITIONS[cityOrder];
+      if (!Number.isFinite(cityId) || !position) return "";
 
       const status = getCityMapStatus(city);
-      const active = Number(city.id) === Number(activeCityId);
+      const active = cityId === Number(activeCityId);
+      const previousStatus = previousWorldMapStatuses.get(cityId);
+      const transitionClass = worldMapHasRendered && previousStatus === "LOCKED" && status !== "LOCKED"
+        ? "city-node--just-unlocked"
+        : worldMapHasRendered && previousStatus === "AVAILABLE" && status === "COMPLETED"
+          ? "city-node--just-completed"
+          : "";
+      const mobileClass = options.mobile ? "city-node--mobile" : "";
+      const positionStyle = options.mobile
+        ? ""
+        : `style="--node-x:${position.left}%; --node-y:${position.top}%;"`;
+      const disabled = status === "LOCKED" ? "disabled" : "";
+      const cityName = getCityMapName(city);
+
       return `
         <button
           type="button"
-          class="city-map-node city-map-node--${status.toLowerCase()} ${active ? "city-map-node--active" : ""}"
-          data-city-map-id="${Number(city.id)}"
-          data-city-order="${Number(city.unlockOrder)}"
-          style="top:${position.top}; left:${position.left};"
-          aria-label="${escapeHtml(city.name)}，${getCityStatusText(status)}，進度 ${getCityProgressText(city)}"
-          aria-disabled="${status === "LOCKED"}"
+          class="city-node city-node--${status.toLowerCase()} ${active ? "city-node--current" : ""} ${transitionClass} ${mobileClass}"
+          data-world-city-id="${cityId}"
+          data-city-order="${cityOrder}"
+          ${positionStyle}
+          ${disabled}
+          aria-label="${escapeHtml(cityName)}，${status === "LOCKED" ? getCityUnlockHint(city, cities) : `進度 ${getCityProgressText(city)}`}"
         >
-          <span class="city-map-node__medallion" aria-hidden="true">
-            <span class="city-map-node__icon">${getCityStatusIcon(status)}</span>
+          <span class="city-node__art">
+            ${renderCityIllustration(city, status)}
           </span>
-          <span class="city-map-node__content">
-            <span class="city-map-node__name">${escapeHtml(city.name)}</span>
-            <span class="city-map-node__progress">${getCityProgressText(city)}</span>
+          <span class="city-node__content">
+            <span class="city-node__name">${escapeHtml(cityName)}</span>
+            ${renderCityStatus(city, cities)}
           </span>
+          ${status === "COMPLETED" ? '<span class="city-node__stamp" aria-hidden="true">COMPLETED</span>' : ""}
         </button>
       `;
     }
 
-function renderTaiwanMap(cities) {
-      const container = document.getElementById("taiwan-city-nodes");
-      if (!container || !Array.isArray(cities)) return;
+function renderWorldMapProgress(journey) {
+      const completed = Number(journey?.completedCityCount ?? 0);
+      const total = Number(journey?.totalCityCount ?? journey?.cities?.length ?? 0);
+      const summary = document.getElementById("taiwan-map-summary");
+      if (summary) summary.textContent = `${completed} / ${total}`;
+    }
+
+function renderTaiwanIsland(journey) {
+      const map = document.getElementById("taiwan-map-view");
+      if (!map) return;
+      map.classList.toggle("world-map--completed", journey?.journeyCompleted === true);
+    }
+
+function renderWorldMapRoute(cities) {
+      const route = document.getElementById("world-map-route");
+      if (!route) return;
+
+      const segments = cities.slice(0, -1).map((city, index) => {
+        const nextCity = cities[index + 1];
+        const from = CITY_MAP_POSITIONS[getCityMapOrder(city)];
+        const to = CITY_MAP_POSITIONS[getCityMapOrder(nextCity)];
+        if (!from || !to) return "";
+
+        const nextStatus = getCityMapStatus(nextCity).toLowerCase();
+        return `
+          <line
+            class="world-map__route-line world-map__route-line--${nextStatus}"
+            x1="${from.left}" y1="${from.top}"
+            x2="${to.left}" y2="${to.top}"
+          ></line>
+        `;
+      }).join("");
+
+      const stops = cities.map(city => {
+        const position = CITY_MAP_POSITIONS[getCityMapOrder(city)];
+        if (!position) return "";
+        return `
+          <circle
+            class="world-map__route-stop world-map__route-stop--${getCityMapStatus(city).toLowerCase()}"
+            cx="${position.left}"
+            cy="${position.top}"
+            r="0.75"
+          ></circle>
+        `;
+      }).join("");
+
+      route.innerHTML = `
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false">
+          ${segments}
+          ${stops}
+        </svg>
+      `;
+    }
+
+function renderCityNodes(cities) {
+      const desktop = document.getElementById("world-city-nodes");
+      const mobile = document.getElementById("world-mobile-cities");
+      if (desktop) {
+        desktop.innerHTML = cities.map(city => renderCityNode(city, cities)).join("");
+      }
+      if (mobile) {
+        mobile.innerHTML = cities.map(city => renderCityNode(city, cities, { mobile: true })).join("");
+      }
+    }
+
+function renderTravelerMarker(cities) {
+      const marker = document.getElementById("traveler-marker");
+      if (!marker) return;
+
+      const currentCity = cities.find(city =>
+        getCityMapId(city) === Number(activeCityId) && getCityMapStatus(city) !== "LOCKED"
+      );
+      const position = currentCity && CITY_MAP_POSITIONS[getCityMapOrder(currentCity)];
+      if (!currentCity || !position) {
+        marker.hidden = true;
+        return;
+      }
+
+      marker.hidden = false;
+      marker.style.setProperty("--traveler-x", `${position.left}%`);
+      marker.style.setProperty("--traveler-y", `${position.top}%`);
+      marker.setAttribute("aria-label", `旅行者目前位於${getCityMapName(currentCity)}`);
+    }
+
+function bindCityNodeEvents(cities) {
+      document.querySelectorAll("[data-world-city-id]:not(:disabled)").forEach(button => {
+        button.addEventListener("click", () => {
+          const cityId = Number(button.dataset.worldCityId);
+          const city = cities.find(item => getCityMapId(item) === cityId);
+          if (!city) return;
+          openCityStageView(city);
+        });
+      });
+    }
+
+function renderTaiwanAdventureMap(journey) {
+      const cities = Array.isArray(journey?.cities)
+        ? [...journey.cities].sort((first, second) => getCityMapOrder(first) - getCityMapOrder(second))
+        : [];
+      if (!cities.length) return;
 
       const message = document.getElementById("taiwan-map-message");
       if (message) message.textContent = "";
 
-      const orderedCities = [...cities].sort(
-        (first, second) => Number(first.unlockOrder) - Number(second.unlockOrder)
-      );
-      container.innerHTML = orderedCities.map(renderCityMapNode).join("");
-
-      const completedCount = orderedCities.filter(
-        city => getCityMapStatus(city) === "COMPLETED"
-      ).length;
-      const summary = document.getElementById("taiwan-map-summary");
-      if (summary) summary.textContent = `${completedCount} / ${orderedCities.length} 城市完成`;
+      renderWorldMapProgress(journey);
+      renderTaiwanIsland(journey);
+      renderWorldMapRoute(cities);
+      renderCityNodes(cities);
+      renderTravelerMarker(cities);
+      bindCityNodeEvents(cities);
 
       const endingButton = document.getElementById("reviewJourneyEndingBtn");
       if (endingButton) {
-        endingButton.hidden = appState?.journeyCompleted !== true;
+        endingButton.hidden = journey?.journeyCompleted !== true;
         endingButton.onclick = () => showFinalEnding();
       }
 
-      bindCityMapEvents(orderedCities);
+      previousWorldMapStatuses = new Map(
+        cities.map(city => [getCityMapId(city), getCityMapStatus(city)])
+      );
+      worldMapHasRendered = true;
     }
 
-function bindCityMapEvents(cities) {
-      document.querySelectorAll("[data-city-map-id]").forEach(button => {
-        button.addEventListener("click", () => {
-          const cityId = Number(button.dataset.cityMapId);
-          const city = cities.find(item => Number(item.id) === cityId);
-          if (!city) return;
-
-          if (!city.unlocked) {
-            const message = document.getElementById("taiwan-map-message");
-            if (message) {
-              message.textContent = `${city.name}尚未解鎖，請先擊敗上一座城市的守護者。`;
-            }
-            return;
-          }
-
-          openCityStageView(city);
-        });
+function renderTaiwanMap(cities) {
+      renderTaiwanAdventureMap({
+        ...(appState || {}),
+        cities: Array.isArray(cities) ? cities : appState?.cities || []
       });
     }
 
