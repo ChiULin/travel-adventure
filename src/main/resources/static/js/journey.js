@@ -399,6 +399,11 @@ function renderCityCards() {
         return;
       }
 
+      if (stages && isTaipeiRouteCity(city)) {
+        renderCityAdventureMap(city);
+        return;
+      }
+
       document.getElementById("city-detail").innerHTML = `
         <div class="detail-card">
           <div class="detail-hero">

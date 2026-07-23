@@ -7,6 +7,327 @@ const CITY_MAP_POSITIONS = Object.freeze({
       6: { top: "67%", left: "10%" }
     });
 
+const CITY_ROUTE_POSITIONS = Object.freeze({
+      1: { left: "22%", top: "78%" },
+      2: { left: "70%", top: "59%" },
+      3: { left: "30%", top: "37%" },
+      4: { left: "72%", top: "16%" }
+    });
+
+function isTaipeiRouteCity(city) {
+      return Number(city?.id) === 1 || String(city?.code || "").toUpperCase() === "TPE";
+    }
+
+function buildCityRouteStages(city) {
+      const landmarks = Array.isArray(city?.landmarks)
+        ? city.landmarks
+        : Array.isArray(city?.scenes) ? city.scenes : [];
+      const stages = [...landmarks]
+        .sort((first, second) => Number(first.stageOrder) - Number(second.stageOrder))
+        .map(landmark => ({
+          id: landmark.id,
+          cityId: city.id,
+          order: Number(landmark.stageOrder),
+          label: landmark.stageLabel,
+          name: landmark.name,
+          status: landmark.stageStatus,
+          actionLabel: landmark.actionLabel,
+          interactionType: landmark.interactionType,
+          type: "LANDMARK",
+          source: landmark
+        }));
+
+      if (city?.bossStage) {
+        stages.push({
+          id: `boss-${city.id}`,
+          cityId: city.id,
+          order: Number(city.bossStage.stageOrder),
+          label: city.bossStage.stageLabel,
+          name: city.bossStage.bossName,
+          status: city.bossStage.stageStatus,
+          actionLabel: city.bossStage.actionLabel,
+          interactionType: "BOSS",
+          type: "BOSS",
+          source: city.bossStage
+        });
+      }
+
+      return stages.sort((first, second) => first.order - second.order);
+    }
+
+function findCurrentStage(stages) {
+      const available = stages.find(stage => stage.status === "AVAILABLE");
+      if (available) return available;
+
+      return [...stages]
+        .filter(stage => stage.status === "COMPLETED")
+        .sort((first, second) => second.order - first.order)[0] ?? null;
+    }
+
+function getRouteStageStatusText(status) {
+      if (status === "COMPLETED") return "已完成";
+      if (status === "AVAILABLE") return "可以挑戰";
+      return "尚未解鎖";
+    }
+
+function getRouteInteractionText(stage) {
+      if (stage.type === "BOSS") return "城市守護者挑戰";
+      return {
+        EXPLORATION: "線索探索",
+        IMAGE_RECOGNITION: "圖片辨識",
+        QUIZ: "文化問答"
+      }[stage.interactionType] || "景點挑戰";
+    }
+
+function getRouteStageIcon(stage) {
+      if (stage.status === "COMPLETED") return "✓";
+      if (stage.status === "LOCKED") return "🔒";
+      return stage.type === "BOSS" ? "👹" : "📍";
+    }
+
+function renderCityRouteNode(stage, currentStage) {
+      const position = CITY_ROUTE_POSITIONS[stage.order];
+      if (!position) return "";
+      const status = String(stage.status || "LOCKED").toLowerCase();
+      const isCurrent = currentStage?.id === stage.id;
+
+      return `
+        <button
+          type="button"
+          class="city-route-node city-route-node--${status} ${stage.type === "BOSS" ? "city-route-node--boss" : ""} ${isCurrent ? "city-route-node--current" : ""}"
+          data-city-route-stage="${escapeHtml(stage.id)}"
+          style="left:${position.left}; top:${position.top};"
+          aria-label="${escapeHtml(stage.label || `第 ${stage.order} 關`)}，${escapeHtml(stage.name)}，${getRouteStageStatusText(stage.status)}"
+          aria-disabled="${stage.status === "LOCKED"}"
+        >
+          <span class="city-route-node__icon" aria-hidden="true">${getRouteStageIcon(stage)}</span>
+          <span class="city-route-node__order">${escapeHtml(stage.label || `第 ${stage.order} 關`)}</span>
+          <strong>${escapeHtml(stage.name)}</strong>
+          <small>${getRouteStageStatusText(stage.status)}</small>
+        </button>
+      `;
+    }
+
+function renderCityAdventureMap(city) {
+      const container = document.getElementById("city-detail");
+      if (!container || !city) return;
+
+      const stages = buildCityRouteStages(city);
+      const currentStage = findCurrentStage(stages);
+      const status = cityStatus(city);
+      const completedCount = stages.filter(stage => stage.status === "COMPLETED").length;
+      const currentPosition = currentStage ? CITY_ROUTE_POSITIONS[currentStage.order] : null;
+      const activeLandmark = stages.find(stage =>
+        stage.type === "LANDMARK" && Number(stage.id) === Number(activeSceneQuizId)
+      );
+      const activeChallenge = activeLandmark
+        ? `
+          <section class="city-route-active-challenge" aria-label="目前景點挑戰">
+            <span class="city-route-kicker">${escapeHtml(activeLandmark.label)} · ${escapeHtml(activeLandmark.name)}</span>
+            ${renderActiveSceneQuiz(activeLandmark.source)}
+          </section>
+        `
+        : Number(activeBossQuizCityId) === Number(city.id)
+          ? `
+            <section class="city-route-active-challenge city-route-active-challenge--boss" aria-label="目前守護者挑戰">
+              <span class="city-route-kicker">${escapeHtml(city.bossStage?.stageLabel || "第 4 關")} · ${escapeHtml(city.bossName)}</span>
+              ${renderActiveBossQuiz(city)}
+            </section>
+          `
+          : "";
+      const logsMarkup = (logs.length ? logs : [{ time: "--:--", text: "歡迎來到台北旅行冒險。" }])
+        .map(log => `<div class="log"><strong>${escapeHtml(log.time)}</strong> ${escapeHtml(log.text)}</div>`)
+        .join("");
+
+      container.innerHTML = `
+        <div class="detail-card city-adventure-detail">
+          <div class="detail-hero city-adventure-hero">
+            <span class="city-route-kicker">臺北驗證路線</span>
+            <h2>${escapeHtml(city.badgeIcon || "🎒")} ${escapeHtml(city.name)}旅行路線</h2>
+            <p>沿著城市路線完成三個文化景點，最後挑戰臺北守護者。</p>
+          </div>
+          <div class="section-head">
+            <div>
+              <h2>城市內旅行路線</h2>
+              <p class="city-copy">點擊節點查看景點情報，再決定是否開始挑戰。</p>
+            </div>
+            <span class="status-pill ${status.key}">${completedCount} / ${stages.length} 關完成</span>
+          </div>
+          <div class="difficulty-picker" aria-label="挑戰難度">
+            ${Object.entries(DIFFICULTIES).map(([key, mode]) => `
+              <button type="button" class="difficulty-option ${selectedDifficulty === key ? "active" : ""}"
+                      data-route-difficulty="${key}" ${difficultyLocked ? "disabled" : ""}>
+                <strong>${mode.label}</strong>
+                <span>${mode.seconds} 秒 · ${mode.lives} 生命 · ${Math.round(mode.multiplier * 100)}% 獎勵</span>
+              </button>
+            `).join("")}
+          </div>
+          <section class="city-adventure-map" aria-label="${escapeHtml(city.name)}四關旅行路線">
+            <div class="city-adventure-map__header">
+              <div>
+                <span class="city-route-kicker">臺北文化散策</span>
+                <h3>臺北 101 → 故宮 → 西門町 → 守護者</h3>
+              </div>
+              <strong>${currentStage
+                ? `🎒 玩家目前在${escapeHtml(currentStage.label || `第 ${currentStage.order} 關`)}`
+                : "旅程尚未開始"}</strong>
+            </div>
+            <div class="city-adventure-map__canvas">
+              <span class="city-route-decoration city-route-decoration--mountain" aria-hidden="true">⛰</span>
+              <span class="city-route-decoration city-route-decoration--lantern" aria-hidden="true">🏮</span>
+              <svg class="city-route-line" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M22 78 C39 72, 55 65, 70 59 C56 52, 42 43, 30 37 C46 29, 61 22, 72 16"></path>
+              </svg>
+              ${stages.map(stage => renderCityRouteNode(stage, currentStage)).join("")}
+              ${currentStage && currentPosition ? `
+                <div class="city-route-player" style="left:${currentPosition.left}; top:${currentPosition.top};"
+                     aria-label="玩家目前在${escapeHtml(currentStage.label)}">
+                  <span aria-hidden="true">🎒</span>
+                </div>
+              ` : ""}
+            </div>
+            <div class="city-route-legend" aria-label="關卡狀態圖例">
+              <span>📍 可挑戰</span>
+              <span>✓ 已完成</span>
+              <span>🔒 尚未解鎖</span>
+              <span>👹 城市守護者</span>
+            </div>
+            <div id="city-route-stage-modal" class="city-route-modal" hidden>
+              <button type="button" class="city-route-modal__backdrop" data-city-route-close aria-label="關閉景點情報"></button>
+              <section class="city-route-info" role="dialog" aria-modal="true" aria-labelledby="cityRouteInfoTitle">
+                <button type="button" class="city-route-info__close" data-city-route-close aria-label="關閉">×</button>
+                <div id="city-route-stage-info"></div>
+              </section>
+            </div>
+          </section>
+          ${activeChallenge}
+          <div class="log-list">${logsMarkup}</div>
+        </div>
+      `;
+
+      bindCityAdventureMapEvents(city, stages);
+      startActiveQuizTimer();
+    }
+
+function openCityRouteStageInfo(city, stage, stages) {
+      const modal = document.getElementById("city-route-stage-modal");
+      const content = document.getElementById("city-route-stage-info");
+      if (!modal || !content || !stage) return;
+
+      const locked = stage.status === "LOCKED";
+      const completed = stage.status === "COMPLETED";
+      const previous = stages
+        .filter(item => item.order < stage.order)
+        .sort((first, second) => second.order - first.order)[0];
+      const description = stage.type === "BOSS"
+        ? `完成城市最終文化挑戰，取得${city.name}徽章。`
+        : completed
+          ? stage.source.story || stage.source.desc || "這個景點已收錄至收藏圖鑑。"
+          : stage.source.desc || "完成挑戰後解鎖景點故事。";
+
+      content.innerHTML = locked
+        ? `
+          <span class="city-route-info__status city-route-info__status--locked">🔒 鎖定</span>
+          <h3 id="cityRouteInfoTitle">${escapeHtml(stage.name)}尚未解鎖</h3>
+          <p>請先完成${previous ? `「${escapeHtml(previous.name)}」` : "上一個關卡"}。</p>
+          <div class="city-route-info__hint">鎖定節點僅提供解鎖提示，不會發出挑戰請求。</div>
+        `
+        : `
+          <span class="city-route-info__status city-route-info__status--${completed ? "completed" : "available"}">
+            ${completed ? "✓ 已完成" : "📍 可挑戰"}
+          </span>
+          <h3 id="cityRouteInfoTitle">${escapeHtml(stage.name)}</h3>
+          <strong class="city-route-info__label">${escapeHtml(stage.label || `第 ${stage.order} 關`)}</strong>
+          <p>${escapeHtml(description)}</p>
+          <div class="city-route-info__meta">
+            <span><small>玩法</small>${escapeHtml(getRouteInteractionText(stage))}</span>
+            <span><small>狀態</small>${getRouteStageStatusText(stage.status)}</span>
+          </div>
+          <div class="city-route-info__actions">
+            ${completed && stage.type === "LANDMARK" ? `
+              <button class="btn ghost" type="button" data-route-stage-story="${stage.id}">查看故事</button>
+            ` : ""}
+            <button class="btn ${stage.type === "BOSS" ? "red" : ""}" type="button" data-route-stage-start>
+              ${completed ? "再次挑戰" : "開始挑戰"}
+            </button>
+          </div>
+        `;
+
+      modal.hidden = false;
+
+      content.querySelector("[data-route-stage-story]")?.addEventListener("click", event => {
+        runWithButtonLock(event.currentTarget, async () => {
+          closeCityRouteStageInfo();
+          await viewSceneStory(stage.id);
+        });
+      });
+      content.querySelector("[data-route-stage-start]")?.addEventListener("click", event => {
+        runWithButtonLock(event.currentTarget, async () => {
+          closeCityRouteStageInfo();
+          if (stage.type === "BOSS") {
+            await openBossDifficultySelection(stage.cityId);
+            return;
+          }
+          await dispatchLandmarkInteraction(stage.source);
+        });
+      });
+    }
+
+function closeCityRouteStageInfo() {
+      const modal = document.getElementById("city-route-stage-modal");
+      if (modal) modal.hidden = true;
+    }
+
+function bindCityAdventureMapEvents(city, stages) {
+      document.querySelectorAll("[data-city-route-stage]").forEach(button => {
+        button.addEventListener("click", () => {
+          const stage = stages.find(item => String(item.id) === button.dataset.cityRouteStage);
+          openCityRouteStageInfo(city, stage, stages);
+        });
+      });
+
+      document.querySelectorAll("[data-city-route-close]").forEach(button => {
+        button.addEventListener("click", closeCityRouteStageInfo);
+      });
+
+      document.querySelectorAll("[data-route-difficulty]").forEach(button => {
+        button.addEventListener("click", () => {
+          selectedDifficulty = button.dataset.routeDifficulty;
+          resetLocalBattleState();
+          renderPlayerSummary();
+          renderCityAdventureMap(city);
+        });
+      });
+
+      document.querySelectorAll("[data-scene-id]").forEach(button => {
+        button.addEventListener("click", () => runWithButtonLock(button, () =>
+          checkin(Number(button.dataset.sceneId), button.dataset.answer, button.dataset.answerText)
+        ));
+      });
+
+      document.querySelectorAll("[data-boss-city-id]").forEach(button => {
+        button.addEventListener("click", () => runWithButtonLock(button, () =>
+          challengeBoss(button.dataset.answer, button.dataset.answerText)
+        ));
+      });
+    }
+
+function dispatchLandmarkInteraction(scene) {
+      return startSceneInteraction(scene);
+    }
+
+function openBossDifficultySelection(cityId) {
+      return startBossQuiz(Number(cityId));
+    }
+
+async function refreshCityRoute(cityId) {
+      await refreshState();
+      const city = appState?.cities?.find(item => Number(item.id) === Number(cityId));
+      if (city && journeyView === "city" && Number(activeCityId) === Number(cityId)) {
+        renderCityAdventureMap(city);
+      }
+    }
+
 function getCityMapStatus(city) {
       if (!city?.unlocked) return "LOCKED";
       if (city.bossStage?.stageStatus === "COMPLETED" || city.defeated) return "COMPLETED";
