@@ -105,8 +105,8 @@ class ImageRecognitionIntegrationTest {
 
         mockMvc.perform(get("/api/journey/me").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.cities[0].scenes[1].interactionType").value("IMAGE_RECOGNITION"))
-                .andExpect(jsonPath("$.data.cities[0].scenes[1].actionLabel").value("開始挑戰"));
+                .andExpect(jsonPath("$.data.cities[0].scenes[1].interactionType").value("MYSTERY"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[1].actionLabel").value("開始未知挑戰"));
 
         String firstBody = mockMvc.perform(get("/api/image-challenges/scenes/2?difficulty=NORMAL")
                         .header("Authorization", "Bearer " + token))
@@ -114,7 +114,7 @@ class ImageRecognitionIntegrationTest {
                 .andExpect(jsonPath("$.message").value("取得圖片辨識挑戰成功"))
                 .andExpect(jsonPath("$.data.questionId").isString())
                 .andExpect(jsonPath("$.data.cityId").value(1))
-                .andExpect(jsonPath("$.data.imageUrl").value("/images/landmarks/national-palace-museum.png"))
+                .andExpect(jsonPath("$.data.imageUrl").value("/images/challenges/palace-focus.jpg"))
                 .andExpect(jsonPath("$.data.displayMode").value("BLUR"))
                 .andExpect(jsonPath("$.data.blurLevel").value(6))
                 .andExpect(jsonPath("$.data.difficulty").value("NORMAL"))

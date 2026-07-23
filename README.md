@@ -62,10 +62,15 @@ game.quiz.max-pending-per-player=5
 game.quiz.cleanup-interval-ms=60000
 game.exploration.cleanup-interval-ms=60000
 game.image-recognition.cleanup-interval-ms=60000
+game.puzzle.cleanup-interval-ms=60000
 game.boss.cleanup-interval-ms=60000
 ```
 
 同一玩家預設最多保留 5 題未完成題目；同一關卡重新取題會取代前一題，不會額外占用配額。目前部署模型明確限制為單一應用節點；多節點部署前必須將全部挑戰狀態改存 Redis 或共享資料庫。
+
+圖片辨識與拼圖的圖片、候選景點及正解統一設定於 `VisualChallengeRegistry`，使用 `cityOrder + stageOrder` 作為穩定識別，啟動時才解析實際景點 ID。啟動驗證會阻擋缺少素材、候選重複或正解未列入候選的設定。
+
+目前拼圖採展示型 MVP：拼圖片排列完成由前端判斷；最終景點答案、Session 期限、玩家歸屬與獎勵則由後端驗證。若未來需要防止直接呼叫完成 API，應新增後端交換 API 並保存目前排列。
 
 ## 本機啟動
 

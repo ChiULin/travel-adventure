@@ -15,6 +15,12 @@ public class LandmarkChallengePoolRegistry {
                     MysteryChallengeType.QUIZ,
                     MysteryChallengeType.IMAGE_RECOGNITION,
                     MysteryChallengeType.PUZZLE
+            ),
+            new LandmarkStageKey(1, 2),
+            List.of(
+                    MysteryChallengeType.QUIZ,
+                    MysteryChallengeType.IMAGE_RECOGNITION,
+                    MysteryChallengeType.PUZZLE
             )
     );
 
@@ -24,5 +30,9 @@ public class LandmarkChallengePoolRegistry {
 
     public boolean isEnabled(int cityOrder, int stageOrder) {
         return !getAvailableTypes(cityOrder, stageOrder).isEmpty();
+    }
+
+    public Map<LandmarkStageKey, List<MysteryChallengeType>> findAll() {
+        return pools;
     }
 }

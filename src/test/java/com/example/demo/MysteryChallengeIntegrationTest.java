@@ -2,6 +2,7 @@ package com.example.demo;
 
 import com.example.demo.entity.User;
 import com.example.demo.repository.UserRepository;
+import com.example.demo.service.CheckinService;
 import com.example.demo.service.ExplorationService;
 import com.example.demo.service.ImageRecognitionService;
 import com.example.demo.service.LandmarkChallengePoolRegistry;
@@ -45,6 +46,9 @@ class MysteryChallengeIntegrationTest {
 
     @Autowired
     private LandmarkChallengePoolRegistry challengePoolRegistry;
+
+    @Autowired
+    private CheckinService checkinService;
 
     @Test
     void taipei101MysteryChallengeReturnsSameActiveSession() throws Exception {
@@ -100,6 +104,30 @@ class MysteryChallengeIntegrationTest {
                 challengePoolRegistry.getAvailableTypes(1, 1)
         );
         assertTrue(Set.of("QUIZ", "EXPLORATION", "IMAGE_RECOGNITION", "PUZZLE").contains(type));
+    }
+
+    @Test
+    void palacePoolUsesThreePreparedTypesAndReusesActiveSession() throws Exception {
+        String token = registerAndGetToken("palace-mystery");
+        User user = userRepository.findByUsername("palace-mystery").orElseThrow();
+        checkinService.completeExploration(user.getId(), 1L, "NORMAL");
+
+        String first = startMystery(token, 2L);
+        String repeated = startMystery(token, 2L);
+        String type = extract(first, "challengeType");
+
+        assertEquals(
+                List.of(
+                        MysteryChallengeType.QUIZ,
+                        MysteryChallengeType.IMAGE_RECOGNITION,
+                        MysteryChallengeType.PUZZLE
+                ),
+                challengePoolRegistry.getAvailableTypes(1, 2)
+        );
+        assertTrue(Set.of("QUIZ", "IMAGE_RECOGNITION", "PUZZLE").contains(type));
+        assertEquals(extract(first, "challengeSessionId"),
+                extract(repeated, "challengeSessionId"));
+        assertEquals(type, extract(repeated, "challengeType"));
     }
 
     private String childChallengeId(MysteryChallengeService.MysteryChallengeResponse response) {

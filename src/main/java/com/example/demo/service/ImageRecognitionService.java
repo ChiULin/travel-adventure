@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class ImageRecognitionService {
-    private final ImageRecognitionRegistry registry;
+    private final VisualChallengeRegistry registry;
     private final SceneRepository sceneRepository;
     private final CityRepository cityRepository;
     private final CheckinRepository checkinRepository;
@@ -42,7 +42,7 @@ public class ImageRecognitionService {
     private final Object issuanceMonitor = new Object();
 
     @Autowired
-    public ImageRecognitionService(ImageRecognitionRegistry registry,
+    public ImageRecognitionService(VisualChallengeRegistry registry,
                                    SceneRepository sceneRepository,
                                    CityRepository cityRepository,
                                    CheckinRepository checkinRepository,
@@ -54,7 +54,7 @@ public class ImageRecognitionService {
                 checkinService, stageRegistry, Clock.systemUTC(), stageService);
     }
 
-    ImageRecognitionService(ImageRecognitionRegistry registry,
+    ImageRecognitionService(VisualChallengeRegistry registry,
                             SceneRepository sceneRepository,
                             CityRepository cityRepository,
                             CheckinRepository checkinRepository,
@@ -75,16 +75,18 @@ public class ImageRecognitionService {
     }
 
     public ImageChallengeView issue(Long userId, Long sceneId, String difficultyName) {
-        Scene targetScene = sceneRepository.findById(sceneId)
+        sceneRepository.findById(sceneId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "找不到景點"));
         LandmarkStageDefinition targetStage = stageRegistry.findByLandmarkId(sceneId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "這個景點沒有圖片辨識挑戰"));
-        ImageRecognitionDefinition definition = registry.findByStage(
-                        targetScene.getCity().getUnlockOrder(), targetStage.stageOrder())
+        City targetCity = cityRepository.findById(targetStage.cityId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "找不到城市"));
+        VisualChallengeDefinition definition = registry.findByStage(
+                        targetCity.getUnlockOrder(), targetStage.stageOrder())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "這個景點沒有圖片辨識挑戰"));
-        validateCityUnlocked(userId, targetScene.getCity().getId());
+        validateCityUnlocked(userId, targetCity.getId());
         stageService.validateStageAvailable(userId, sceneId);
         validateSceneNotCompleted(userId, sceneId);
         GameDifficulty difficulty = GameDifficulty.from(difficultyName);
@@ -103,7 +105,7 @@ public class ImageRecognitionService {
             List<SceneOption> candidates = candidateOptions(definition, difficulty);
             Instant expiresAt = now.plusSeconds(difficulty.seconds());
             PendingImageChallenge challenge = new PendingImageChallenge(
-                    "IMG-" + UUID.randomUUID(), userId, targetScene.getCity().getId(),
+                    "IMG-" + UUID.randomUUID(), userId, targetCity.getId(),
                     sceneId, definition, difficulty,
                     now, expiresAt, candidates);
             challenges.put(challenge.questionId, challenge);
@@ -178,8 +180,8 @@ public class ImageRecognitionService {
         return new ImageChallengeView(
                 challenge.questionId,
                 challenge.cityId,
-                challenge.definition.prompt(),
-                challenge.definition.imageUrl(),
+                challenge.definition.focusPrompt(),
+                challenge.definition.focusImageUrl(),
                 displayMode(challenge.difficulty),
                 blurLevel(challenge.difficulty),
                 challenge.difficulty.name(),
@@ -190,15 +192,15 @@ public class ImageRecognitionService {
         );
     }
 
-    private List<SceneOption> candidateOptions(ImageRecognitionDefinition definition,
+    private List<SceneOption> candidateOptions(VisualChallengeDefinition definition,
                                                GameDifficulty difficulty) {
         int candidateCount = difficulty == GameDifficulty.CASUAL ? 3 : 4;
-        Map<LandmarkStageKey, Long> sceneIdsByStage = resolveSceneIds(definition.candidateStages());
-        Long targetSceneId = sceneIdsByStage.get(definition.targetStage());
+        Map<VisualChallengeKey, Long> sceneIdsByStage = resolveSceneIds(definition.candidateStages());
+        Long targetSceneId = sceneIdsByStage.get(definition.correctStage());
         List<Long> selectedIds = new ArrayList<>();
         selectedIds.add(targetSceneId);
         List<Long> distractors = new ArrayList<>(definition.candidateStages().stream()
-                .filter(stage -> !stage.equals(definition.targetStage()))
+                .filter(stage -> !stage.equals(definition.correctStage()))
                 .map(sceneIdsByStage::get)
                 .toList());
         Collections.shuffle(distractors);
@@ -217,7 +219,7 @@ public class ImageRecognitionService {
         return List.copyOf(candidates);
     }
 
-    private Map<LandmarkStageKey, Long> resolveSceneIds(List<LandmarkStageKey> stageKeys) {
+    private Map<VisualChallengeKey, Long> resolveSceneIds(List<VisualChallengeKey> stageKeys) {
         Map<Integer, City> citiesByOrder = cityRepository.findAllByOrderByUnlockOrderAsc().stream()
                 .collect(Collectors.toMap(City::getUnlockOrder, Function.identity()));
         return stageKeys.stream().collect(Collectors.toMap(
@@ -293,7 +295,7 @@ public class ImageRecognitionService {
         private final Long userId;
         private final Long cityId;
         private final Long targetSceneId;
-        private final ImageRecognitionDefinition definition;
+        private final VisualChallengeDefinition definition;
         private final GameDifficulty difficulty;
         private final Instant issuedAt;
         private final Instant expiresAt;
@@ -302,7 +304,7 @@ public class ImageRecognitionService {
 
         private PendingImageChallenge(String questionId, Long userId,
                                       Long cityId, Long targetSceneId,
-                                      ImageRecognitionDefinition definition,
+                                      VisualChallengeDefinition definition,
                                       GameDifficulty difficulty, Instant issuedAt,
                                       Instant expiresAt, List<SceneOption> candidates) {
             this.questionId = questionId;

@@ -38,7 +38,7 @@ class PuzzleChallengeIntegrationTest {
     private PuzzleChallengeService puzzleChallengeService;
 
     @Test
-    void puzzleAnswerIsPlayerBoundOneTimeAndUnlocksPalaceOnlyWhenCorrect() throws Exception {
+    void sharedPuzzleFlowUnlocksPalaceAndThenXimendingOnlyWhenCorrect() throws Exception {
         String token = registerAndGetToken("puzzle-player");
         String otherToken = registerAndGetToken("puzzle-other");
         User user = userRepository.findByUsername("puzzle-player").orElseThrow();
@@ -55,6 +55,11 @@ class PuzzleChallengeIntegrationTest {
                 .toList();
         assertFalse(responseFields.contains("correctLandmarkId"));
         assertFalse(responseFields.contains("correctStage"));
+        Long wrongLandmarkId = first.candidates().stream()
+                .map(PuzzleChallengeService.LandmarkOption::landmarkId)
+                .filter(landmarkId -> !landmarkId.equals(1L))
+                .findFirst()
+                .orElseThrow();
 
         mockMvc.perform(post("/api/puzzle-challenges/" + first.challengeId() + "/complete")
                         .header("Authorization", "Bearer " + otherToken)
@@ -66,7 +71,7 @@ class PuzzleChallengeIntegrationTest {
         mockMvc.perform(post("/api/puzzle-challenges/" + first.challengeId() + "/complete")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(answerRequest(2L)))
+                        .content(answerRequest(wrongLandmarkId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.correct").value(false))
                 .andExpect(jsonPath("$.data.completed").value(false));
@@ -102,6 +107,51 @@ class PuzzleChallengeIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.cities[0].scenes[0].stageStatus").value("COMPLETED"))
                 .andExpect(jsonPath("$.data.cities[0].scenes[1].stageStatus").value("AVAILABLE"));
+
+        PuzzleChallengeService.PuzzleChallengeView palace =
+                puzzleChallengeService.issue(user.getId(), 2L, "NORMAL", "MC-palace-1");
+        PuzzleChallengeService.PuzzleChallengeView repeatedPalace =
+                puzzleChallengeService.issue(user.getId(), 2L, "NORMAL", "MC-palace-reload");
+        assertTrue(palace.challengeId().equals(repeatedPalace.challengeId()));
+        assertTrue(palace.initialTileOrder().equals(repeatedPalace.initialTileOrder()));
+        assertTrue("/images/challenges/palace-puzzle.jpg".equals(palace.imageUrl()));
+        Long wrongPalaceAnswer = palace.candidates().stream()
+                .map(PuzzleChallengeService.LandmarkOption::landmarkId)
+                .filter(landmarkId -> !landmarkId.equals(2L))
+                .findFirst()
+                .orElseThrow();
+
+        mockMvc.perform(post("/api/puzzle-challenges/" + palace.challengeId() + "/complete")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(answerRequest(wrongPalaceAnswer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.correct").value(false))
+                .andExpect(jsonPath("$.data.completed").value(false));
+
+        assertFalse(checkinRepository.existsByUserIdAndSceneId(user.getId(), 2L));
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[0].scenes[1].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[2].stageStatus").value("LOCKED"));
+
+        PuzzleChallengeService.PuzzleChallengeView palaceRetry =
+                puzzleChallengeService.issue(user.getId(), 2L, "NORMAL", "MC-palace-2");
+        mockMvc.perform(post("/api/puzzle-challenges/" + palaceRetry.challengeId() + "/complete")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(answerRequest(2L)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.correct").value(true))
+                .andExpect(jsonPath("$.data.completed").value(true))
+                .andExpect(jsonPath("$.data.sceneId").value(2));
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[0].scenes[1].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[2].stageStatus").value("AVAILABLE"));
     }
 
     private void assertPalaceLocked(String token) throws Exception {

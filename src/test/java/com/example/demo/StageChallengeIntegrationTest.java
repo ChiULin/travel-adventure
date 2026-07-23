@@ -115,7 +115,7 @@ class StageChallengeIntegrationTest {
                 .andExpect(jsonPath("$.data.cities[0].scenes[1].stageOrder").value(2))
                 .andExpect(jsonPath("$.data.cities[0].scenes[1].stageLabel").value("第 2 關"))
                 .andExpect(jsonPath("$.data.cities[0].scenes[1].stageStatus").value("LOCKED"))
-                .andExpect(jsonPath("$.data.cities[0].scenes[1].mysteryChallengeEnabled").value(false))
+                .andExpect(jsonPath("$.data.cities[0].scenes[1].mysteryChallengeEnabled").value(true))
                 .andExpect(jsonPath("$.data.cities[0].scenes[1].actionLabel").value("完成上一關後解鎖"))
                 .andExpect(jsonPath("$.data.cities[0].scenes[2].id").value(3))
                 .andExpect(jsonPath("$.data.cities[0].scenes[2].stageOrder").value(3))
@@ -744,7 +744,7 @@ class StageChallengeIntegrationTest {
                 .andExpect(jsonPath("$.data.cities[0].scenes[0].stageStatus").value("COMPLETED"))
                 .andExpect(jsonPath("$.data.cities[0].scenes[0].actionLabel").value("查看故事"))
                 .andExpect(jsonPath("$.data.cities[0].scenes[1].stageStatus").value("AVAILABLE"))
-                .andExpect(jsonPath("$.data.cities[0].scenes[1].actionLabel").value("開始挑戰"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[1].actionLabel").value("開始未知挑戰"))
                 .andExpect(jsonPath("$.data.cities[0].scenes[2].stageStatus").value("LOCKED"))
                 .andExpect(jsonPath("$.data.cities[0].bossStage.stageStatus").value("LOCKED"));
     }

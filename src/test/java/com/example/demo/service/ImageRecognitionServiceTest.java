@@ -67,6 +67,7 @@ class ImageRecognitionServiceTest {
                 cities.values().stream()
                         .sorted(java.util.Comparator.comparingInt(City::getUnlockOrder))
                         .toList());
+        when(cityRepository.findById(1L)).thenReturn(Optional.of(cities.get(1L)));
         when(sceneRepository.findById(2L)).thenReturn(Optional.of(
                 Scene.builder().id(2L).name("國立故宮博物院").city(cities.get(1L)).build()));
         when(sceneRepository.findAllById(any())).thenAnswer(invocation -> {
@@ -78,7 +79,7 @@ class ImageRecognitionServiceTest {
             return scenes;
         });
         service = new ImageRecognitionService(
-                new ImageRecognitionRegistry(), sceneRepository, cityRepository, checkinRepository,
+                new VisualChallengeRegistry(), sceneRepository, cityRepository, checkinRepository,
                 progressRepository, checkinService, stageRegistry, clock, stageService);
     }
 
@@ -91,6 +92,7 @@ class ImageRecognitionServiceTest {
         assertEquals("BLUR", first.displayMode());
         assertEquals(6, first.blurLevel());
         assertEquals(4, first.candidates().size());
+        assertEquals("/images/challenges/palace-focus.jpg", first.imageUrl());
         assertEquals(clock.instant().plusSeconds(5), first.expiresAt());
 
         var casual = service.issue(1L, 2L, "CASUAL");

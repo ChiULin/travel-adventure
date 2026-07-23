@@ -45,7 +45,7 @@ class JourneyStateServiceTest {
     @Mock private CheckinRepository checkinRepository;
     @Mock private UserProgressRepository userProgressRepository;
     @Mock private ExplorationMissionRegistry explorationMissionRegistry;
-    @Mock private ImageRecognitionRegistry imageRecognitionRegistry;
+    @Mock private VisualChallengeRegistry visualChallengeRegistry;
     @Mock private LandmarkStageRegistry landmarkStageRegistry;
     @Mock private LandmarkStageService landmarkStageService;
     @Mock private LandmarkChallengePoolRegistry landmarkChallengePoolRegistry;
@@ -56,7 +56,7 @@ class JourneyStateServiceTest {
     void setUp() {
         service = new JourneyStateService(
                 userRepository, cityRepository, sceneRepository, checkinRepository,
-                userProgressRepository, explorationMissionRegistry, imageRecognitionRegistry,
+                userProgressRepository, explorationMissionRegistry, visualChallengeRegistry,
                 landmarkStageRegistry, landmarkStageService, landmarkChallengePoolRegistry);
     }
 

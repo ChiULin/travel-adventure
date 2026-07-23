@@ -32,7 +32,7 @@ public class PuzzleChallengeService {
 
     private static final int GRID_SIZE = 3;
 
-    private final PuzzleChallengeRegistry registry;
+    private final VisualChallengeRegistry registry;
     private final SceneRepository sceneRepository;
     private final CityRepository cityRepository;
     private final CheckinRepository checkinRepository;
@@ -47,7 +47,7 @@ public class PuzzleChallengeService {
 
     @Autowired
     public PuzzleChallengeService(
-            PuzzleChallengeRegistry registry,
+            VisualChallengeRegistry registry,
             SceneRepository sceneRepository,
             CityRepository cityRepository,
             CheckinRepository checkinRepository,
@@ -61,7 +61,7 @@ public class PuzzleChallengeService {
     }
 
     PuzzleChallengeService(
-            PuzzleChallengeRegistry registry,
+            VisualChallengeRegistry registry,
             SceneRepository sceneRepository,
             CityRepository cityRepository,
             CheckinRepository checkinRepository,
@@ -91,14 +91,14 @@ public class PuzzleChallengeService {
         if (mysterySessionId == null || mysterySessionId.isBlank()) {
             throw new IllegalArgumentException("缺少神秘挑戰 Session");
         }
-        Scene targetScene = sceneRepository.findById(landmarkId)
+        sceneRepository.findById(landmarkId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "找不到景點"));
         LandmarkStageDefinition targetStage = stageRegistry.findByLandmarkId(landmarkId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "這個景點沒有拼圖挑戰"));
         City targetCity = cityRepository.findById(targetStage.cityId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "找不到城市"));
-        PuzzleChallengeDefinition definition = registry.findByStage(
+        VisualChallengeDefinition definition = registry.findByStage(
                         targetCity.getUnlockOrder(), targetStage.stageOrder())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "這個景點沒有拼圖挑戰"));
@@ -206,7 +206,7 @@ public class PuzzleChallengeService {
     private PuzzleChallengeView challengeView(ActivePuzzleChallenge challenge) {
         return new PuzzleChallengeView(
                 challenge.challengeId(),
-                challenge.definition().imageUrl(),
+                challenge.definition().puzzleImageUrl(),
                 challenge.gridSize(),
                 challenge.initialTileOrder(),
                 challenge.difficulty().name(),
@@ -221,10 +221,9 @@ public class PuzzleChallengeService {
         List<Integer> order = IntStream.range(0, GRID_SIZE * GRID_SIZE)
                 .boxed()
                 .collect(Collectors.toCollection(ArrayList::new));
-        Collections.shuffle(order);
-        if (isSolved(order)) {
-            Collections.rotate(order, 1);
-        }
+        do {
+            Collections.shuffle(order);
+        } while (isSolved(order));
         return List.copyOf(order);
     }
 
@@ -240,8 +239,8 @@ public class PuzzleChallengeService {
         };
     }
 
-    private List<LandmarkOption> candidateOptions(PuzzleChallengeDefinition definition) {
-        Map<LandmarkStageKey, Long> sceneIdsByStage = resolveSceneIds(definition.candidateStages());
+    private List<LandmarkOption> candidateOptions(VisualChallengeDefinition definition) {
+        Map<VisualChallengeKey, Long> sceneIdsByStage = resolveSceneIds(definition.candidateStages());
         List<Long> sceneIds = definition.candidateStages().stream()
                 .map(sceneIdsByStage::get)
                 .toList();
@@ -261,7 +260,7 @@ public class PuzzleChallengeService {
         return List.copyOf(candidates);
     }
 
-    private Map<LandmarkStageKey, Long> resolveSceneIds(List<LandmarkStageKey> stageKeys) {
+    private Map<VisualChallengeKey, Long> resolveSceneIds(List<VisualChallengeKey> stageKeys) {
         Map<Integer, City> citiesByOrder = cityRepository.findAllByOrderByUnlockOrderAsc().stream()
                 .collect(Collectors.toMap(City::getUnlockOrder, Function.identity()));
         return stageKeys.stream().collect(Collectors.toMap(
@@ -366,7 +365,7 @@ public class PuzzleChallengeService {
             Instant createdAt,
             Instant expiresAt,
             boolean consumed,
-            PuzzleChallengeDefinition definition,
+            VisualChallengeDefinition definition,
             List<LandmarkOption> candidates
     ) {
         private ActivePuzzleChallenge consume() {

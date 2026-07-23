@@ -37,7 +37,7 @@ public class JourneyStateService {
     private final CheckinRepository checkinRepository;
     private final UserProgressRepository userProgressRepository;
     private final ExplorationMissionRegistry explorationMissionRegistry;
-    private final ImageRecognitionRegistry imageRecognitionRegistry;
+    private final VisualChallengeRegistry visualChallengeRegistry;
     private final LandmarkStageRegistry landmarkStageRegistry;
     private final LandmarkStageService landmarkStageService;
     private final LandmarkChallengePoolRegistry landmarkChallengePoolRegistry;
@@ -45,7 +45,7 @@ public class JourneyStateService {
     public JourneyStateService(UserRepository userRepository, CityRepository cityRepository, SceneRepository sceneRepository,
                                CheckinRepository checkinRepository, UserProgressRepository userProgressRepository,
                                ExplorationMissionRegistry explorationMissionRegistry,
-                               ImageRecognitionRegistry imageRecognitionRegistry,
+                               VisualChallengeRegistry visualChallengeRegistry,
                                LandmarkStageRegistry landmarkStageRegistry,
                                LandmarkStageService landmarkStageService,
                                LandmarkChallengePoolRegistry landmarkChallengePoolRegistry) {
@@ -55,7 +55,7 @@ public class JourneyStateService {
         this.checkinRepository = checkinRepository;
         this.userProgressRepository = userProgressRepository;
         this.explorationMissionRegistry = explorationMissionRegistry;
-        this.imageRecognitionRegistry = imageRecognitionRegistry;
+        this.visualChallengeRegistry = visualChallengeRegistry;
         this.landmarkStageRegistry = landmarkStageRegistry;
         this.landmarkStageService = landmarkStageService;
         this.landmarkChallengePoolRegistry = landmarkChallengePoolRegistry;
@@ -348,7 +348,7 @@ public class JourneyStateService {
         if (explorationMissionRegistry.findByTargetSceneId(scene.getId()).isPresent()) {
             interactionType = SceneInteractionType.EXPLORATION;
         } else if (stageOrder != null
-                && imageRecognitionRegistry.findByStage(cityOrder, stageOrder).isPresent()) {
+                && visualChallengeRegistry.findByStage(cityOrder, stageOrder).isPresent()) {
             interactionType = SceneInteractionType.IMAGE_RECOGNITION;
         } else {
             interactionType = SceneInteractionType.QUIZ;
@@ -357,7 +357,9 @@ public class JourneyStateService {
         boolean mysteryChallengeEnabled = stageOrder != null
                 && landmarkChallengePoolRegistry.isEnabled(cityOrder, stageOrder);
         dto.put("interactionType", mysteryChallengeEnabled ? "MYSTERY" : interactionType.name());
-        dto.put("actionLabel", mysteryChallengeEnabled && !checked
+        dto.put("actionLabel", mysteryChallengeEnabled
+                && !checked
+                && stageStatus != StageStatus.LOCKED
                 ? "開始未知挑戰"
                 : resolveActionLabel(checked, interactionType, stageStatus, stageConfigured));
         dto.put("stageOrder", stageOrder);

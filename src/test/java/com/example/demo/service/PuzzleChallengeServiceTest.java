@@ -72,7 +72,7 @@ class PuzzleChallengeServiceTest {
                 1L, "台北101",
                 2L, "國立故宮博物院",
                 5L, "國家歌劇院",
-                12L, "龍虎塔"
+                17L, "澎湖跨海大橋"
         );
         when(cityRepository.findAllByOrderByUnlockOrderAsc()).thenReturn(
                 cities.values().stream()
@@ -81,6 +81,8 @@ class PuzzleChallengeServiceTest {
         when(cityRepository.findById(1L)).thenReturn(Optional.of(cities.get(1L)));
         when(sceneRepository.findById(1L)).thenReturn(Optional.of(
                 Scene.builder().id(1L).name("台北101").city(cities.get(1L)).build()));
+        when(sceneRepository.findById(2L)).thenReturn(Optional.of(
+                Scene.builder().id(2L).name("國立故宮博物院").city(cities.get(1L)).build()));
         when(sceneRepository.findAllById(any())).thenAnswer(invocation -> {
             Iterable<Long> ids = invocation.getArgument(0);
             List<Scene> scenes = new ArrayList<>();
@@ -96,7 +98,7 @@ class PuzzleChallengeServiceTest {
                 .thenReturn(Optional.empty());
 
         service = new PuzzleChallengeService(
-                new PuzzleChallengeRegistry(),
+                new VisualChallengeRegistry(),
                 sceneRepository,
                 cityRepository,
                 checkinRepository,
@@ -128,10 +130,36 @@ class PuzzleChallengeServiceTest {
     }
 
     @Test
+    void palaceUsesSharedVisualRegistryAndReusesItsSession() {
+        var first = service.issue(1L, 2L, "NORMAL", "MC-palace");
+        var repeated = service.issue(1L, 2L, "NORMAL", "MC-palace-repeated");
+
+        assertEquals(first.challengeId(), repeated.challengeId());
+        assertEquals(first.initialTileOrder(), repeated.initialTileOrder());
+        assertEquals("/images/challenges/palace-puzzle.jpg", first.imageUrl());
+        assertEquals(4, first.candidates().size());
+        assertTrue(first.candidates().stream()
+                .anyMatch(candidate -> candidate.landmarkId().equals(2L)));
+    }
+
+    @Test
+    void everyIssuedPuzzleStartsUnsolved() {
+        for (long userId = 10L; userId < 110L; userId++) {
+            var challenge = service.issue(userId, 1L, "NORMAL", "MC-" + userId);
+            assertFalse(isSolved(challenge.initialTileOrder()));
+        }
+    }
+
+    @Test
     void wrongAnswerConsumesChallengeWithoutCheckin() {
         var challenge = service.issue(1L, 1L, "NORMAL", "MC-wrong");
+        Long wrongLandmarkId = challenge.candidates().stream()
+                .map(PuzzleChallengeService.LandmarkOption::landmarkId)
+                .filter(landmarkId -> !landmarkId.equals(1L))
+                .findFirst()
+                .orElseThrow();
 
-        var result = service.complete(1L, challenge.challengeId(), 2L);
+        var result = service.complete(1L, challenge.challengeId(), wrongLandmarkId);
 
         assertFalse(result.correct());
         assertFalse(result.completed());
