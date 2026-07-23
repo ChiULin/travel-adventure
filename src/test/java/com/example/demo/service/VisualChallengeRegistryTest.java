@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 class VisualChallengeRegistryTest {
 
     @Test
-    void taipeiAndTaichungLandmarksShareStableVisualDefinitions() {
+    void taipeiTaichungAndTainanLandmarksShareStableVisualDefinitions() {
         VisualChallengeRegistry registry = new VisualChallengeRegistry();
         VisualChallengeDefinition taipei = registry.findRequired(new VisualChallengeKey(1, 1));
         VisualChallengeDefinition palace = registry.findRequired(new VisualChallengeKey(1, 2));
@@ -37,8 +37,14 @@ class VisualChallengeRegistryTest {
                 registry.findRequired(new VisualChallengeKey(2, 2));
         VisualChallengeDefinition rainbow =
                 registry.findRequired(new VisualChallengeKey(2, 3));
+        VisualChallengeDefinition chihkan =
+                registry.findRequired(new VisualChallengeKey(3, 1));
+        VisualChallengeDefinition anping =
+                registry.findRequired(new VisualChallengeKey(3, 2));
+        VisualChallengeDefinition confucius =
+                registry.findRequired(new VisualChallengeKey(3, 3));
 
-        assertEquals(6, registry.findAll().size());
+        assertEquals(9, registry.findAll().size());
         assertEquals("/images/challenges/taipei101-focus.jpg", taipei.focusImageUrl());
         assertEquals(taipei.focusImageUrl(), taipei.puzzleImageUrl());
         assertEquals("/images/challenges/palace-focus.jpg", palace.focusImageUrl());
@@ -57,6 +63,12 @@ class VisualChallengeRegistryTest {
         assertEquals("/images/challenges/opera-puzzle.jpg", opera.puzzleImageUrl());
         assertEquals("/images/challenges/rainbow-focus.jpg", rainbow.focusImageUrl());
         assertEquals("/images/challenges/rainbow-puzzle.jpg", rainbow.puzzleImageUrl());
+        assertEquals("/images/challenges/chihkan-focus.jpg", chihkan.focusImageUrl());
+        assertEquals("/images/challenges/chihkan-puzzle.jpg", chihkan.puzzleImageUrl());
+        assertEquals("/images/challenges/anping-focus.jpg", anping.focusImageUrl());
+        assertEquals("/images/challenges/anping-puzzle.jpg", anping.puzzleImageUrl());
+        assertEquals("/images/challenges/confucius-focus.jpg", confucius.focusImageUrl());
+        assertEquals("/images/challenges/confucius-puzzle.jpg", confucius.puzzleImageUrl());
         registry.findAll().forEach((key, definition) -> {
             assertEquals(4, definition.candidateStages().size());
             assertEquals(4, definition.candidateStages().stream().distinct().count());

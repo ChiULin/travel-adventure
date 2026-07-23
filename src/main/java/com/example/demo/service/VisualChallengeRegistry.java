@@ -102,6 +102,51 @@ public class VisualChallengeRegistry {
                                 candidate(6, 3)
                         ),
                         new VisualChallengeKey(2, 3)
+                ),
+                new VisualChallengeKey(3, 1),
+                new VisualChallengeDefinition(
+                        "TAINAN-CHIKHAN-TOWER-VISUAL",
+                        "/images/challenges/chihkan-focus.jpg",
+                        "/images/challenges/chihkan-puzzle.jpg",
+                        "觀察紅瓦、飛簷、紅磚與石碑局部，找出正確的臺南古蹟。",
+                        "赤崁樓前身為普羅民遮城，紅瓦樓閣與歷史遺構見證臺南城市發展。",
+                        List.of(
+                                candidate(3, 1),
+                                candidate(3, 2),
+                                candidate(3, 3),
+                                candidate(1, 2)
+                        ),
+                        new VisualChallengeKey(3, 1)
+                ),
+                new VisualChallengeKey(3, 2),
+                new VisualChallengeDefinition(
+                        "TAINAN-ANPING-FORT-VISUAL",
+                        "/images/challenges/anping-focus.jpg",
+                        "/images/challenges/anping-puzzle.jpg",
+                        "觀察紅磚古牆、樹根與瞭望塔局部，找出正確的臺南古蹟。",
+                        "安平古堡與熱蘭遮城歷史密切相關，古牆、遺跡與瞭望塔保存港城記憶。",
+                        List.of(
+                                candidate(3, 2),
+                                candidate(3, 1),
+                                candidate(3, 3),
+                                candidate(4, 3)
+                        ),
+                        new VisualChallengeKey(3, 2)
+                ),
+                new VisualChallengeKey(3, 3),
+                new VisualChallengeDefinition(
+                        "TAINAN-CONFUCIUS-TEMPLE-VISUAL",
+                        "/images/challenges/confucius-focus.jpg",
+                        "/images/challenges/confucius-puzzle.jpg",
+                        "觀察紅色門牆、傳統屋簷與石坊局部，找出正確的臺南古蹟。",
+                        "臺南孔廟是臺灣第一座孔廟，以紅牆、古建築與教育傳統聞名。",
+                        List.of(
+                                candidate(3, 3),
+                                candidate(3, 1),
+                                candidate(3, 2),
+                                candidate(1, 2)
+                        ),
+                        new VisualChallengeKey(3, 3)
                 )
         ));
     }
