@@ -1,10 +1,10 @@
 const CITY_MAP_POSITIONS = Object.freeze({
-      1: { top: "12%", left: "61%" },
-      2: { top: "35%", left: "43%" },
-      3: { top: "61%", left: "34%" },
-      4: { top: "76%", left: "31%" },
-      5: { top: "48%", left: "70%" },
-      6: { top: "67%", left: "10%" }
+      1: { top: "18%", left: "67%" },
+      2: { top: "37%", left: "59%" },
+      3: { top: "62%", left: "54%" },
+      4: { top: "78%", left: "61%" },
+      5: { top: "50%", left: "74%" },
+      6: { top: "67%", left: "42%" }
     });
 
 const CITY_ROUTE_POSITIONS = Object.freeze({
@@ -922,13 +922,18 @@ function renderCityMapNode(city) {
           type="button"
           class="city-map-node city-map-node--${status.toLowerCase()} ${active ? "city-map-node--active" : ""}"
           data-city-map-id="${Number(city.id)}"
+          data-city-order="${Number(city.unlockOrder)}"
           style="top:${position.top}; left:${position.left};"
           aria-label="${escapeHtml(city.name)}，${getCityStatusText(status)}，進度 ${getCityProgressText(city)}"
           aria-disabled="${status === "LOCKED"}"
         >
-          <span class="city-map-node__icon" aria-hidden="true">${getCityStatusIcon(status)}</span>
-          <span class="city-map-node__name">${escapeHtml(city.name)}</span>
-          <span class="city-map-node__progress">${getCityProgressText(city)}</span>
+          <span class="city-map-node__medallion" aria-hidden="true">
+            <span class="city-map-node__icon">${getCityStatusIcon(status)}</span>
+          </span>
+          <span class="city-map-node__content">
+            <span class="city-map-node__name">${escapeHtml(city.name)}</span>
+            <span class="city-map-node__progress">${getCityProgressText(city)}</span>
+          </span>
         </button>
       `;
     }

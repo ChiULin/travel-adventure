@@ -255,17 +255,46 @@
     }
 
     .taiwan-map-view {
-      padding: 18px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
+      position: relative;
+      min-height: clamp(610px, 62vw, 790px);
+      padding: clamp(28px, 4vw, 58px);
+      border: 3px solid #b98b3d;
+      border-radius: 26px;
       background:
-        radial-gradient(circle at 72% 22%, rgba(255, 255, 255, .95), transparent 22%),
-        linear-gradient(165deg, #e9f7ff, #f8fcff 52%, #e8f7ee);
-      box-shadow: var(--shadow);
+        linear-gradient(90deg, rgba(4, 29, 72, .35), transparent 47%),
+        url("../images/maps/taiwan-adventure-map.png") center / cover no-repeat;
+      box-shadow:
+        inset 0 0 0 3px rgba(255, 231, 166, .7),
+        inset 0 0 0 8px rgba(10, 55, 101, .64),
+        0 18px 42px rgba(5, 34, 74, .28);
       overflow: hidden;
+      isolation: isolate;
+    }
+
+    .taiwan-map-view::before,
+    .taiwan-map-view::after {
+      content: "";
+      position: absolute;
+      z-index: 4;
+      pointer-events: none;
+    }
+
+    .taiwan-map-view::before {
+      inset: 12px;
+      border: 1px solid rgba(255, 226, 147, .72);
+      border-radius: 18px;
+      box-shadow: inset 0 0 24px rgba(255, 213, 111, .18);
+    }
+
+    .taiwan-map-view::after {
+      inset: 0;
+      background: linear-gradient(180deg, rgba(2, 20, 52, .08), transparent 22%, transparent 78%, rgba(2, 20, 52, .22));
+      z-index: 0;
     }
 
     .taiwan-map-header {
+      position: relative;
+      z-index: 3;
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
@@ -273,61 +302,68 @@
     }
 
     .taiwan-map-header h2 {
-      margin: 3px 0 6px;
-      color: var(--ink);
-      font-size: 24px;
+      max-width: 430px;
+      margin: 9px 0 10px;
+      color: #fff6d8;
+      font-family: "Noto Serif TC", "Microsoft JhengHei", serif;
+      font-size: clamp(36px, 5.1vw, 70px);
+      font-weight: 900;
+      line-height: 1.08;
+      letter-spacing: .04em;
+      text-shadow:
+        0 3px 0 #78552d,
+        0 7px 18px rgba(0, 16, 45, .68);
     }
 
     .taiwan-map-header p {
       margin-bottom: 0;
-      color: var(--muted);
+      color: #fff6d8;
+      font-size: clamp(14px, 1.5vw, 19px);
       font-weight: 800;
+      letter-spacing: .08em;
+      text-shadow: 0 2px 7px rgba(0, 18, 49, .9);
     }
 
     .taiwan-map-header > strong {
       flex: 0 0 auto;
-      padding: 7px 10px;
+      min-width: 210px;
+      padding: 14px 24px;
+      border: 3px solid #bf8d3f;
       border-radius: 999px;
-      color: #123b78;
-      background: rgba(255, 255, 255, .86);
-      box-shadow: 0 4px 14px rgba(31, 70, 130, .1);
+      color: #604622;
+      background: linear-gradient(180deg, #fffbed, #ead7aa);
+      box-shadow:
+        inset 0 0 0 3px rgba(255, 255, 255, .65),
+        0 8px 20px rgba(0, 26, 60, .3);
+      font-family: "Noto Serif TC", "Microsoft JhengHei", serif;
+      font-size: clamp(17px, 2vw, 25px);
+      text-align: center;
     }
 
     .taiwan-map-eyebrow {
-      color: var(--green);
-      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 18px;
+      border: 1px solid rgba(236, 190, 95, .7);
+      border-radius: 4px 24px 24px 4px;
+      color: #ffe19a;
+      background: linear-gradient(90deg, rgba(5, 34, 78, .96), rgba(12, 55, 105, .72));
+      box-shadow: 0 5px 16px rgba(0, 21, 55, .36);
+      font-size: 15px;
       font-weight: 900;
       letter-spacing: .12em;
     }
 
+    .taiwan-map-eyebrow::before {
+      content: "✦";
+      font-size: 18px;
+    }
+
     .taiwan-map {
-      position: relative;
-      width: min(100%, 520px);
-      aspect-ratio: 3 / 4;
-      margin: 18px auto 10px;
-      border-radius: 28px;
-      background:
-        radial-gradient(circle at 18% 70%, rgba(36, 111, 229, .1), transparent 13%),
-        repeating-radial-gradient(circle at 50% 50%, rgba(36, 111, 229, .055) 0 1px, transparent 1px 34px);
-    }
-
-    .taiwan-map-shape {
       position: absolute;
-      inset: 4% 16% 3% 18%;
-      clip-path: polygon(61% 0, 78% 8%, 87% 22%, 78% 38%, 70% 54%, 58% 70%, 42% 86%, 20% 100%, 12% 88%, 21% 68%, 27% 48%, 33% 27%, 43% 10%);
-      background:
-        linear-gradient(135deg, rgba(255, 255, 255, .4), transparent 34%),
-        linear-gradient(160deg, #d8efce, #8dcaa6 55%, #5eaa83);
-      filter: drop-shadow(0 16px 20px rgba(28, 89, 76, .22));
-      transform: rotate(-7deg);
-    }
-
-    .taiwan-map-shape::after {
-      content: "";
-      position: absolute;
-      inset: 4%;
-      clip-path: inherit;
-      border: 2px solid rgba(255, 255, 255, .48);
+      z-index: 2;
+      inset: 0;
     }
 
     .taiwan-city-nodes {
@@ -338,68 +374,178 @@
     .city-map-node {
       position: absolute;
       z-index: 2;
-      min-width: 96px;
-      padding: 8px 10px;
-      border: 2px solid currentColor;
-      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      min-width: clamp(132px, 14vw, 190px);
+      padding: 7px 18px 7px 7px;
+      border: 3px solid #5f86b5;
+      border-radius: 999px 18px 18px 999px;
       color: #174887;
-      background: rgba(255, 255, 255, .94);
-      box-shadow: 0 7px 18px rgba(15, 55, 102, .18);
+      background: linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(224, 238, 251, .97));
+      box-shadow:
+        inset 0 0 0 3px rgba(255, 255, 255, .72),
+        0 7px 0 rgba(18, 54, 91, .25),
+        0 12px 22px rgba(3, 32, 67, .34);
       transform: translate(-50%, -50%);
-      transition: box-shadow .18s ease, filter .18s ease;
+      transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
     }
 
     .city-map-node:hover {
-      box-shadow: 0 10px 24px rgba(15, 55, 102, .28);
+      box-shadow:
+        inset 0 0 0 3px rgba(255, 255, 255, .78),
+        0 7px 0 rgba(18, 54, 91, .25),
+        0 16px 28px rgba(3, 32, 67, .46);
       filter: brightness(1.03);
+      transform: translate(-50%, calc(-50% - 3px));
     }
 
     .city-map-node:focus-visible {
-      outline: 3px solid rgba(36, 111, 229, .32);
-      outline-offset: 3px;
+      outline: 4px solid #ffe08c;
+      outline-offset: 4px;
     }
 
-    .city-map-node__icon,
+    .city-map-node__content,
     .city-map-node__name,
     .city-map-node__progress {
       display: block;
     }
 
-    .city-map-node__icon { font-size: 19px; }
-    .city-map-node__name { margin-top: 2px; font-weight: 900; }
-    .city-map-node__progress { margin-top: 2px; font-size: 12px; font-weight: 800; }
+    .city-map-node__medallion {
+      display: grid;
+      flex: 0 0 auto;
+      width: 52px;
+      height: 52px;
+      margin-right: 10px;
+      border: 2px solid currentColor;
+      border-radius: 50%;
+      place-items: center;
+      background:
+        radial-gradient(circle at 35% 30%, rgba(255, 255, 255, .88), transparent 28%),
+        linear-gradient(145deg, #d9eafb, #8eb5d4);
+      box-shadow: inset 0 0 0 3px rgba(255, 255, 255, .48);
+    }
+
+    .city-map-node__content {
+      min-width: 0;
+      text-align: left;
+    }
+
+    .city-map-node__icon { font-size: 22px; }
+    .city-map-node__name {
+      font-family: "Noto Serif TC", "Microsoft JhengHei", serif;
+      font-size: clamp(15px, 1.6vw, 21px);
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .city-map-node__progress { margin-top: 2px; font-size: 12px; font-weight: 900; }
 
     .city-map-node--locked {
-      color: #667085;
-      background: rgba(239, 243, 248, .94);
+      border-color: #7d7d78;
+      color: #575b5d;
+      background: linear-gradient(180deg, rgba(230, 228, 219, .98), rgba(174, 176, 173, .97));
       cursor: not-allowed;
-      opacity: .72;
+      filter: saturate(.15);
+      opacity: .92;
     }
 
     .city-map-node--available {
       animation: cityNodePulse 1.8s ease-in-out infinite;
     }
 
+    .city-map-node--available::before {
+      content: "🧭";
+      position: absolute;
+      left: 25px;
+      bottom: calc(100% + 8px);
+      display: grid;
+      width: 40px;
+      height: 40px;
+      border: 2px solid #ffe394;
+      border-radius: 50%;
+      place-items: center;
+      background: #1768a8;
+      box-shadow: 0 0 0 6px rgba(93, 210, 255, .28), 0 5px 14px rgba(0, 25, 60, .42);
+      font-size: 21px;
+    }
+
     .city-map-node--completed {
-      color: #197842;
-      background: rgba(242, 255, 246, .96);
+      border-color: #c69a45;
+      color: #356c41;
+      background: linear-gradient(180deg, #fff9da, #d8eab8);
     }
 
     .city-map-node--active {
-      box-shadow: 0 0 0 4px rgba(36, 111, 229, .14), 0 10px 24px rgba(15, 55, 102, .25);
+      box-shadow: 0 0 0 5px rgba(97, 216, 255, .45), 0 13px 27px rgba(0, 25, 62, .42);
+    }
+
+    .taiwan-map-tip {
+      position: absolute;
+      z-index: 3;
+      left: clamp(28px, 4vw, 58px);
+      bottom: clamp(28px, 4vw, 52px);
+      display: flex;
+      align-items: center;
+      width: min(330px, 30%);
+      padding: 13px 18px;
+      border: 2px solid #c79b4b;
+      border-radius: 10px;
+      color: #fff4cf;
+      background: rgba(5, 34, 75, .9);
+      box-shadow: inset 0 0 0 2px rgba(255, 223, 145, .18), 0 8px 24px rgba(0, 18, 47, .36);
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.6;
+    }
+
+    .taiwan-map-tip__icon {
+      display: grid;
+      flex: 0 0 auto;
+      width: 44px;
+      height: 44px;
+      margin-right: 13px;
+      border: 1px solid #e0b75f;
+      border-radius: 50%;
+      place-items: center;
+      color: #ffdc78;
+      background: radial-gradient(circle, #43658f, #102d58);
+      font-size: 25px;
+    }
+
+    .taiwan-map-tip strong {
+      display: block;
+      color: #ffd775;
+      font-size: 15px;
+      letter-spacing: .08em;
     }
 
     .taiwan-map-message {
+      position: absolute;
+      z-index: 5;
+      right: 24px;
+      bottom: 20px;
       min-height: 22px;
+      max-width: 52%;
       margin: 0;
-      color: #a13b42;
+      padding: 5px 10px;
+      border-radius: 8px;
+      color: #fff3cf;
+      background: rgba(116, 31, 35, .88);
       text-align: center;
       font-weight: 900;
     }
 
+    .taiwan-map-message:empty {
+      display: none;
+    }
+
     #reviewJourneyEndingBtn {
-      display: block;
-      margin: 8px auto 0;
+      position: absolute;
+      z-index: 5;
+      right: clamp(28px, 4vw, 58px);
+      bottom: 66px;
+      border-color: #e5bd69;
+      color: #fff4d2;
+      background: rgba(6, 40, 82, .9);
     }
 
     #reviewJourneyEndingBtn[hidden] {
@@ -407,14 +553,16 @@
     }
 
     .taiwan-map-legend {
+      position: absolute;
+      z-index: 3;
+      right: clamp(28px, 4vw, 58px);
+      bottom: 30px;
       display: flex;
-      justify-content: center;
-      gap: 10px 18px;
-      margin-top: 10px;
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 800;
-      flex-wrap: wrap;
+      gap: 10px 14px;
+      color: #fff4d2;
+      font-size: 12px;
+      font-weight: 900;
+      text-shadow: 0 2px 5px rgba(0, 15, 38, .9);
     }
 
     .city-stage-view {
@@ -1766,36 +1914,108 @@
 
     @media (max-width: 640px) {
       .taiwan-map-view {
-        padding: 14px 10px;
+        min-height: 760px;
+        padding: 20px 18px;
+        border-radius: 18px;
+        background:
+          linear-gradient(180deg, rgba(4, 29, 72, .2), transparent 38%),
+          url("../images/maps/taiwan-adventure-map.png") 66% center / auto 100% no-repeat;
       }
 
       .taiwan-map-header {
         align-items: flex-start;
         flex-direction: column;
+        gap: 10px;
       }
 
       .taiwan-map-header > strong {
         align-self: flex-start;
-      }
-
-      .taiwan-map {
-        width: min(100%, 380px);
-        margin-top: 12px;
-      }
-
-      .city-map-node {
-        min-width: 72px;
-        padding: 6px;
-        border-radius: 11px;
-        font-size: 13px;
-      }
-
-      .city-map-node__icon {
+        min-width: 0;
+        padding: 9px 16px;
         font-size: 16px;
       }
 
+      .taiwan-map-header h2 {
+        max-width: 100%;
+        margin: 7px 0;
+        font-size: 32px;
+        letter-spacing: 0;
+      }
+
+      .taiwan-map-header p {
+        display: none;
+      }
+
+      .taiwan-map-eyebrow {
+        padding: 6px 13px;
+        font-size: 12px;
+      }
+
+      .city-map-node {
+        min-width: 120px;
+        padding: 5px 10px 5px 5px;
+        border-width: 2px;
+        border-radius: 999px 12px 12px 999px;
+      }
+
+      .city-map-node__medallion {
+        width: 38px;
+        height: 38px;
+        margin-right: 7px;
+      }
+
+      .city-map-node__icon { font-size: 16px; }
+      .city-map-node__name { font-size: 14px; }
       .city-map-node__progress {
-        font-size: 11px;
+        font-size: 10px;
+      }
+
+      .city-map-node--available::before {
+        left: 15px;
+        bottom: calc(100% + 5px);
+        width: 31px;
+        height: 31px;
+        font-size: 16px;
+      }
+
+      .city-map-node[data-city-order="1"] { top: 30% !important; left: 66% !important; }
+      .city-map-node[data-city-order="2"] { top: 43% !important; left: 47% !important; }
+      .city-map-node[data-city-order="3"] { top: 59% !important; left: 43% !important; }
+      .city-map-node[data-city-order="4"] { top: 73% !important; left: 57% !important; }
+      .city-map-node[data-city-order="5"] { top: 50% !important; left: 72% !important; }
+      .city-map-node[data-city-order="6"] { top: 66% !important; left: 25% !important; }
+
+      .taiwan-map-tip {
+        left: 18px;
+        bottom: 17px;
+        width: calc(100% - 36px);
+        padding: 10px 12px;
+        font-size: 12px;
+      }
+
+      .taiwan-map-tip__icon {
+        width: 34px;
+        height: 34px;
+        margin-right: 9px;
+        font-size: 19px;
+      }
+
+      .taiwan-map-legend {
+        display: none;
+      }
+
+      .taiwan-map-message {
+        right: 18px;
+        bottom: 91px;
+        max-width: calc(100% - 36px);
+        font-size: 12px;
+      }
+
+      #reviewJourneyEndingBtn {
+        right: 18px;
+        bottom: 92px;
+        padding: 7px 10px;
+        font-size: 12px;
       }
 
       .city-adventure-map__header {
