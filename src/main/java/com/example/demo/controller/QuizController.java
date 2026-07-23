@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.service.QuizQuestionService;
+import com.example.demo.service.MysteryChallengeService;
 import com.example.demo.service.UserService;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
@@ -18,10 +19,16 @@ import java.util.Map;
 public class QuizController {
     private final QuizQuestionService quizQuestionService;
     private final UserService userService;
+    private final MysteryChallengeService mysteryChallengeService;
 
-    public QuizController(QuizQuestionService quizQuestionService, UserService userService) {
+    public QuizController(
+            QuizQuestionService quizQuestionService,
+            UserService userService,
+            MysteryChallengeService mysteryChallengeService
+    ) {
         this.quizQuestionService = quizQuestionService;
         this.userService = userService;
+        this.mysteryChallengeService = mysteryChallengeService;
     }
 
     @GetMapping("/landmarks/{sceneId}/random")
@@ -29,6 +36,7 @@ public class QuizController {
             @PathVariable Long sceneId,
             @RequestParam(defaultValue = "CASUAL") String difficulty,
             Authentication authentication) {
+        mysteryChallengeService.rejectLegacyLandmarkStart(sceneId);
         return ResponseEntity.ok(ApiResponse.success("取得景點題目成功",
                 quizQuestionService.randomSceneQuestion(
                         userService.userIdFor(authentication.getName()), sceneId, difficulty)));

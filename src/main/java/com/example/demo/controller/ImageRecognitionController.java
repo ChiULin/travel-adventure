@@ -38,6 +38,7 @@ public class ImageRecognitionController {
             @RequestParam(defaultValue = "CASUAL") String difficulty,
             Authentication authentication) {
         Long userId = userService.userIdFor(authentication.getName());
+        mysteryChallengeService.rejectLegacyLandmarkStart(sceneId);
         return ResponseEntity.ok(ApiResponse.success(
                 "取得圖片辨識挑戰成功",
                 imageRecognitionService.issue(userId, sceneId, difficulty)

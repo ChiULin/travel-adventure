@@ -21,6 +21,12 @@ public class LandmarkChallengePoolRegistry {
                     MysteryChallengeType.QUIZ,
                     MysteryChallengeType.IMAGE_RECOGNITION,
                     MysteryChallengeType.PUZZLE
+            ),
+            new LandmarkStageKey(1, 3),
+            List.of(
+                    MysteryChallengeType.QUIZ,
+                    MysteryChallengeType.IMAGE_RECOGNITION,
+                    MysteryChallengeType.PUZZLE
             )
     );
 

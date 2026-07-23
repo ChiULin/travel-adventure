@@ -44,35 +44,31 @@ class StageChallengeIntegrationTest {
     private UserProgressRepository userProgressRepository;
 
     @Test
-    void taipeiChallengeApisEnforceStageOrderBeforeIssuingState() throws Exception {
+    void taipeiMysteryStagesRejectLegacyIssuanceApis() throws Exception {
         String token = registerAndGetToken("stage-api-player");
         User user = userRepository.findByUsername("stage-api-player").orElseThrow();
 
         mockMvc.perform(get("/api/explorations/cities/1/random")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.missionId").value("TAIPEI-101-01"));
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("此城市的探索已啟用未知挑戰，請由未知挑戰入口開始"));
 
-        assertLocked(get("/api/image-challenges/scenes/2?difficulty=NORMAL"), token);
-        assertLocked(get("/api/quizzes/landmarks/3/random?difficulty=NORMAL"), token);
+        assertMysteryOnly(get("/api/image-challenges/scenes/1?difficulty=NORMAL"), token);
+        assertMysteryOnly(get("/api/image-challenges/scenes/2?difficulty=NORMAL"), token);
+        assertMysteryOnly(get("/api/quizzes/landmarks/3/random?difficulty=NORMAL"), token);
         assertNoCheckin(user.getId(), 2L);
         assertNoCheckin(user.getId(), 3L);
+    }
 
-        saveCheckin(user, 1L, true);
-
-        mockMvc.perform(get("/api/image-challenges/scenes/2?difficulty=NORMAL")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.questionId").isString());
-        assertLocked(get("/api/quizzes/landmarks/3/random?difficulty=NORMAL"), token);
-
-        saveCheckin(user, 2L, true);
-
-        mockMvc.perform(get("/api/quizzes/landmarks/3/random?difficulty=NORMAL")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.questionId").isString());
-        assertNoCheckin(user.getId(), 3L);
+    private void assertMysteryOnly(
+            org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder request,
+            String token
+    ) throws Exception {
+        mockMvc.perform(request.header("Authorization", "Bearer " + token))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("此景點已啟用未知挑戰，請由未知挑戰入口開始"));
     }
 
     @Test
@@ -83,7 +79,7 @@ class StageChallengeIntegrationTest {
 
         saveCheckin(owner, 1L, true);
 
-        assertLocked(get("/api/image-challenges/scenes/2?difficulty=NORMAL"), otherToken);
+        assertLocked(mysteryStart(2L), otherToken);
     }
 
     @Test
@@ -93,7 +89,7 @@ class StageChallengeIntegrationTest {
 
         saveCheckin(user, 1L, false);
 
-        assertLocked(get("/api/image-challenges/scenes/2?difficulty=NORMAL"), token);
+        assertLocked(mysteryStart(2L), token);
     }
 
     @Test
@@ -121,6 +117,8 @@ class StageChallengeIntegrationTest {
                 .andExpect(jsonPath("$.data.cities[0].scenes[2].stageOrder").value(3))
                 .andExpect(jsonPath("$.data.cities[0].scenes[2].stageLabel").value("第 3 關"))
                 .andExpect(jsonPath("$.data.cities[0].scenes[2].stageStatus").value("LOCKED"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[2].mysteryChallengeEnabled").value(true))
+                .andExpect(jsonPath("$.data.cities[0].scenes[2].interactionType").value("MYSTERY"))
                 .andExpect(jsonPath("$.data.cities[0].scenes[2].actionLabel").value("完成上一關後解鎖"))
                 .andExpect(jsonPath("$.data.cities[0].bossStage.cityId").value(1))
                 .andExpect(jsonPath("$.data.cities[0].bossStage.bossName").value("台北守護者"))
@@ -763,7 +761,7 @@ class StageChallengeIntegrationTest {
                 .andExpect(jsonPath("$.data.cities[0].scenes[1].stageStatus").value("COMPLETED"))
                 .andExpect(jsonPath("$.data.cities[0].scenes[1].actionLabel").value("查看故事"))
                 .andExpect(jsonPath("$.data.cities[0].scenes[2].stageStatus").value("AVAILABLE"))
-                .andExpect(jsonPath("$.data.cities[0].scenes[2].actionLabel").value("開始挑戰"));
+                .andExpect(jsonPath("$.data.cities[0].scenes[2].actionLabel").value("開始未知挑戰"));
     }
 
     @Test
@@ -859,6 +857,14 @@ class StageChallengeIntegrationTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").value("請先完成上一個景點關卡"));
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder mysteryStart(
+            Long landmarkId
+    ) {
+        return post("/api/mystery-challenges/landmarks/" + landmarkId + "/start")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"difficulty\":\"NORMAL\"}");
     }
 
     private void saveCheckin(User user, Long sceneId, boolean completed) {

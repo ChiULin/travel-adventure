@@ -130,6 +130,31 @@ class MysteryChallengeIntegrationTest {
         assertEquals(type, extract(repeated, "challengeType"));
     }
 
+    @Test
+    void ximendingPoolUsesThreePreparedTypesAndReusesActiveSession() throws Exception {
+        String token = registerAndGetToken("ximending-mystery");
+        User user = userRepository.findByUsername("ximending-mystery").orElseThrow();
+        checkinService.completeExploration(user.getId(), 1L, "NORMAL");
+        checkinService.completeExploration(user.getId(), 2L, "NORMAL");
+
+        String first = startMystery(token, 3L);
+        String repeated = startMystery(token, 3L);
+        String type = extract(first, "challengeType");
+
+        assertEquals(
+                List.of(
+                        MysteryChallengeType.QUIZ,
+                        MysteryChallengeType.IMAGE_RECOGNITION,
+                        MysteryChallengeType.PUZZLE
+                ),
+                challengePoolRegistry.getAvailableTypes(1, 3)
+        );
+        assertTrue(Set.of("QUIZ", "IMAGE_RECOGNITION", "PUZZLE").contains(type));
+        assertEquals(extract(first, "challengeSessionId"),
+                extract(repeated, "challengeSessionId"));
+        assertEquals(type, extract(repeated, "challengeType"));
+    }
+
     private String childChallengeId(MysteryChallengeService.MysteryChallengeResponse response) {
         if (response.challengeType() == MysteryChallengeType.EXPLORATION) {
             return ((ExplorationService.ExplorationMissionView) response.challengeData()).missionId();

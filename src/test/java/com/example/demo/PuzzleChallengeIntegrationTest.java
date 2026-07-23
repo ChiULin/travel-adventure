@@ -38,7 +38,7 @@ class PuzzleChallengeIntegrationTest {
     private PuzzleChallengeService puzzleChallengeService;
 
     @Test
-    void sharedPuzzleFlowUnlocksPalaceAndThenXimendingOnlyWhenCorrect() throws Exception {
+    void sharedPuzzleFlowUnlocksAllTaipeiStagesAndBossOnlyWhenCorrect() throws Exception {
         String token = registerAndGetToken("puzzle-player");
         String otherToken = registerAndGetToken("puzzle-other");
         User user = userRepository.findByUsername("puzzle-player").orElseThrow();
@@ -151,12 +151,64 @@ class PuzzleChallengeIntegrationTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.cities[0].scenes[1].stageStatus").value("COMPLETED"))
-                .andExpect(jsonPath("$.data.cities[0].scenes[2].stageStatus").value("AVAILABLE"));
+                .andExpect(jsonPath("$.data.cities[0].scenes[2].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[0].bossStage.stageStatus").value("LOCKED"));
+
+        PuzzleChallengeService.PuzzleChallengeView ximending =
+                puzzleChallengeService.issue(user.getId(), 3L, "NORMAL", "MC-ximending-1");
+        PuzzleChallengeService.PuzzleChallengeView repeatedXimending =
+                puzzleChallengeService.issue(user.getId(), 3L, "NORMAL", "MC-ximending-reload");
+        assertTrue(ximending.challengeId().equals(repeatedXimending.challengeId()));
+        assertTrue(ximending.initialTileOrder().equals(repeatedXimending.initialTileOrder()));
+        assertTrue("/images/challenges/ximending-puzzle.jpg".equals(ximending.imageUrl()));
+        Long wrongXimendingAnswer = ximending.candidates().stream()
+                .map(PuzzleChallengeService.LandmarkOption::landmarkId)
+                .filter(landmarkId -> !landmarkId.equals(3L))
+                .findFirst()
+                .orElseThrow();
+
+        mockMvc.perform(post("/api/puzzle-challenges/" + ximending.challengeId() + "/complete")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(answerRequest(wrongXimendingAnswer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.correct").value(false))
+                .andExpect(jsonPath("$.data.completed").value(false));
+
+        assertFalse(checkinRepository.existsByUserIdAndSceneId(user.getId(), 3L));
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[0].scenes[2].stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[0].bossStage.stageStatus").value("LOCKED"));
+
+        PuzzleChallengeService.PuzzleChallengeView ximendingRetry =
+                puzzleChallengeService.issue(user.getId(), 3L, "NORMAL", "MC-ximending-2");
+        mockMvc.perform(post("/api/puzzle-challenges/" + ximendingRetry.challengeId() + "/complete")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(answerRequest(3L)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.correct").value(true))
+                .andExpect(jsonPath("$.data.completed").value(true))
+                .andExpect(jsonPath("$.data.sceneId").value(3))
+                .andExpect(jsonPath("$.data.cityBossUnlocked").value(true));
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[0].scenes[2].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[0].bossUnlocked").value(true))
+                .andExpect(jsonPath("$.data.cities[0].bossStage.stageStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.cities[0].bossStage.actionLabel")
+                        .value("挑戰城市守護者"));
     }
 
     private void assertPalaceLocked(String token) throws Exception {
-        mockMvc.perform(get("/api/image-challenges/scenes/2?difficulty=NORMAL")
-                        .header("Authorization", "Bearer " + token))
+        mockMvc.perform(post("/api/mystery-challenges/landmarks/2/start")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"difficulty\":\"NORMAL\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("請先完成上一個景點關卡"));
     }

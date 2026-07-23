@@ -42,6 +42,21 @@ public class VisualChallengeRegistry {
                                 candidate(1, 3)
                         ),
                         new VisualChallengeKey(1, 2)
+                ),
+                new VisualChallengeKey(1, 3),
+                new VisualChallengeDefinition(
+                        "TAIPEI-XIMENDING-VISUAL",
+                        "/images/challenges/ximending-focus.jpg",
+                        "/images/challenges/ximending-puzzle.jpg",
+                        "觀察紅磚、拱窗與八角屋頂等街區建築特徵，找出正確的臺灣景點。",
+                        "西門町融合紅樓歷史建築、徒步商圈與街頭文化，是臺北代表性的娛樂文化街區。",
+                        List.of(
+                                candidate(1, 3),
+                                candidate(2, 3),
+                                candidate(4, 1),
+                                candidate(6, 3)
+                        ),
+                        new VisualChallengeKey(1, 3)
                 )
         ));
     }

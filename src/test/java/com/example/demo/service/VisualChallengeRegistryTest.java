@@ -25,16 +25,26 @@ import static org.mockito.Mockito.when;
 class VisualChallengeRegistryTest {
 
     @Test
-    void taipeiAndPalaceShareStableVisualDefinitions() {
+    void allTaipeiLandmarksShareStableVisualDefinitions() {
         VisualChallengeRegistry registry = new VisualChallengeRegistry();
         VisualChallengeDefinition taipei = registry.findRequired(new VisualChallengeKey(1, 1));
         VisualChallengeDefinition palace = registry.findRequired(new VisualChallengeKey(1, 2));
+        VisualChallengeDefinition ximending =
+                registry.findRequired(new VisualChallengeKey(1, 3));
 
-        assertEquals(2, registry.findAll().size());
+        assertEquals(3, registry.findAll().size());
         assertEquals("/images/challenges/taipei101-focus.jpg", taipei.focusImageUrl());
         assertEquals(taipei.focusImageUrl(), taipei.puzzleImageUrl());
         assertEquals("/images/challenges/palace-focus.jpg", palace.focusImageUrl());
         assertEquals("/images/challenges/palace-puzzle.jpg", palace.puzzleImageUrl());
+        assertEquals("/images/challenges/ximending-focus.jpg", ximending.focusImageUrl());
+        assertEquals("/images/challenges/ximending-puzzle.jpg", ximending.puzzleImageUrl());
+        assertEquals(List.of(
+                new VisualChallengeKey(1, 3),
+                new VisualChallengeKey(2, 3),
+                new VisualChallengeKey(4, 1),
+                new VisualChallengeKey(6, 3)
+        ), ximending.candidateStages());
         registry.findAll().forEach((key, definition) -> {
             assertEquals(4, definition.candidateStages().size());
             assertEquals(4, definition.candidateStages().stream().distinct().count());

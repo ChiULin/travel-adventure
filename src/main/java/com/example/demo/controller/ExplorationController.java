@@ -37,6 +37,7 @@ public class ExplorationController {
     public ResponseEntity<ApiResponse<ExplorationService.ExplorationMissionView>> random(
             @PathVariable Long cityId, Authentication authentication) {
         Long userId = userService.userIdFor(authentication.getName());
+        mysteryChallengeService.rejectLegacyCityExplorationStart(cityId);
         return ResponseEntity.ok(ApiResponse.success(
                 "取得旅行委託成功",
                 explorationService.randomMission(userId, cityId)

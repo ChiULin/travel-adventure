@@ -164,6 +164,43 @@ public class MysteryChallengeService {
         });
     }
 
+    @Transactional(readOnly = true)
+    public void rejectLegacyLandmarkStart(Long landmarkId) {
+        LandmarkStageDefinition stage = stageRegistry.findByLandmarkId(landmarkId)
+                .orElse(null);
+        if (stage == null) {
+            return;
+        }
+        int cityOrder = cityRepository.findById(stage.cityId())
+                .map(city -> city.getUnlockOrder())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "找不到景點所屬城市"));
+        if (challengePoolRegistry.isEnabled(cityOrder, stage.stageOrder())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "此景點已啟用未知挑戰，請由未知挑戰入口開始"
+            );
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public void rejectLegacyCityExplorationStart(Long cityId) {
+        int cityOrder = cityRepository.findById(cityId)
+                .map(city -> city.getUnlockOrder())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "找不到城市"));
+        boolean mysteryExplorationEnabled = stageRegistry.findByCityId(cityId).stream()
+                .anyMatch(stage -> challengePoolRegistry
+                        .getAvailableTypes(cityOrder, stage.stageOrder())
+                        .contains(MysteryChallengeType.EXPLORATION));
+        if (mysteryExplorationEnabled) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "此城市的探索已啟用未知挑戰，請由未知挑戰入口開始"
+            );
+        }
+    }
+
     @Scheduled(fixedDelayString = "${game.mystery-challenge.cleanup-interval-ms:60000}")
     public void removeExpiredChallenges() {
         Instant now = clock.instant();

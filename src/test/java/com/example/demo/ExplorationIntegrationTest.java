@@ -177,23 +177,16 @@ class ExplorationIntegrationTest {
     }
 
     @Test
-    void cityMissionsRemainIsolatedAndCompleteTheirOwnScenes() throws Exception {
+    void legacyTaipeiExplorationIsBlockedWhileOtherCityMissionStillCompletes() throws Exception {
         String token = registerAndGetToken("multi-explore");
         User user = userRepository.findByUsername("multi-explore").orElseThrow();
         unlockCity(user.getId(), 5L);
 
         mockMvc.perform(get("/api/explorations/cities/1/random")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.missionId").value("TAIPEI-101-01"))
-                .andExpect(jsonPath("$.data.cityId").value(1))
-                .andExpect(jsonPath("$.data.availableInvestigations", hasSize(3)))
-                .andExpect(jsonPath("$.data.candidates", hasSize(3)))
-                .andExpect(jsonPath("$.data.candidates[0].sceneId").value(1))
-                .andExpect(jsonPath("$.data.candidates[1].sceneId").value(2))
-                .andExpect(jsonPath("$.data.candidates[2].sceneId").value(3))
-                .andExpect(jsonPath("$.data.correctSceneId").doesNotExist())
-                .andExpect(jsonPath("$.data.cultureAnswer").doesNotExist());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("此城市的探索已啟用未知挑戰，請由未知挑戰入口開始"));
 
         mockMvc.perform(get("/api/explorations/cities/5/random")
                         .header("Authorization", "Bearer " + token))
@@ -212,29 +205,10 @@ class ExplorationIntegrationTest {
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"sceneId\":13}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("選擇的地點不在本次候選清單中"));
+                .andExpect(status().isForbidden());
 
-        String taipeiChallenge = submitCorrectGuess(token, "TAIPEI-101-01", 1L, "台北101");
         String tarokoChallenge = submitCorrectGuess(token, "HUALIEN-TAROKO-01", 13L, "太魯閣");
-        String taipeiQuestionId = extract(taipeiChallenge, "questionId");
         String tarokoQuestionId = extract(tarokoChallenge, "questionId");
-
-        mockMvc.perform(post("/api/explorations/HUALIEN-TAROKO-01/complete")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(completeRequest(taipeiQuestionId, "立霧溪")))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("文化挑戰題目無效"));
-
-        mockMvc.perform(post("/api/explorations/TAIPEI-101-01/complete")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(completeRequest(taipeiQuestionId, "竹子")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.completed").value(true))
-                .andExpect(jsonPath("$.data.sceneId").value(1))
-                .andExpect(jsonPath("$.data.sceneName").value("台北101"));
 
         mockMvc.perform(post("/api/explorations/HUALIEN-TAROKO-01/complete")
                         .header("Authorization", "Bearer " + token)
@@ -245,17 +219,15 @@ class ExplorationIntegrationTest {
                 .andExpect(jsonPath("$.data.sceneId").value(13))
                 .andExpect(jsonPath("$.data.sceneName").value("太魯閣"));
 
-        if (!checkinRepository.existsByUserIdAndSceneId(user.getId(), 1L)
+        if (checkinRepository.existsByUserIdAndSceneId(user.getId(), 1L)
                 || !checkinRepository.existsByUserIdAndSceneId(user.getId(), 13L)) {
-            throw new AssertionError("Each mission must create a checkin for its own target scene");
+            throw new AssertionError("Only the issued non-mystery mission may create a checkin");
         }
 
-        for (Long cityId : java.util.List.of(1L, 5L)) {
-            mockMvc.perform(get("/api/explorations/cities/" + cityId + "/random")
-                            .header("Authorization", "Bearer " + token))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.message").value("目前沒有未完成的探索委託"));
-        }
+        mockMvc.perform(get("/api/explorations/cities/5/random")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("目前沒有未完成的探索委託"));
     }
 
     @Test

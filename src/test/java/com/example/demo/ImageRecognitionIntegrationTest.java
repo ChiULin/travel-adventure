@@ -6,6 +6,7 @@ import com.example.demo.entity.User;
 import com.example.demo.repository.CheckinRepository;
 import com.example.demo.repository.SceneRepository;
 import com.example.demo.repository.UserRepository;
+import com.example.demo.service.ImageRecognitionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -19,6 +20,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -36,6 +41,8 @@ class ImageRecognitionIntegrationTest {
     private SceneRepository sceneRepository;
     @Autowired
     private CheckinRepository checkinRepository;
+    @Autowired
+    private ImageRecognitionService imageRecognitionService;
 
     @Test
     void taipei101FocusImageChallengeHidesAnswerAndUnlocksPalaceOnlyWhenCorrect() throws Exception {
@@ -48,18 +55,12 @@ class ImageRecognitionIntegrationTest {
             throw new AssertionError("Taipei 101 focus image must exist");
         }
 
-        String firstBody = mockMvc.perform(get("/api/image-challenges/scenes/1?difficulty=NORMAL")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.imageUrl")
-                        .value("/images/challenges/taipei101-focus.jpg"))
-                .andExpect(jsonPath("$.data.candidates", hasSize(4)))
-                .andExpect(jsonPath("$.data.targetSceneId").doesNotExist())
-                .andExpect(jsonPath("$.data.correctSceneId").doesNotExist())
-                .andExpect(jsonPath("$.data.cultureExplanation").doesNotExist())
-                .andReturn().getResponse().getContentAsString();
-
-        String firstQuestionId = extract(firstBody, "questionId");
+        ImageRecognitionService.ImageChallengeView first =
+                imageRecognitionService.issue(user.getId(), 1L, "NORMAL");
+        assertEquals("/images/challenges/taipei101-focus.jpg", first.imageUrl());
+        assertEquals(4, first.candidates().size());
+        assertPublicViewHidesAnswer();
+        String firstQuestionId = first.questionId();
         mockMvc.perform(post("/api/image-challenges/" + firstQuestionId + "/complete")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -73,11 +74,9 @@ class ImageRecognitionIntegrationTest {
         }
         assertPalaceLocked(token);
 
-        String secondBody = mockMvc.perform(get("/api/image-challenges/scenes/1?difficulty=NORMAL")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-        String secondQuestionId = extract(secondBody, "questionId");
+        ImageRecognitionService.ImageChallengeView second =
+                imageRecognitionService.issue(user.getId(), 1L, "NORMAL");
+        String secondQuestionId = second.questionId();
 
         mockMvc.perform(post("/api/image-challenges/" + secondQuestionId + "/complete")
                         .header("Authorization", "Bearer " + token)
@@ -108,22 +107,16 @@ class ImageRecognitionIntegrationTest {
                 .andExpect(jsonPath("$.data.cities[0].scenes[1].interactionType").value("MYSTERY"))
                 .andExpect(jsonPath("$.data.cities[0].scenes[1].actionLabel").value("開始未知挑戰"));
 
-        String firstBody = mockMvc.perform(get("/api/image-challenges/scenes/2?difficulty=NORMAL")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("取得圖片辨識挑戰成功"))
-                .andExpect(jsonPath("$.data.questionId").isString())
-                .andExpect(jsonPath("$.data.cityId").value(1))
-                .andExpect(jsonPath("$.data.imageUrl").value("/images/challenges/palace-focus.jpg"))
-                .andExpect(jsonPath("$.data.displayMode").value("BLUR"))
-                .andExpect(jsonPath("$.data.blurLevel").value(6))
-                .andExpect(jsonPath("$.data.difficulty").value("NORMAL"))
-                .andExpect(jsonPath("$.data.candidates", hasSize(4)))
-                .andExpect(jsonPath("$.data.targetSceneId").doesNotExist())
-                .andExpect(jsonPath("$.data.correctSceneId").doesNotExist())
-                .andExpect(jsonPath("$.data.cultureExplanation").doesNotExist())
-                .andReturn().getResponse().getContentAsString();
-        String firstQuestionId = extract(firstBody, "questionId");
+        ImageRecognitionService.ImageChallengeView first =
+                imageRecognitionService.issue(user.getId(), 2L, "NORMAL");
+        assertEquals(1L, first.cityId());
+        assertEquals("/images/challenges/palace-focus.jpg", first.imageUrl());
+        assertEquals("BLUR", first.displayMode());
+        assertEquals(6, first.blurLevel());
+        assertEquals("NORMAL", first.difficulty());
+        assertEquals(4, first.candidates().size());
+        assertPublicViewHidesAnswer();
+        String firstQuestionId = first.questionId();
 
         mockMvc.perform(post("/api/image-challenges/" + firstQuestionId + "/complete")
                         .header("Authorization", "Bearer " + otherToken)
@@ -158,14 +151,10 @@ class ImageRecognitionIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("圖片辨識題目不存在或已使用"));
 
-        String secondBody = mockMvc.perform(get("/api/image-challenges/scenes/2?difficulty=NORMAL")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-        String secondQuestionId = extract(secondBody, "questionId");
-        if (firstQuestionId.equals(secondQuestionId)) {
-            throw new AssertionError("Consumed challenge must not be reused");
-        }
+        ImageRecognitionService.ImageChallengeView second =
+                imageRecognitionService.issue(user.getId(), 2L, "NORMAL");
+        String secondQuestionId = second.questionId();
+        assertNotEquals(firstQuestionId, secondQuestionId);
 
         mockMvc.perform(post("/api/image-challenges/" + secondQuestionId + "/complete")
                         .header("Authorization", "Bearer " + token)
@@ -200,10 +189,8 @@ class ImageRecognitionIntegrationTest {
                 .andExpect(jsonPath("$.data.cities[0].bossUnlocked").value(true))
                 .andExpect(jsonPath("$.data.cities[0].scenes[1].actionLabel").value("查看故事"));
 
-        mockMvc.perform(get("/api/image-challenges/scenes/2?difficulty=NORMAL")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("這個景點已經完成打卡"));
+        assertThrows(IllegalArgumentException.class,
+                () -> imageRecognitionService.issue(user.getId(), 2L, "NORMAL"));
     }
 
     private void completeOtherTaipeiScenes(User user) {
@@ -221,10 +208,22 @@ class ImageRecognitionIntegrationTest {
     }
 
     private void assertPalaceLocked(String token) throws Exception {
-        mockMvc.perform(get("/api/image-challenges/scenes/2?difficulty=NORMAL")
-                        .header("Authorization", "Bearer " + token))
+        mockMvc.perform(post("/api/mystery-challenges/landmarks/2/start")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"difficulty\":\"NORMAL\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("請先完成上一個景點關卡"));
+    }
+
+    private void assertPublicViewHidesAnswer() {
+        var fields = java.util.Arrays.stream(
+                        ImageRecognitionService.ImageChallengeView.class.getRecordComponents())
+                .map(java.lang.reflect.RecordComponent::getName)
+                .toList();
+        assertFalse(fields.contains("targetSceneId"));
+        assertFalse(fields.contains("correctSceneId"));
+        assertFalse(fields.contains("cultureExplanation"));
     }
 
     private String registerAndGetToken(String username) throws Exception {
