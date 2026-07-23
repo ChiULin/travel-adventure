@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.service.ImageRecognitionService;
+import com.example.demo.service.MysteryChallengeService;
 import com.example.demo.service.UserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -21,11 +22,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class ImageRecognitionController {
     private final ImageRecognitionService imageRecognitionService;
     private final UserService userService;
+    private final MysteryChallengeService mysteryChallengeService;
 
     public ImageRecognitionController(ImageRecognitionService imageRecognitionService,
-                                      UserService userService) {
+                                      UserService userService,
+                                      MysteryChallengeService mysteryChallengeService) {
         this.imageRecognitionService = imageRecognitionService;
         this.userService = userService;
+        this.mysteryChallengeService = mysteryChallengeService;
     }
 
     @GetMapping("/scenes/{sceneId}")
@@ -48,6 +52,7 @@ public class ImageRecognitionController {
         Long userId = userService.userIdFor(authentication.getName());
         ImageRecognitionService.ImageChallengeResult result = imageRecognitionService.complete(
                 userId, questionId, request.sceneId(), request.difficulty());
+        mysteryChallengeService.markConsumed(userId, questionId);
         String message = result.correct()
                 ? "辨識成功，完成景點打卡"
                 : "辨識錯誤，請重新取得圖片挑戰";

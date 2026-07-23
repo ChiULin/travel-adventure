@@ -23,6 +23,7 @@ const SESSION_KEY = "travelAdventureApiSession";
     let pendingCityStageTransition = null;
     let cityStageTransitionPlaying = false;
     let cityRouteMessageTimer = null;
+    let mysteryChallengeStarting = false;
     let answerCombo = 0;
     let cityLives = DIFFICULTIES[selectedDifficulty].lives;
     let cityFailedPending = false;
@@ -75,6 +76,7 @@ const SESSION_KEY = "travelAdventureApiSession";
         submitting: false,
         expired: false,
         result: null,
+        mysteryChallenge: false,
         error: null
       };
     }

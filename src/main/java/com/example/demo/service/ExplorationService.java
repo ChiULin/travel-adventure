@@ -121,6 +121,27 @@ public class ExplorationService {
         }
     }
 
+    public ExplorationMissionView missionForScene(Long userId, Long sceneId) {
+        ExplorationMissionDefinition selected = missionRegistry.findByTargetSceneId(sceneId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "這個景點沒有探索任務"));
+        validateCityUnlocked(userId, selected.cityId());
+        stageService.validateStageAvailable(userId, selected.targetSceneId());
+        validateSceneNotCompleted(userId, selected);
+
+        Instant now = clock.instant();
+        String key = stateKey(userId, selected.missionKey());
+        ExplorationState state = explorationStates.compute(key, (ignored, current) -> {
+            if (current == null || current.completed || !now.isBefore(current.expiresAt)) {
+                return new ExplorationState(userId, selected, now, now.plus(MISSION_DURATION));
+            }
+            return current;
+        });
+        synchronized (state) {
+            return missionView(state);
+        }
+    }
+
     public InvestigationResult investigate(Long userId, String missionId, String actionName) {
         ExplorationState state = activeState(userId, missionId);
         ClueType clueType = clueType(actionName);

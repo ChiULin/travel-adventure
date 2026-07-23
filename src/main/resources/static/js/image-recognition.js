@@ -19,17 +19,7 @@ function stopImageRecognitionTimer() {
         const challenge = await api(
           `/api/image-challenges/scenes/${scene.id}?difficulty=${encodeURIComponent(selectedDifficulty)}`
         );
-        imageRecognitionState = {
-          ...createImageRecognitionState(),
-          ...challenge,
-          sceneId: scene.id,
-          cityId: Number(challenge.cityId || activeCityId),
-          initialBlurLevel: Number(challenge.blurLevel || 0),
-          currentBlurLevel: Number(challenge.blurLevel || 0),
-          candidates: challenge.candidates || []
-        };
-        difficultyLocked = true;
-        startImageRecognitionTimer();
+        openIssuedImageRecognition(scene, challenge, false);
       } catch (error) {
         imageRecognitionState.error = error.message;
         addLog(error.message);
@@ -37,6 +27,31 @@ function stopImageRecognitionTimer() {
         imageRecognitionState.loading = false;
         renderImageRecognition();
       }
+    }
+
+    function openIssuedImageRecognition(scene, challenge, mysteryChallenge = false) {
+      if (!scene || !challenge) return;
+      stopQuizTimer();
+      stopImageRecognitionTimer();
+      imageRecognitionState = {
+        ...createImageRecognitionState(),
+        ...challenge,
+        sceneId: scene.id,
+        cityId: Number(challenge.cityId || activeCityId),
+        initialBlurLevel: Number(challenge.blurLevel || 0),
+        currentBlurLevel: Number(challenge.blurLevel || 0),
+        candidates: challenge.candidates || [],
+        mysteryChallenge,
+        loading: false
+      };
+      difficultyLocked = true;
+      renderPlayerSummary();
+      startImageRecognitionTimer();
+      renderImageRecognition();
+      document.getElementById("image-recognition")?.scrollIntoView({
+        behavior: prefersReducedCityMotion() ? "auto" : "smooth",
+        block: "start"
+      });
     }
 
     function startImageRecognitionTimer() {
@@ -223,5 +238,9 @@ function stopImageRecognitionTimer() {
     function retryImageRecognition() {
       const city = appState?.cities.find(item => item.id === Number(imageRecognitionState.cityId));
       const scene = city?.scenes?.find(item => item.id === Number(imageRecognitionState.sceneId));
-      if (scene) return startImageRecognition(scene);
+      if (!scene) return;
+      if (imageRecognitionState.mysteryChallenge) {
+        return startMysteryChallenge(scene, selectedDifficulty);
+      }
+      return startImageRecognition(scene);
     }

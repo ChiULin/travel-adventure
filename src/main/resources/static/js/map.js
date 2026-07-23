@@ -206,6 +206,7 @@ function getRouteStageStatusText(status) {
 
 function getRouteInteractionText(stage) {
       if (stage.type === "BOSS") return "城市守護者挑戰";
+      if (stage.source?.mysteryChallengeEnabled) return "尚未揭曉";
       return {
         EXPLORATION: "探索推理",
         IMAGE_RECOGNITION: "圖片辨識",
@@ -217,6 +218,7 @@ function getRouteStageIcon(stage) {
       if (stage.status === "LOCKED") return "🔒";
       if (stage.status === "COMPLETED") return "✓";
       if (stage.type === "BOSS") return "👹";
+      if (stage.source?.mysteryChallengeEnabled) return "❔";
       return {
         EXPLORATION: "🔍",
         IMAGE_RECOGNITION: "🖼️",
@@ -253,7 +255,9 @@ function renderCityRouteNode(stage, currentStage) {
           <span class="city-route-node__icon" aria-hidden="true">${getRouteStageIcon(stage)}</span>
           <span class="city-route-node__order">${escapeHtml(stage.label || `第 ${stage.order} 關`)}</span>
           <strong>${escapeHtml(stage.name)}</strong>
-          <small>${getRouteStageStatusText(stage.status)}</small>
+          <small>${stage.source?.mysteryChallengeEnabled && stage.status === "AVAILABLE"
+            ? "未知挑戰"
+            : getRouteStageStatusText(stage.status)}</small>
         </button>
       `;
     }
@@ -350,7 +354,10 @@ function renderCityAdventureMap(city, options = {}) {
               ${renderPlayerMarker(stages, options.initialPlayerOrder)}
             </div>
             <div class="city-route-legend" aria-label="關卡狀態圖例">
-              <span>🔍／🖼️／❓ 可挑戰</span>
+              ${stages.some(stage => stage.source?.mysteryChallengeEnabled)
+                ? "<span>❔ 未知挑戰</span>"
+                : ""}
+              <span>🔍／🖼️／❓ 一般挑戰</span>
               <span>✓ 已完成</span>
               <span>🔒 尚未解鎖</span>
               <span>👹 城市守護者</span>
@@ -379,11 +386,15 @@ function openCityRouteStageInfo(city, stage, stages) {
 
       const locked = stage.status === "LOCKED";
       const completed = stage.status === "COMPLETED";
+      const mysteryChallenge = stage.type === "LANDMARK"
+        && stage.source?.mysteryChallengeEnabled === true;
       const previous = stages
         .filter(item => item.order < stage.order)
         .sort((first, second) => second.order - first.order)[0];
       const description = stage.type === "BOSS"
         ? `完成城市最終文化挑戰，取得${city.name}徽章。`
+        : mysteryChallenge
+          ? stage.source.story || stage.source.desc || "靠近景點，看看旅途中會遇見什麼。"
         : completed
           ? stage.source.story || stage.source.desc || "這個景點已收錄至收藏圖鑑。"
           : stage.source.desc || "完成挑戰後解鎖景點故事。";
@@ -402,8 +413,27 @@ function openCityRouteStageInfo(city, stage, stages) {
           <h3 id="cityRouteInfoTitle">${escapeHtml(stage.name)}</h3>
           <strong class="city-route-info__label">${escapeHtml(stage.label || `第 ${stage.order} 關`)}</strong>
           <p>${escapeHtml(description)}</p>
+          ${mysteryChallenge ? `
+            <div class="city-route-info__hint">
+              旅行途中可能遇見不同的文化考驗，玩法會在開始後揭曉。
+            </div>
+            <div class="mystery-rewards">
+              <span><small>經驗值</small>+${formatNumber(scaledReward(stage.source.expReward))} EXP</span>
+              <span><small>金幣</small>+${formatNumber(scaledReward(stage.source.coinReward))}</span>
+            </div>
+            <div class="mystery-difficulty" aria-label="選擇未知挑戰難度">
+              ${Object.entries(DIFFICULTIES).map(([key, mode]) => `
+                <button type="button"
+                        class="mystery-difficulty__option ${selectedDifficulty === key ? "active" : ""}"
+                        data-mystery-difficulty="${key}">
+                  <strong>${escapeHtml(mode.label)}</strong>
+                  <small>${mode.seconds} 秒 · ${mode.lives} 生命</small>
+                </button>
+              `).join("")}
+            </div>
+          ` : ""}
           <div class="city-route-info__meta">
-            <span><small>玩法</small>${escapeHtml(getRouteInteractionText(stage))}</span>
+            <span><small>${mysteryChallenge ? "挑戰" : "玩法"}</small>${escapeHtml(getRouteInteractionText(stage))}</span>
             <span><small>狀態</small>${getRouteStageStatusText(stage.status)}</span>
           </div>
           <div class="city-route-info__actions">
@@ -411,12 +441,24 @@ function openCityRouteStageInfo(city, stage, stages) {
               <button class="btn ghost" type="button" data-route-stage-story="${stage.id}">查看故事</button>
             ` : ""}
             <button class="btn ${stage.type === "BOSS" ? "red" : ""}" type="button" data-route-stage-start>
-              ${completed ? "再次挑戰" : "開始挑戰"}
+              ${mysteryChallenge ? "開始未知挑戰" : completed ? "再次挑戰" : "開始挑戰"}
             </button>
           </div>
         `;
 
       modal.hidden = false;
+
+      content.querySelectorAll("[data-mystery-difficulty]").forEach(button => {
+        button.addEventListener("click", () => {
+          if (mysteryChallengeStarting) return;
+          selectedDifficulty = button.dataset.mysteryDifficulty;
+          resetLocalBattleState();
+          renderPlayerSummary();
+          content.querySelectorAll("[data-mystery-difficulty]").forEach(option => {
+            option.classList.toggle("active", option === button);
+          });
+        });
+      });
 
       content.querySelector("[data-route-stage-story]")?.addEventListener("click", event => {
         runWithButtonLock(event.currentTarget, async () => {
@@ -429,6 +471,10 @@ function openCityRouteStageInfo(city, stage, stages) {
           closeCityRouteStageInfo();
           if (stage.type === "BOSS") {
             await openBossDifficultySelection(stage.cityId);
+            return;
+          }
+          if (mysteryChallenge) {
+            await startMysteryChallenge(stage.source, selectedDifficulty);
             return;
           }
           await dispatchLandmarkInteraction(stage.source);
@@ -485,6 +531,123 @@ function bindCityAdventureMapEvents(city, stages) {
 
 function dispatchLandmarkInteraction(scene) {
       return startSceneInteraction(scene);
+    }
+
+const CHALLENGE_REVEAL_TEXT = Object.freeze({
+      EXPLORATION: {
+        icon: "🔍",
+        title: "探索推理",
+        description: "一名神秘旅人交給你一項調查委託。"
+      },
+      IMAGE_RECOGNITION: {
+        icon: "🖼️",
+        title: "圖片辨識",
+        description: "一張模糊照片出現在你的旅行筆記中。"
+      },
+      QUIZ: {
+        icon: "❓",
+        title: "文化問答",
+        description: "城市居民向你提出文化考驗。"
+      }
+    });
+
+function showMysteryRevealLoading(landmark) {
+      document.getElementById("mystery-challenge-reveal")?.remove();
+      const overlay = document.createElement("div");
+      overlay.id = "mystery-challenge-reveal";
+      overlay.className = "mystery-challenge-reveal";
+      overlay.setAttribute("role", "dialog");
+      overlay.setAttribute("aria-modal", "true");
+      overlay.setAttribute("aria-label", "未知挑戰揭曉");
+      overlay.innerHTML = `
+        <section class="mystery-reveal-card">
+          <span class="mystery-reveal-card__icon" aria-hidden="true">❔</span>
+          <span class="city-route-kicker">${escapeHtml(landmark.name)}</span>
+          <h2>分析旅行事件中……</h2>
+          <p>這次會遇見什麼文化考驗？</p>
+        </section>
+      `;
+      document.body.appendChild(overlay);
+      return overlay;
+    }
+
+async function playChallengeReveal(overlay, challengeType) {
+      const reveal = CHALLENGE_REVEAL_TEXT[challengeType];
+      if (!overlay || !reveal) {
+        throw new Error("無法辨識挑戰類型");
+      }
+
+      await waitForCityAnimation(350);
+      const card = overlay.querySelector(".mystery-reveal-card");
+      card?.classList.add("mystery-reveal-card--revealed");
+      if (card) {
+        card.innerHTML = `
+          <span class="mystery-reveal-card__icon" aria-hidden="true">${reveal.icon}</span>
+          <span class="city-route-kicker">挑戰揭曉</span>
+          <h2>${escapeHtml(reveal.title)}</h2>
+          <p>${escapeHtml(reveal.description)}</p>
+        `;
+      }
+      await waitForCityAnimation(900);
+    }
+
+function openIssuedQuizChallenge(landmark, challenge) {
+      activeQuizQuestion = challenge;
+      selectedDifficulty = challenge.difficulty || selectedDifficulty;
+      difficultyLocked = true;
+      activeSceneQuizId = Number(landmark.id);
+      activeBossQuizCityId = null;
+      renderPlayerSummary();
+      renderCityDetail(activeCityId);
+      document.querySelector(".city-route-active-challenge")?.scrollIntoView({
+        behavior: prefersReducedCityMotion() ? "auto" : "smooth",
+        block: "start"
+      });
+    }
+
+function dispatchMysteryChallenge(result, landmark) {
+      const challenge = result?.challengeData;
+      selectedDifficulty = result?.difficulty || challenge?.difficulty || selectedDifficulty;
+
+      switch (result?.challengeType) {
+        case "EXPLORATION":
+          openIssuedExplorationMission(challenge);
+          break;
+        case "IMAGE_RECOGNITION":
+          openIssuedImageRecognition(landmark, challenge, true);
+          break;
+        case "QUIZ":
+          openIssuedQuizChallenge(landmark, challenge);
+          break;
+        default:
+          throw new Error("無法辨識挑戰類型");
+      }
+    }
+
+async function startMysteryChallenge(landmark, difficulty) {
+      if (!landmark || mysteryChallengeStarting) return;
+      mysteryChallengeStarting = true;
+      const overlay = showMysteryRevealLoading(landmark);
+
+      try {
+        const result = await api(
+          `/api/mystery-challenges/landmarks/${encodeURIComponent(landmark.id)}/start`,
+          {
+            method: "POST",
+            body: JSON.stringify({ difficulty })
+          }
+        );
+        await playChallengeReveal(overlay, result.challengeType);
+        overlay.remove();
+        dispatchMysteryChallenge(result, landmark);
+        addLog(`${landmark.name}的未知挑戰已揭曉：${CHALLENGE_REVEAL_TEXT[result.challengeType]?.title || "文化考驗"}。`);
+      } catch (error) {
+        overlay.remove();
+        addLog(error.message);
+        showCityRouteMessage(error.message);
+      } finally {
+        mysteryChallengeStarting = false;
+      }
     }
 
 function openBossDifficultySelection(cityId) {

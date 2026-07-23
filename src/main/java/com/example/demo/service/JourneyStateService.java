@@ -40,13 +40,15 @@ public class JourneyStateService {
     private final ImageRecognitionRegistry imageRecognitionRegistry;
     private final LandmarkStageRegistry landmarkStageRegistry;
     private final LandmarkStageService landmarkStageService;
+    private final LandmarkChallengePoolRegistry landmarkChallengePoolRegistry;
 
     public JourneyStateService(UserRepository userRepository, CityRepository cityRepository, SceneRepository sceneRepository,
                                CheckinRepository checkinRepository, UserProgressRepository userProgressRepository,
                                ExplorationMissionRegistry explorationMissionRegistry,
                                ImageRecognitionRegistry imageRecognitionRegistry,
                                LandmarkStageRegistry landmarkStageRegistry,
-                               LandmarkStageService landmarkStageService) {
+                               LandmarkStageService landmarkStageService,
+                               LandmarkChallengePoolRegistry landmarkChallengePoolRegistry) {
         this.userRepository = userRepository;
         this.cityRepository = cityRepository;
         this.sceneRepository = sceneRepository;
@@ -56,6 +58,7 @@ public class JourneyStateService {
         this.imageRecognitionRegistry = imageRecognitionRegistry;
         this.landmarkStageRegistry = landmarkStageRegistry;
         this.landmarkStageService = landmarkStageService;
+        this.landmarkChallengePoolRegistry = landmarkChallengePoolRegistry;
     }
 
     public Map<String, Object> state(Long userId) {
@@ -82,7 +85,8 @@ public class JourneyStateService {
             boolean stageMode = landmarkStageRegistry.isCityFullyConfigured(city.getId());
             List<Map<String, Object>> sceneDtos = scenes.stream()
                     .map(scene -> sceneDto(
-                            userId, scene, checkedSceneIds.contains(scene.getId()), stageMode))
+                            userId, scene, checkedSceneIds.contains(scene.getId()), stageMode,
+                            city.getUnlockOrder()))
                     .collect(Collectors.toCollection(ArrayList::new));
             if (stageMode) {
                 sceneDtos.sort(Comparator.comparingInt(scene -> (Integer) scene.get("stageOrder")));
@@ -304,7 +308,13 @@ public class JourneyStateService {
         return new LevelInfo(level, remainingExp, requiredExp, progressPercent);
     }
 
-    private Map<String, Object> sceneDto(Long userId, Scene scene, boolean checked, boolean stageMode) {
+    private Map<String, Object> sceneDto(
+            Long userId,
+            Scene scene,
+            boolean checked,
+            boolean stageMode,
+            int cityOrder
+    ) {
         Map<String, Object> dto = new LinkedHashMap<>();
         dto.put("id", scene.getId());
         dto.put("name", scene.getName());
@@ -327,8 +337,6 @@ public class JourneyStateService {
         } else {
             interactionType = SceneInteractionType.QUIZ;
         }
-        dto.put("interactionType", interactionType.name());
-
         boolean stageConfigured = false;
         Integer stageOrder = null;
         String stageLabel = null;
@@ -344,11 +352,17 @@ public class JourneyStateService {
             stageStatus = result.status();
         }
 
-        dto.put("actionLabel", resolveActionLabel(checked, interactionType, stageStatus, stageConfigured));
+        boolean mysteryChallengeEnabled = stageOrder != null
+                && landmarkChallengePoolRegistry.isEnabled(cityOrder, stageOrder);
+        dto.put("interactionType", mysteryChallengeEnabled ? "MYSTERY" : interactionType.name());
+        dto.put("actionLabel", mysteryChallengeEnabled && !checked
+                ? "開始未知挑戰"
+                : resolveActionLabel(checked, interactionType, stageStatus, stageConfigured));
         dto.put("stageOrder", stageOrder);
         dto.put("stageLabel", stageLabel);
         dto.put("stageStatus", stageStatus);
         dto.put("stageConfigured", stageConfigured);
+        dto.put("mysteryChallengeEnabled", mysteryChallengeEnabled);
         return dto;
     }
 

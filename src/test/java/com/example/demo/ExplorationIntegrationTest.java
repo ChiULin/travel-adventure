@@ -268,7 +268,8 @@ class ExplorationIntegrationTest {
 
         mockMvc.perform(get("/api/journey/me").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.cities[0].scenes[0].interactionType").value("EXPLORATION"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[0].interactionType").value("MYSTERY"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[0].actionLabel").value("開始未知挑戰"))
                 .andExpect(jsonPath("$.data.cities[1].scenes[0].interactionType").value("EXPLORATION"))
                 .andExpect(jsonPath("$.data.cities[1].scenes[0].actionLabel").value("開始挑戰"))
                 .andExpect(jsonPath("$.data.cities[1].scenes[1].interactionType").value("QUIZ"))

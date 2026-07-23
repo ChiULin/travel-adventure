@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.service.ExplorationService;
+import com.example.demo.service.MysteryChallengeService;
 import com.example.demo.service.UserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -20,10 +21,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class ExplorationController {
     private final ExplorationService explorationService;
     private final UserService userService;
+    private final MysteryChallengeService mysteryChallengeService;
 
-    public ExplorationController(ExplorationService explorationService, UserService userService) {
+    public ExplorationController(
+            ExplorationService explorationService,
+            UserService userService,
+            MysteryChallengeService mysteryChallengeService
+    ) {
         this.explorationService = explorationService;
         this.userService = userService;
+        this.mysteryChallengeService = mysteryChallengeService;
     }
 
     @GetMapping("/cities/{cityId}/random")
@@ -72,6 +79,7 @@ public class ExplorationController {
         Long userId = userService.userIdFor(authentication.getName());
         ExplorationService.ExplorationCompletionResult result = explorationService.complete(
                 userId, missionId, request.questionId(), request.answer(), request.difficulty());
+        mysteryChallengeService.markConsumed(userId, missionId);
         String message = result.completed()
                 ? "探索完成，成功打卡" + result.sceneName()
                 : "文化挑戰答案錯誤";

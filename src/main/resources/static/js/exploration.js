@@ -15,6 +15,21 @@ async function loadExplorationMission(cityId = activeCityId || 1) {
       }
     }
 
+    function openIssuedExplorationMission(mission) {
+      if (!mission) return;
+      explorationState = createExplorationState();
+      explorationState.mission = mission;
+      explorationState.cityId = Number(mission.cityId || activeCityId);
+      applyExplorationProgress(mission);
+      difficultyLocked = true;
+      renderPlayerSummary();
+      renderExplorationMission();
+      document.getElementById("exploration-mission")?.scrollIntoView({
+        behavior: prefersReducedCityMotion() ? "auto" : "smooth",
+        block: "start"
+      });
+    }
+
     function applyExplorationProgress(data) {
       if (!data) return;
       if (Number.isFinite(Number(data.remainingActions))) {

@@ -139,7 +139,7 @@ async function refreshState() {
       renderAll();
       const explorationCity = appState.cities.find(city => city.id === activeCityId);
       const supportsExploration = explorationCity?.scenes?.some(scene =>
-        scene.interactionType === "EXPLORATION" && !scene.checked
+        scene.interactionType === "EXPLORATION" && !scene.mysteryChallengeEnabled && !scene.checked
       );
       if (supportsExploration && explorationCity.unlocked && !explorationState.mission && !explorationState.loading
           && !explorationState.error && !explorationState.completion) {
