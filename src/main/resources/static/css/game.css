@@ -440,6 +440,20 @@
       background: rgba(255, 255, 255, .9);
     }
 
+    .city-adventure-hero--taipei {
+      background:
+        linear-gradient(180deg, rgba(11, 35, 71, .08), rgba(11, 35, 71, .78)),
+        radial-gradient(circle at 76% 26%, rgba(255, 226, 137, .48), transparent 18%),
+        linear-gradient(135deg, #2c77c8, #53a86d 62%, #e4a83d);
+    }
+
+    .city-adventure-hero--taichung {
+      background:
+        linear-gradient(180deg, rgba(72, 45, 14, .05), rgba(46, 66, 35, .74)),
+        radial-gradient(circle at 76% 24%, rgba(255, 218, 111, .68), transparent 20%),
+        linear-gradient(145deg, #efb65d, #9fc48f 60%, #579077);
+    }
+
     .city-adventure-map {
       position: relative;
       margin-top: 16px;
@@ -451,6 +465,28 @@
         radial-gradient(circle at 82% 18%, rgba(243, 180, 63, .22), transparent 16%),
         linear-gradient(155deg, #eff8ff, #fffaf0 52%, #edf8ee);
       box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .78);
+    }
+
+    .city-route-board--taipei {
+      background:
+        radial-gradient(circle at 82% 18%, rgba(255, 255, 255, .72), transparent 19%),
+        linear-gradient(180deg, rgba(211, 235, 255, .96), rgba(242, 238, 225, .96));
+    }
+
+    .city-route-board--taichung {
+      background:
+        radial-gradient(circle at 80% 18%, rgba(255, 215, 116, .58), transparent 18%),
+        linear-gradient(180deg, rgba(255, 236, 188, .96), rgba(192, 224, 193, .96));
+    }
+
+    .city-route-board--default,
+    .city-route-board--tainan,
+    .city-route-board--kaohsiung,
+    .city-route-board--hualien,
+    .city-route-board--penghu {
+      background:
+        radial-gradient(circle at 82% 18%, rgba(255, 255, 255, .68), transparent 18%),
+        linear-gradient(155deg, #eff8ff, #fffaf0 52%, #edf8ee);
     }
 
     .city-adventure-map__header {
@@ -653,13 +689,13 @@
       filter: grayscale(.25);
     }
 
-    .city-route-decoration--mountain {
+    .city-route-decoration--primary {
       left: 5%;
       bottom: 5%;
       font-size: 74px;
     }
 
-    .city-route-decoration--lantern {
+    .city-route-decoration--secondary {
       right: 6%;
       top: 29%;
       font-size: 54px;
@@ -1375,11 +1411,11 @@
         font-size: 18px;
       }
 
-      .city-route-decoration--mountain {
+      .city-route-decoration--primary {
         font-size: 52px;
       }
 
-      .city-route-decoration--lantern {
+      .city-route-decoration--secondary {
         font-size: 38px;
       }
 

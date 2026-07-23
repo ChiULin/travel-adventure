@@ -399,7 +399,7 @@ function renderCityCards() {
         return;
       }
 
-      if (stages && isTaipeiRouteCity(city)) {
+      if (stages && shouldRenderAdventureMap(city)) {
         renderCityAdventureMap(city);
         return;
       }

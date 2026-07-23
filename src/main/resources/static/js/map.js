@@ -14,14 +14,106 @@ const CITY_ROUTE_POSITIONS = Object.freeze({
       4: { left: "72%", top: "16%" }
     });
 
-function isTaipeiRouteCity(city) {
-      return Number(city?.id) === 1 || String(city?.code || "").toUpperCase() === "TPE";
+const CITY_ADVENTURE_MAP_ENABLED_ORDERS = new Set([1, 2]);
+
+const CITY_MAP_THEMES = Object.freeze({
+      1: {
+        key: "taipei",
+        title: "臺北城市冒險",
+        subtitle: "穿越現代地標與歷史文化",
+        icon: "🏙️",
+        backgroundClass: "city-route-board--taipei",
+        decorations: [
+          { icon: "🏙️", className: "city-route-decoration--primary" },
+          { icon: "🏮", className: "city-route-decoration--secondary" }
+        ]
+      },
+      2: {
+        key: "taichung",
+        title: "臺中城市冒險",
+        subtitle: "探索濕地、建築與繽紛聚落",
+        icon: "🌅",
+        backgroundClass: "city-route-board--taichung",
+        decorations: [
+          { icon: "🌾", className: "city-route-decoration--primary" },
+          { icon: "🌅", className: "city-route-decoration--secondary" }
+        ]
+      },
+      3: {
+        key: "tainan",
+        title: "臺南城市冒險",
+        subtitle: "走入古城的歷史記憶",
+        icon: "🏯",
+        backgroundClass: "city-route-board--tainan",
+        decorations: [
+          { icon: "🏯", className: "city-route-decoration--primary" },
+          { icon: "🧱", className: "city-route-decoration--secondary" }
+        ]
+      },
+      4: {
+        key: "kaohsiung",
+        title: "高雄城市冒險",
+        subtitle: "港都藝術與文化之旅",
+        icon: "⚓",
+        backgroundClass: "city-route-board--kaohsiung",
+        decorations: [
+          { icon: "⚓", className: "city-route-decoration--primary" },
+          { icon: "🎨", className: "city-route-decoration--secondary" }
+        ]
+      },
+      5: {
+        key: "hualien",
+        title: "花蓮城市冒險",
+        subtitle: "穿越山海交會的自然景觀",
+        icon: "⛰️",
+        backgroundClass: "city-route-board--hualien",
+        decorations: [
+          { icon: "⛰️", className: "city-route-decoration--primary" },
+          { icon: "🌊", className: "city-route-decoration--secondary" }
+        ]
+      },
+      6: {
+        key: "penghu",
+        title: "澎湖城市冒險",
+        subtitle: "踏上海島與石滬的旅程",
+        icon: "🏝️",
+        backgroundClass: "city-route-board--penghu",
+        decorations: [
+          { icon: "🏝️", className: "city-route-decoration--primary" },
+          { icon: "🐚", className: "city-route-decoration--secondary" }
+        ]
+      }
+    });
+
+function cityRouteLandmarks(city) {
+      if (Array.isArray(city?.landmarks)) return city.landmarks;
+      return Array.isArray(city?.scenes) ? city.scenes : [];
+    }
+
+function shouldRenderAdventureMap(city) {
+      const landmarks = cityRouteLandmarks(city);
+      return CITY_ADVENTURE_MAP_ENABLED_ORDERS.has(Number(city?.unlockOrder))
+        && landmarks.length === 3
+        && landmarks.every(landmark => landmark.stageConfigured === true)
+        && city?.bossStage != null;
+    }
+
+function getCityMapTheme(city) {
+      return CITY_MAP_THEMES[Number(city?.unlockOrder)] ?? {
+        key: "default",
+        title: `${city?.name || "城市"}城市冒險`,
+        subtitle: "完成景點關卡，挑戰城市守護者",
+        icon: "🧭",
+        backgroundClass: "city-route-board--default",
+        decorations: [
+          { icon: "🧭", className: "city-route-decoration--primary" },
+          { icon: "✨", className: "city-route-decoration--secondary" }
+        ]
+      };
     }
 
 function buildCityRouteStages(city) {
-      const landmarks = Array.isArray(city?.landmarks)
-        ? city.landmarks
-        : Array.isArray(city?.scenes) ? city.scenes : [];
+      const landmarks = cityRouteLandmarks(city);
       const stages = [...landmarks]
         .sort((first, second) => Number(first.stageOrder) - Number(second.stageOrder))
         .map(landmark => ({
@@ -73,16 +165,31 @@ function getRouteStageStatusText(status) {
 function getRouteInteractionText(stage) {
       if (stage.type === "BOSS") return "城市守護者挑戰";
       return {
-        EXPLORATION: "線索探索",
+        EXPLORATION: "探索推理",
         IMAGE_RECOGNITION: "圖片辨識",
         QUIZ: "文化問答"
       }[stage.interactionType] || "景點挑戰";
     }
 
 function getRouteStageIcon(stage) {
-      if (stage.status === "COMPLETED") return "✓";
       if (stage.status === "LOCKED") return "🔒";
-      return stage.type === "BOSS" ? "👹" : "📍";
+      if (stage.status === "COMPLETED") return "✓";
+      if (stage.type === "BOSS") return "👹";
+      return {
+        EXPLORATION: "🔍",
+        IMAGE_RECOGNITION: "🖼️",
+        QUIZ: "❓"
+      }[stage.interactionType] || "📍";
+    }
+
+function renderCityRouteDecorations(theme) {
+      return (theme.decorations || [])
+        .map(decoration => `
+          <span class="city-route-decoration ${escapeHtml(decoration.className)}" aria-hidden="true">
+            ${escapeHtml(decoration.icon)}
+          </span>
+        `)
+        .join("");
     }
 
 function renderCityRouteNode(stage, currentStage) {
@@ -112,6 +219,7 @@ function renderCityAdventureMap(city) {
       const container = document.getElementById("city-detail");
       if (!container || !city) return;
 
+      const theme = getCityMapTheme(city);
       const stages = buildCityRouteStages(city);
       const currentStage = findCurrentStage(stages);
       const status = cityStatus(city);
@@ -135,16 +243,17 @@ function renderCityAdventureMap(city) {
             </section>
           `
           : "";
-      const logsMarkup = (logs.length ? logs : [{ time: "--:--", text: "歡迎來到台北旅行冒險。" }])
+      const routeTitle = stages.map(stage => stage.name).join(" → ");
+      const logsMarkup = (logs.length ? logs : [{ time: "--:--", text: `歡迎來到${city.name}旅行冒險。` }])
         .map(log => `<div class="log"><strong>${escapeHtml(log.time)}</strong> ${escapeHtml(log.text)}</div>`)
         .join("");
 
       container.innerHTML = `
-        <div class="detail-card city-adventure-detail">
-          <div class="detail-hero city-adventure-hero">
-            <span class="city-route-kicker">臺北驗證路線</span>
-            <h2>${escapeHtml(city.badgeIcon || "🎒")} ${escapeHtml(city.name)}旅行路線</h2>
-            <p>沿著城市路線完成三個文化景點，最後挑戰臺北守護者。</p>
+        <div class="detail-card city-adventure-detail" data-city-theme="${escapeHtml(theme.key)}">
+          <div class="detail-hero city-adventure-hero city-adventure-hero--${escapeHtml(theme.key)}">
+            <span class="city-route-kicker">${escapeHtml(theme.icon)} ${escapeHtml(theme.title)}</span>
+            <h2>${escapeHtml(city.badgeIcon || theme.icon)} ${escapeHtml(city.name)}旅行路線</h2>
+            <p>${escapeHtml(theme.subtitle)}</p>
           </div>
           <div class="section-head">
             <div>
@@ -162,19 +271,20 @@ function renderCityAdventureMap(city) {
               </button>
             `).join("")}
           </div>
-          <section class="city-adventure-map" aria-label="${escapeHtml(city.name)}四關旅行路線">
+          <section class="city-adventure-map city-route-board ${escapeHtml(theme.backgroundClass)}"
+                   data-city-theme="${escapeHtml(theme.key)}"
+                   aria-label="${escapeHtml(city.name)}四關旅行路線">
             <div class="city-adventure-map__header">
               <div>
-                <span class="city-route-kicker">臺北文化散策</span>
-                <h3>臺北 101 → 故宮 → 西門町 → 守護者</h3>
+                <span class="city-route-kicker">${escapeHtml(theme.title)}</span>
+                <h3>${escapeHtml(routeTitle)}</h3>
               </div>
               <strong>${currentStage
                 ? `🎒 玩家目前在${escapeHtml(currentStage.label || `第 ${currentStage.order} 關`)}`
                 : "旅程尚未開始"}</strong>
             </div>
             <div class="city-adventure-map__canvas">
-              <span class="city-route-decoration city-route-decoration--mountain" aria-hidden="true">⛰</span>
-              <span class="city-route-decoration city-route-decoration--lantern" aria-hidden="true">🏮</span>
+              ${renderCityRouteDecorations(theme)}
               <svg class="city-route-line" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                 <path d="M22 78 C39 72, 55 65, 70 59 C56 52, 42 43, 30 37 C46 29, 61 22, 72 16"></path>
               </svg>
@@ -187,7 +297,7 @@ function renderCityAdventureMap(city) {
               ` : ""}
             </div>
             <div class="city-route-legend" aria-label="關卡狀態圖例">
-              <span>📍 可挑戰</span>
+              <span>🔍／🖼️／❓ 可挑戰</span>
               <span>✓ 已完成</span>
               <span>🔒 尚未解鎖</span>
               <span>👹 城市守護者</span>
@@ -320,11 +430,19 @@ function openBossDifficultySelection(cityId) {
       return startBossQuiz(Number(cityId));
     }
 
-async function refreshCityRoute(cityId) {
+async function refreshCurrentCityAdventureMap(cityId) {
       await refreshState();
       const city = appState?.cities?.find(item => Number(item.id) === Number(cityId));
-      if (city && journeyView === "city" && Number(activeCityId) === Number(cityId)) {
+      if (!city) {
+        openTaiwanMapView();
+        return;
+      }
+      activeCityId = Number(city.id);
+      journeyView = "city";
+      if (shouldRenderAdventureMap(city)) {
         renderCityAdventureMap(city);
+      } else {
+        renderCityDetail(city.id);
       }
     }
 
