@@ -201,18 +201,45 @@ function renderBattleStatus() {
       return appState?.journeyCompleted === true;
     }
 
+    function finalEndingStorageKey() {
+      const userId = appState?.user?.id;
+      return userId == null ? null : `journey-ending-shown:${userId}`;
+    }
+
+    function finalEndingWasShown() {
+      const key = finalEndingStorageKey();
+      if (!key) return false;
+      try {
+        return localStorage.getItem(key) === "true";
+      } catch {
+        return false;
+      }
+    }
+
+    function rememberFinalEnding() {
+      const key = finalEndingStorageKey();
+      if (!key) return;
+      try {
+        localStorage.setItem(key, "true");
+      } catch {
+        // Storage may be unavailable; the in-memory guard still prevents loops.
+      }
+    }
+
     function maybeShowFinalEnding() {
       if (!appState || finalEndingShown || cityStageTransitionPlaying
           || pendingCityStageTransition || !tutorialIsCompleted() || overlayIsOpen()) return;
-      if (shouldShowFinalEnding()) {
+      if (shouldShowFinalEnding() && !finalEndingWasShown()) {
         showFinalEnding();
       }
     }
 
     function showFinalEnding() {
+      if (!shouldShowFinalEnding()) return;
       const user = appState.user || {};
       const cities = appState.cities || [];
       finalEndingShown = true;
+      rememberFinalEnding();
       stopQuizTimer();
       const cityRoute = cities.map((city, index) => `
         <div class="final-city" style="--d:${index * 0.16}s">

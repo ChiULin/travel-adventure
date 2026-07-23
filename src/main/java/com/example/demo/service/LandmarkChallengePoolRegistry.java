@@ -109,6 +109,27 @@ public class LandmarkChallengePoolRegistry {
                     MysteryChallengeType.IMAGE_RECOGNITION,
                     MysteryChallengeType.PUZZLE
             )
+            ),
+            Map.of(
+            new LandmarkStageKey(6, 1),
+            List.of(
+                    MysteryChallengeType.EXPLORATION,
+                    MysteryChallengeType.QUIZ,
+                    MysteryChallengeType.IMAGE_RECOGNITION,
+                    MysteryChallengeType.PUZZLE
+            ),
+            new LandmarkStageKey(6, 2),
+            List.of(
+                    MysteryChallengeType.QUIZ,
+                    MysteryChallengeType.IMAGE_RECOGNITION,
+                    MysteryChallengeType.PUZZLE
+            ),
+            new LandmarkStageKey(6, 3),
+            List.of(
+                    MysteryChallengeType.QUIZ,
+                    MysteryChallengeType.IMAGE_RECOGNITION,
+                    MysteryChallengeType.PUZZLE
+            )
             )
     );
 

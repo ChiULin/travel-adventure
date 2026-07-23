@@ -397,6 +397,15 @@
       font-weight: 900;
     }
 
+    #reviewJourneyEndingBtn {
+      display: block;
+      margin: 8px auto 0;
+    }
+
+    #reviewJourneyEndingBtn[hidden] {
+      display: none;
+    }
+
     .taiwan-map-legend {
       display: flex;
       justify-content: center;

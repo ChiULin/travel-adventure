@@ -244,6 +244,53 @@ public class VisualChallengeRegistry {
                                 ),
                                 new VisualChallengeKey(5, 3)
                         )
+                ),
+                Map.of(
+                        new VisualChallengeKey(6, 1),
+                        new VisualChallengeDefinition(
+                                "PENGHU-DOUBLE-HEART-WEIR-VISUAL",
+                                "/images/challenges/double-heart-focus.jpg",
+                                "/images/challenges/double-heart-puzzle.jpg",
+                                "觀察石牆排列、海水與潮間帶形狀的組合，找出正確景點。",
+                                "雙心石滬以玄武岩堆砌潮間帶石牆，呈現澎湖傳統海洋生活智慧。",
+                                List.of(
+                                        candidate(6, 1),
+                                        candidate(5, 2),
+                                        candidate(2, 1),
+                                        candidate(4, 2)
+                                ),
+                                new VisualChallengeKey(6, 1)
+                        ),
+                        new VisualChallengeKey(6, 2),
+                        new VisualChallengeDefinition(
+                                "PENGHU-SEA-BRIDGE-VISUAL",
+                                "/images/challenges/penghu-bridge-focus.jpg",
+                                "/images/challenges/penghu-bridge-puzzle.jpg",
+                                "觀察橋梁結構、海面及島嶼之間的連接方式，找出正確景點。",
+                                "澎湖跨海大橋跨越海域連接島嶼，是群島交通與海洋景觀的重要地標。",
+                                List.of(
+                                        candidate(6, 2),
+                                        candidate(4, 2),
+                                        candidate(5, 3),
+                                        candidate(2, 1)
+                                ),
+                                new VisualChallengeKey(6, 2)
+                        ),
+                        new VisualChallengeKey(6, 3),
+                        new VisualChallengeDefinition(
+                                "PENGHU-FIREWORKS-FESTIVAL-VISUAL",
+                                "/images/challenges/fireworks-focus.jpg",
+                                "/images/challenges/fireworks-puzzle.jpg",
+                                "觀察夜間活動、海面及煙火背景的組合，找出正確景點。",
+                                "澎湖花火節結合海島港灣、舞臺活動與海面煙火，形成代表性的夜間盛會。",
+                                List.of(
+                                        candidate(6, 3),
+                                        candidate(1, 3),
+                                        candidate(4, 2),
+                                        candidate(4, 1)
+                                ),
+                                new VisualChallengeKey(6, 3)
+                        )
                 )
         ));
     }

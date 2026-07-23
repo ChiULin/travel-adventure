@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 class VisualChallengeRegistryTest {
 
     @Test
-    void firstFiveCitiesShareStableVisualDefinitions() {
+    void allSixCitiesShareStableVisualDefinitions() {
         VisualChallengeRegistry registry = new VisualChallengeRegistry();
         VisualChallengeDefinition taipei = registry.findRequired(new VisualChallengeKey(1, 1));
         VisualChallengeDefinition palace = registry.findRequired(new VisualChallengeKey(1, 2));
@@ -55,8 +55,14 @@ class VisualChallengeRegistryTest {
                 registry.findRequired(new VisualChallengeKey(5, 2));
         VisualChallengeDefinition qingshui =
                 registry.findRequired(new VisualChallengeKey(5, 3));
+        VisualChallengeDefinition doubleHeart =
+                registry.findRequired(new VisualChallengeKey(6, 1));
+        VisualChallengeDefinition penghuBridge =
+                registry.findRequired(new VisualChallengeKey(6, 2));
+        VisualChallengeDefinition fireworks =
+                registry.findRequired(new VisualChallengeKey(6, 3));
 
-        assertEquals(15, registry.findAll().size());
+        assertEquals(18, registry.findAll().size());
         assertEquals("/images/challenges/taipei101-focus.jpg", taipei.focusImageUrl());
         assertEquals(taipei.focusImageUrl(), taipei.puzzleImageUrl());
         assertEquals("/images/challenges/palace-focus.jpg", palace.focusImageUrl());
@@ -96,6 +102,15 @@ class VisualChallengeRegistryTest {
         assertTrue(taroko.focusPrompt().contains("岩壁"));
         assertTrue(qixingtan.focusPrompt().contains("礫石"));
         assertTrue(qingshui.focusPrompt().contains("岩壁"));
+        assertEquals("/images/challenges/double-heart-focus.jpg", doubleHeart.focusImageUrl());
+        assertEquals("/images/challenges/double-heart-puzzle.jpg", doubleHeart.puzzleImageUrl());
+        assertEquals("/images/challenges/penghu-bridge-focus.jpg", penghuBridge.focusImageUrl());
+        assertEquals("/images/challenges/penghu-bridge-puzzle.jpg", penghuBridge.puzzleImageUrl());
+        assertEquals("/images/challenges/fireworks-focus.jpg", fireworks.focusImageUrl());
+        assertEquals("/images/challenges/fireworks-puzzle.jpg", fireworks.puzzleImageUrl());
+        assertTrue(doubleHeart.focusPrompt().contains("石牆"));
+        assertTrue(penghuBridge.focusPrompt().contains("橋梁"));
+        assertTrue(fireworks.focusPrompt().contains("煙火"));
         registry.findAll().forEach((key, definition) -> {
             assertEquals(4, definition.candidateStages().size());
             assertEquals(4, definition.candidateStages().stream().distinct().count());

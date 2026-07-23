@@ -217,15 +217,18 @@ class StageChallengeIntegrationTest {
                 .andExpect(jsonPath("$.data.cities[5].scenes[0].stageConfigured").value(true))
                 .andExpect(jsonPath("$.data.cities[5].scenes[0].stageOrder").value(1))
                 .andExpect(jsonPath("$.data.cities[5].scenes[0].stageStatus").value("LOCKED"))
-                .andExpect(jsonPath("$.data.cities[5].scenes[0].interactionType").value("EXPLORATION"))
+                .andExpect(jsonPath("$.data.cities[5].scenes[0].mysteryChallengeEnabled").value(true))
+                .andExpect(jsonPath("$.data.cities[5].scenes[0].interactionType").value("MYSTERY"))
                 .andExpect(jsonPath("$.data.cities[5].scenes[1].id").value(17))
                 .andExpect(jsonPath("$.data.cities[5].scenes[1].stageOrder").value(2))
                 .andExpect(jsonPath("$.data.cities[5].scenes[1].stageStatus").value("LOCKED"))
-                .andExpect(jsonPath("$.data.cities[5].scenes[1].interactionType").value("QUIZ"))
+                .andExpect(jsonPath("$.data.cities[5].scenes[1].mysteryChallengeEnabled").value(true))
+                .andExpect(jsonPath("$.data.cities[5].scenes[1].interactionType").value("MYSTERY"))
                 .andExpect(jsonPath("$.data.cities[5].scenes[2].id").value(18))
                 .andExpect(jsonPath("$.data.cities[5].scenes[2].stageOrder").value(3))
                 .andExpect(jsonPath("$.data.cities[5].scenes[2].stageStatus").value("LOCKED"))
-                .andExpect(jsonPath("$.data.cities[5].scenes[2].interactionType").value("QUIZ"))
+                .andExpect(jsonPath("$.data.cities[5].scenes[2].mysteryChallengeEnabled").value(true))
+                .andExpect(jsonPath("$.data.cities[5].scenes[2].interactionType").value("MYSTERY"))
                 .andExpect(jsonPath("$.data.cities[5].bossStage.cityId").value(6))
                 .andExpect(jsonPath("$.data.cities[5].bossStage.stageOrder").value(4))
                 .andExpect(jsonPath("$.data.cities[5].bossStage.stageStatus").value("LOCKED"));
@@ -642,49 +645,43 @@ class StageChallengeIntegrationTest {
     }
 
     @Test
-    void penghuChallengeApisEnforceStageOrderWithoutCreatingLockedExplorationState() throws Exception {
+    void penghuMysteryApisEnforceCityAndStageOrder() throws Exception {
         String token = registerAndGetToken("penghu-api-player");
         User user = userRepository.findByUsername("penghu-api-player").orElseThrow();
 
-        mockMvc.perform(get("/api/explorations/cities/6/random")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isBadRequest());
-        mockMvc.perform(post("/api/explorations/PENGHU-DOUBLE-HEART-01/investigate")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"action\":\"LOCAL\"}"))
-                .andExpect(status().is4xxClientError());
-        mockMvc.perform(post("/api/explorations/PENGHU-DOUBLE-HEART-01/guess")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"sceneId\":16}"))
-                .andExpect(status().is4xxClientError());
+        assertLocked(mysteryStart(16L), token);
         assertNoCheckin(user.getId(), 16L);
 
         unlockCity(user, 6L);
 
         mockMvc.perform(get("/api/explorations/cities/6/random")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.missionId").value("PENGHU-DOUBLE-HEART-01"));
+                .andExpect(status().isConflict());
+        mockMvc.perform(get("/api/quizzes/landmarks/16/random?difficulty=NORMAL")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isConflict());
+        mockMvc.perform(get("/api/image-challenges/scenes/16")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isConflict());
+        mockMvc.perform(mysteryStart(16L)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
 
-        assertLocked(get("/api/quizzes/landmarks/17/random?difficulty=NORMAL"), token);
+        assertLocked(mysteryStart(17L), token);
         assertNoCheckin(user.getId(), 17L);
 
         saveCheckin(user, 16L, true);
 
-        mockMvc.perform(get("/api/quizzes/landmarks/17/random?difficulty=NORMAL")
+        mockMvc.perform(mysteryStart(17L)
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.questionId").isString());
-        assertLocked(get("/api/quizzes/landmarks/18/random?difficulty=NORMAL"), token);
+                .andExpect(status().isOk());
+        assertLocked(mysteryStart(18L), token);
 
         saveCheckin(user, 17L, true);
 
-        mockMvc.perform(get("/api/quizzes/landmarks/18/random?difficulty=NORMAL")
+        mockMvc.perform(mysteryStart(18L)
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.questionId").isString());
+                .andExpect(status().isOk());
         assertNoCheckin(user.getId(), 18L);
     }
 
@@ -739,7 +736,7 @@ class StageChallengeIntegrationTest {
         unlockCity(other, 6L);
         saveCheckin(owner, 16L, true);
 
-        assertLocked(get("/api/quizzes/landmarks/17/random?difficulty=NORMAL"), otherToken);
+        assertLocked(mysteryStart(17L), otherToken);
     }
 
     @Test
@@ -749,7 +746,7 @@ class StageChallengeIntegrationTest {
         unlockCity(user, 6L);
         saveCheckin(user, 16L, false);
 
-        assertLocked(get("/api/quizzes/landmarks/17/random?difficulty=NORMAL"), token);
+        assertLocked(mysteryStart(17L), token);
     }
 
     @Test

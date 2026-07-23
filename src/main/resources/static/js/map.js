@@ -951,6 +951,12 @@ function renderTaiwanMap(cities) {
       const summary = document.getElementById("taiwan-map-summary");
       if (summary) summary.textContent = `${completedCount} / ${orderedCities.length} 城市完成`;
 
+      const endingButton = document.getElementById("reviewJourneyEndingBtn");
+      if (endingButton) {
+        endingButton.hidden = appState?.journeyCompleted !== true;
+        endingButton.onclick = () => showFinalEnding();
+      }
+
       bindCityMapEvents(orderedCities);
     }
 
