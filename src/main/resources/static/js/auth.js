@@ -34,6 +34,7 @@ function clearAuthState() {
       selectedDifficulty = "NORMAL";
       resetLocalBattleState();
       stopImageRecognitionTimer();
+      stopPuzzleTimer();
       appState = null;
       missionsState = null;
       achievementsState = null;
@@ -41,6 +42,7 @@ function clearAuthState() {
       selectedCollectionId = null;
       explorationState = createExplorationState();
       imageRecognitionState = createImageRecognitionState();
+      puzzleState = createPuzzleState();
       activeCityId = null;
       journeyView = "map";
       answerSubmitting = false;
@@ -55,6 +57,7 @@ function clearAuthState() {
       document.getElementById("collectionDetail").innerHTML = "";
       document.getElementById("exploration-mission").innerHTML = "";
       document.getElementById("image-recognition").innerHTML = "";
+      document.getElementById("puzzle-challenge").innerHTML = "";
       closeResultCard();
     }
 

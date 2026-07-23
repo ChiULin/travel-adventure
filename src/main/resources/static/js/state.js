@@ -35,6 +35,7 @@ const SESSION_KEY = "travelAdventureApiSession";
     let selectedCollectionId = null;
     let explorationState = createExplorationState();
     let imageRecognitionState = createImageRecognitionState();
+    let puzzleState = createPuzzleState();
 
     function createExplorationState() {
       return {
@@ -77,6 +78,30 @@ const SESSION_KEY = "travelAdventureApiSession";
         expired: false,
         result: null,
         mysteryChallenge: false,
+        error: null
+      };
+    }
+
+    function createPuzzleState() {
+      return {
+        challengeId: null,
+        cityId: null,
+        landmarkId: null,
+        imageUrl: null,
+        gridSize: 3,
+        tileOrder: [],
+        candidates: [],
+        difficulty: null,
+        seconds: 0,
+        issuedAt: null,
+        expiresAt: null,
+        selectedPosition: null,
+        solved: false,
+        timerId: null,
+        remainingSeconds: 0,
+        submitting: false,
+        expired: false,
+        result: null,
         error: null
       };
     }

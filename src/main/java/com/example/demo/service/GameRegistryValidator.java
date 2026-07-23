@@ -19,6 +19,7 @@ public class GameRegistryValidator implements ApplicationRunner {
     private final LandmarkStageRegistry stageRegistry;
     private final ExplorationMissionRegistry explorationRegistry;
     private final ImageRecognitionRegistry imageRegistry;
+    private final PuzzleChallengeRegistry puzzleRegistry;
     private final SceneRepository sceneRepository;
     private final CityRepository cityRepository;
 
@@ -26,11 +27,13 @@ public class GameRegistryValidator implements ApplicationRunner {
             LandmarkStageRegistry stageRegistry,
             ExplorationMissionRegistry explorationRegistry,
             ImageRecognitionRegistry imageRegistry,
+            PuzzleChallengeRegistry puzzleRegistry,
             SceneRepository sceneRepository,
             CityRepository cityRepository) {
         this.stageRegistry = stageRegistry;
         this.explorationRegistry = explorationRegistry;
         this.imageRegistry = imageRegistry;
+        this.puzzleRegistry = puzzleRegistry;
         this.sceneRepository = sceneRepository;
         this.cityRepository = cityRepository;
     }
@@ -53,6 +56,12 @@ public class GameRegistryValidator implements ApplicationRunner {
                 challenge.candidateStages().forEach(stageKey ->
                         validateImageStage(
                                 "image challenge " + challenge.challengeKey(),
+                                stageKey,
+                                citiesByOrder)));
+        puzzleRegistry.findAll().forEach(challenge ->
+                challenge.candidateStages().forEach(stageKey ->
+                        validateImageStage(
+                                "puzzle challenge " + challenge.challengeKey(),
                                 stageKey,
                                 citiesByOrder)));
     }

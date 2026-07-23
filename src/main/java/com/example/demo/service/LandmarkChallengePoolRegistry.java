@@ -13,7 +13,8 @@ public class LandmarkChallengePoolRegistry {
             List.of(
                     MysteryChallengeType.EXPLORATION,
                     MysteryChallengeType.QUIZ,
-                    MysteryChallengeType.IMAGE_RECOGNITION
+                    MysteryChallengeType.IMAGE_RECOGNITION,
+                    MysteryChallengeType.PUZZLE
             )
     );
 

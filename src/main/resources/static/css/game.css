@@ -1663,6 +1663,98 @@
       box-shadow: inset 0 0 0 1px #17804b;
     }
 
+    .puzzle-card {
+      margin-bottom: 18px;
+      padding: 18px;
+      border: 1px solid rgba(36, 111, 229, .24);
+      border-radius: 16px;
+      background: linear-gradient(145deg, #f8fbff, #f5fff9);
+      box-shadow: 0 16px 40px rgba(31, 70, 130, .12);
+    }
+
+    .puzzle-card h2 {
+      margin: 4px 0;
+      color: var(--ink);
+    }
+
+    .puzzle-timer {
+      padding: 7px 10px;
+      border-radius: 999px;
+      color: #174887;
+      background: #e5efff;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .puzzle-timer.warning {
+      color: #8a2f20;
+      background: #ffe3dc;
+    }
+
+    .puzzle-board {
+      display: grid;
+      grid-template-columns: repeat(var(--puzzle-size), minmax(0, 1fr));
+      width: min(100%, 480px);
+      aspect-ratio: 4 / 3;
+      margin: 20px auto;
+      gap: 3px;
+      overflow: hidden;
+      border: 5px solid white;
+      border-radius: 12px;
+      background: #d9e4f2;
+      box-shadow: 0 12px 30px rgba(15, 43, 80, .2);
+    }
+
+    .puzzle-tile {
+      min-width: 0;
+      min-height: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 2px;
+      background-repeat: no-repeat;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: transform .16s ease, filter .16s ease, outline-color .16s ease;
+    }
+
+    .puzzle-tile:hover:not(:disabled) {
+      filter: brightness(1.08);
+    }
+
+    .puzzle-tile--selected {
+      position: relative;
+      z-index: 1;
+      outline: 4px solid #ffcc4d;
+      outline-offset: -4px;
+      transform: scale(.94);
+    }
+
+    .puzzle-tile:disabled {
+      cursor: default;
+      opacity: 1;
+    }
+
+    .puzzle-solved {
+      width: fit-content;
+      margin: 0 auto 14px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      color: #126236;
+      background: #def8e8;
+      font-weight: 900;
+    }
+
+    .puzzle-candidates {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    .puzzle-card--complete {
+      border-color: rgba(40, 168, 90, .42);
+      background: linear-gradient(145deg, #f4fff8, #edf9f2);
+    }
+
     @media (max-width: 640px) {
       .taiwan-map-view {
         padding: 14px 10px;
@@ -1777,6 +1869,25 @@
         grid-template-columns: 1fr;
       }
 
+      .puzzle-card {
+        padding: 14px 10px;
+      }
+
+      .puzzle-card .section-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .puzzle-board {
+        width: 100%;
+        gap: 2px;
+        border-width: 3px;
+      }
+
+      .puzzle-candidates {
+        grid-template-columns: 1fr;
+      }
+
       .stage-route {
         padding: 12px;
       }
@@ -1812,7 +1923,8 @@
       .city-completion-overlay,
       .city-completion-card,
       .mystery-challenge-reveal,
-      .mystery-reveal-card {
+      .mystery-reveal-card,
+      .puzzle-tile {
         animation: none !important;
         transition: none !important;
       }

@@ -7,6 +7,7 @@ import com.example.demo.service.ImageRecognitionService;
 import com.example.demo.service.LandmarkChallengePoolRegistry;
 import com.example.demo.service.MysteryChallengeService;
 import com.example.demo.service.MysteryChallengeType;
+import com.example.demo.service.PuzzleChallengeService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -84,7 +85,7 @@ class MysteryChallengeIntegrationTest {
     }
 
     @Test
-    void taipei101PoolContainsAllThreePreparedChallengeTypes() throws Exception {
+    void taipei101PoolContainsAllFourPreparedChallengeTypes() throws Exception {
         String token = registerAndGetToken("mystery-pool-player");
         String response = startMystery(token, 1L);
         String type = extract(response, "challengeType");
@@ -93,11 +94,12 @@ class MysteryChallengeIntegrationTest {
                 List.of(
                         MysteryChallengeType.EXPLORATION,
                         MysteryChallengeType.QUIZ,
-                        MysteryChallengeType.IMAGE_RECOGNITION
+                        MysteryChallengeType.IMAGE_RECOGNITION,
+                        MysteryChallengeType.PUZZLE
                 ),
                 challengePoolRegistry.getAvailableTypes(1, 1)
         );
-        assertTrue(Set.of("QUIZ", "EXPLORATION", "IMAGE_RECOGNITION").contains(type));
+        assertTrue(Set.of("QUIZ", "EXPLORATION", "IMAGE_RECOGNITION", "PUZZLE").contains(type));
     }
 
     private String childChallengeId(MysteryChallengeService.MysteryChallengeResponse response) {
@@ -106,6 +108,9 @@ class MysteryChallengeIntegrationTest {
         }
         if (response.challengeType() == MysteryChallengeType.IMAGE_RECOGNITION) {
             return ((ImageRecognitionService.ImageChallengeView) response.challengeData()).questionId();
+        }
+        if (response.challengeType() == MysteryChallengeType.PUZZLE) {
+            return ((PuzzleChallengeService.PuzzleChallengeView) response.challengeData()).challengeId();
         }
         @SuppressWarnings("unchecked")
         Map<String, Object> question = (Map<String, Object>) response.challengeData();

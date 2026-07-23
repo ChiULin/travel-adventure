@@ -548,6 +548,11 @@ const CHALLENGE_REVEAL_TEXT = Object.freeze({
         icon: "❓",
         title: "文化問答",
         description: "城市居民向你提出文化考驗。"
+      },
+      PUZZLE: {
+        icon: "🧩",
+        title: "景點拼圖",
+        description: "旅行照片散落成數個碎片，請將它重新拼合。"
       }
     });
 
@@ -618,6 +623,9 @@ function dispatchMysteryChallenge(result, landmark) {
           break;
         case "QUIZ":
           openIssuedQuizChallenge(landmark, challenge);
+          break;
+        case "PUZZLE":
+          openIssuedPuzzleChallenge(landmark, challenge);
           break;
         default:
           throw new Error("無法辨識挑戰類型");
