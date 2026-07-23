@@ -25,14 +25,20 @@ import static org.mockito.Mockito.when;
 class VisualChallengeRegistryTest {
 
     @Test
-    void allTaipeiLandmarksShareStableVisualDefinitions() {
+    void taipeiAndTaichungLandmarksShareStableVisualDefinitions() {
         VisualChallengeRegistry registry = new VisualChallengeRegistry();
         VisualChallengeDefinition taipei = registry.findRequired(new VisualChallengeKey(1, 1));
         VisualChallengeDefinition palace = registry.findRequired(new VisualChallengeKey(1, 2));
         VisualChallengeDefinition ximending =
                 registry.findRequired(new VisualChallengeKey(1, 3));
+        VisualChallengeDefinition gaomei =
+                registry.findRequired(new VisualChallengeKey(2, 1));
+        VisualChallengeDefinition opera =
+                registry.findRequired(new VisualChallengeKey(2, 2));
+        VisualChallengeDefinition rainbow =
+                registry.findRequired(new VisualChallengeKey(2, 3));
 
-        assertEquals(3, registry.findAll().size());
+        assertEquals(6, registry.findAll().size());
         assertEquals("/images/challenges/taipei101-focus.jpg", taipei.focusImageUrl());
         assertEquals(taipei.focusImageUrl(), taipei.puzzleImageUrl());
         assertEquals("/images/challenges/palace-focus.jpg", palace.focusImageUrl());
@@ -45,6 +51,12 @@ class VisualChallengeRegistryTest {
                 new VisualChallengeKey(4, 1),
                 new VisualChallengeKey(6, 3)
         ), ximending.candidateStages());
+        assertEquals("/images/challenges/gaomei-focus.jpg", gaomei.focusImageUrl());
+        assertEquals("", gaomei.puzzleImageUrl());
+        assertEquals("/images/challenges/opera-focus.jpg", opera.focusImageUrl());
+        assertEquals("/images/challenges/opera-puzzle.jpg", opera.puzzleImageUrl());
+        assertEquals("/images/challenges/rainbow-focus.jpg", rainbow.focusImageUrl());
+        assertEquals("/images/challenges/rainbow-puzzle.jpg", rainbow.puzzleImageUrl());
         registry.findAll().forEach((key, definition) -> {
             assertEquals(4, definition.candidateStages().size());
             assertEquals(4, definition.candidateStages().stream().distinct().count());

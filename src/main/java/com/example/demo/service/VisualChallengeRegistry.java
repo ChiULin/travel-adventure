@@ -57,6 +57,51 @@ public class VisualChallengeRegistry {
                                 candidate(6, 3)
                         ),
                         new VisualChallengeKey(1, 3)
+                ),
+                new VisualChallengeKey(2, 1),
+                new VisualChallengeDefinition(
+                        "TAICHUNG-GAOMEI-WETLANDS-VISUAL",
+                        "/images/challenges/gaomei-focus.jpg",
+                        "",
+                        "觀察木棧道、潮間帶水面、夕陽倒影與風力發電機，找出正確的臺灣景點。",
+                        "高美濕地擁有潮間帶生態、木棧道與沿岸風機，是臺中著名的夕陽景觀。",
+                        List.of(
+                                candidate(2, 1),
+                                candidate(5, 2),
+                                candidate(5, 3),
+                                candidate(6, 1)
+                        ),
+                        new VisualChallengeKey(2, 1)
+                ),
+                new VisualChallengeKey(2, 2),
+                new VisualChallengeDefinition(
+                        "TAICHUNG-NATIONAL-THEATER-VISUAL",
+                        "/images/challenges/opera-focus.jpg",
+                        "/images/challenges/opera-puzzle.jpg",
+                        "觀察曲面牆、洞穴式開口與流動的建築輪廓，找出正確的臺灣景點。",
+                        "臺中國家歌劇院以曲牆、孔洞與無樑板的洞穴式空間聞名。",
+                        List.of(
+                                candidate(2, 2),
+                                candidate(1, 1),
+                                candidate(4, 1),
+                                candidate(1, 2)
+                        ),
+                        new VisualChallengeKey(2, 2)
+                ),
+                new VisualChallengeKey(2, 3),
+                new VisualChallengeDefinition(
+                        "TAICHUNG-RAINBOW-VILLAGE-VISUAL",
+                        "/images/challenges/rainbow-focus.jpg",
+                        "/images/challenges/rainbow-puzzle.jpg",
+                        "觀察牆面上的人物、動物與鮮明手繪圖案，找出正確的臺灣景點。",
+                        "彩虹眷村以充滿人物、動物與幾何圖案的彩繪巷弄保存眷村記憶。",
+                        List.of(
+                                candidate(2, 3),
+                                candidate(1, 3),
+                                candidate(4, 1),
+                                candidate(6, 3)
+                        ),
+                        new VisualChallengeKey(2, 3)
                 )
         ));
     }
