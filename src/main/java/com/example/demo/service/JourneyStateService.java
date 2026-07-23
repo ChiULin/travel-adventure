@@ -329,14 +329,6 @@ public class JourneyStateService {
         dto.put("expReward", scene.getExpReward());
         dto.put("coinReward", scene.getCoinReward());
         dto.put("checked", checked);
-        SceneInteractionType interactionType;
-        if (explorationMissionRegistry.findByTargetSceneId(scene.getId()).isPresent()) {
-            interactionType = SceneInteractionType.EXPLORATION;
-        } else if (imageRecognitionRegistry.findByTargetSceneId(scene.getId()).isPresent()) {
-            interactionType = SceneInteractionType.IMAGE_RECOGNITION;
-        } else {
-            interactionType = SceneInteractionType.QUIZ;
-        }
         boolean stageConfigured = false;
         Integer stageOrder = null;
         String stageLabel = null;
@@ -350,6 +342,16 @@ public class JourneyStateService {
             stageOrder = result.stageOrder();
             stageLabel = "第 " + result.stageOrder() + " 關";
             stageStatus = result.status();
+        }
+
+        SceneInteractionType interactionType;
+        if (explorationMissionRegistry.findByTargetSceneId(scene.getId()).isPresent()) {
+            interactionType = SceneInteractionType.EXPLORATION;
+        } else if (stageOrder != null
+                && imageRecognitionRegistry.findByStage(cityOrder, stageOrder).isPresent()) {
+            interactionType = SceneInteractionType.IMAGE_RECOGNITION;
+        } else {
+            interactionType = SceneInteractionType.QUIZ;
         }
 
         boolean mysteryChallengeEnabled = stageOrder != null

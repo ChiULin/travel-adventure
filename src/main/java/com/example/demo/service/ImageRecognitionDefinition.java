@@ -5,27 +5,25 @@ import java.util.Objects;
 
 public record ImageRecognitionDefinition(
         String challengeKey,
-        Long cityId,
-        Long targetSceneId,
+        LandmarkStageKey targetStage,
         String prompt,
         String imageUrl,
-        List<Long> candidateSceneIds,
+        List<LandmarkStageKey> candidateStages,
         String cultureExplanation
 ) {
     public ImageRecognitionDefinition {
         Objects.requireNonNull(challengeKey, "challengeKey");
-        Objects.requireNonNull(cityId, "cityId");
-        Objects.requireNonNull(targetSceneId, "targetSceneId");
+        Objects.requireNonNull(targetStage, "targetStage");
         Objects.requireNonNull(prompt, "prompt");
         Objects.requireNonNull(imageUrl, "imageUrl");
-        candidateSceneIds = List.copyOf(candidateSceneIds);
+        candidateStages = List.copyOf(candidateStages);
         Objects.requireNonNull(cultureExplanation, "cultureExplanation");
         if (challengeKey.isBlank() || prompt.isBlank() || imageUrl.isBlank() || cultureExplanation.isBlank()) {
             throw new IllegalArgumentException("圖片辨識定義不可包含空白內容");
         }
-        if (candidateSceneIds.size() < 4
-                || candidateSceneIds.stream().distinct().count() != candidateSceneIds.size()
-                || !candidateSceneIds.contains(targetSceneId)) {
+        if (candidateStages.size() < 4
+                || candidateStages.stream().distinct().count() != candidateStages.size()
+                || !candidateStages.contains(targetStage)) {
             throw new IllegalArgumentException("圖片辨識必須包含目標景點與至少四個不同候選景點");
         }
     }

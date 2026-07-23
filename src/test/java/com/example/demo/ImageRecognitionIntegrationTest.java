@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -35,6 +36,65 @@ class ImageRecognitionIntegrationTest {
     private SceneRepository sceneRepository;
     @Autowired
     private CheckinRepository checkinRepository;
+
+    @Test
+    void taipei101FocusImageChallengeHidesAnswerAndUnlocksPalaceOnlyWhenCorrect() throws Exception {
+        String token = registerAndGetToken("taipei-focus-player");
+        User user = userRepository.findByUsername("taipei-focus-player").orElseThrow();
+
+        ClassPathResource focusImage =
+                new ClassPathResource("static/images/challenges/taipei101-focus.jpg");
+        if (!focusImage.exists()) {
+            throw new AssertionError("Taipei 101 focus image must exist");
+        }
+
+        String firstBody = mockMvc.perform(get("/api/image-challenges/scenes/1?difficulty=NORMAL")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.imageUrl")
+                        .value("/images/challenges/taipei101-focus.jpg"))
+                .andExpect(jsonPath("$.data.candidates", hasSize(4)))
+                .andExpect(jsonPath("$.data.targetSceneId").doesNotExist())
+                .andExpect(jsonPath("$.data.correctSceneId").doesNotExist())
+                .andExpect(jsonPath("$.data.cultureExplanation").doesNotExist())
+                .andReturn().getResponse().getContentAsString();
+
+        String firstQuestionId = extract(firstBody, "questionId");
+        mockMvc.perform(post("/api/image-challenges/" + firstQuestionId + "/complete")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(answerRequest(5L, "NORMAL")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.correct").value(false))
+                .andExpect(jsonPath("$.data.completed").value(false));
+
+        if (checkinRepository.existsByUserIdAndSceneId(user.getId(), 1L)) {
+            throw new AssertionError("Wrong focus-image answer must not create checkin");
+        }
+        assertPalaceLocked(token);
+
+        String secondBody = mockMvc.perform(get("/api/image-challenges/scenes/1?difficulty=NORMAL")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String secondQuestionId = extract(secondBody, "questionId");
+
+        mockMvc.perform(post("/api/image-challenges/" + secondQuestionId + "/complete")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(answerRequest(1L, "NORMAL")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.correct").value(true))
+                .andExpect(jsonPath("$.data.completed").value(true))
+                .andExpect(jsonPath("$.data.sceneId").value(1))
+                .andExpect(jsonPath("$.data.sceneName").value("台北101"));
+
+        mockMvc.perform(get("/api/journey/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cities[0].scenes[0].stageStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.cities[0].scenes[1].stageStatus").value("AVAILABLE"));
+    }
 
     @Test
     void imageChallengeIsPlayerBoundOneTimeAndCompletesCheckin() throws Exception {
@@ -158,6 +218,13 @@ class ImageRecognitionIntegrationTest {
                     .earnedCoins(0)
                     .build());
         }
+    }
+
+    private void assertPalaceLocked(String token) throws Exception {
+        mockMvc.perform(get("/api/image-challenges/scenes/2?difficulty=NORMAL")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("請先完成上一個景點關卡"));
     }
 
     private String registerAndGetToken(String username) throws Exception {

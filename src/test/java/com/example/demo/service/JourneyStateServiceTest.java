@@ -125,7 +125,6 @@ class JourneyStateServiceTest {
         when(sceneRepository.findByCityId(CITY_ID)).thenReturn(scenes);
         scenes.forEach(scene -> {
             when(explorationMissionRegistry.findByTargetSceneId(scene.getId())).thenReturn(Optional.empty());
-            when(imageRecognitionRegistry.findByTargetSceneId(scene.getId())).thenReturn(Optional.empty());
         });
     }
 

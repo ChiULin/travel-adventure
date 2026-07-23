@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.IntUnaryOperator;
 
 @Service
 public class MysteryChallengeService {
@@ -33,6 +34,7 @@ public class MysteryChallengeService {
     private final ExplorationService explorationService;
     private final ImageRecognitionService imageRecognitionService;
     private final Clock clock;
+    private final IntUnaryOperator randomIndex;
     private final Map<String, ActiveMysteryChallenge> activeChallenges = new ConcurrentHashMap<>();
     private final Map<String, MysteryChallengeType> previousChallengeTypes = new ConcurrentHashMap<>();
     private final Object challengeMonitor = new Object();
@@ -49,7 +51,8 @@ public class MysteryChallengeService {
             ImageRecognitionService imageRecognitionService
     ) {
         this(sceneRepository, cityRepository, stageRegistry, stageService, challengePoolRegistry,
-                quizQuestionService, explorationService, imageRecognitionService, Clock.systemUTC());
+                quizQuestionService, explorationService, imageRecognitionService, Clock.systemUTC(),
+                bound -> ThreadLocalRandom.current().nextInt(bound));
     }
 
     MysteryChallengeService(
@@ -63,6 +66,23 @@ public class MysteryChallengeService {
             ImageRecognitionService imageRecognitionService,
             Clock clock
     ) {
+        this(sceneRepository, cityRepository, stageRegistry, stageService, challengePoolRegistry,
+                quizQuestionService, explorationService, imageRecognitionService, clock,
+                bound -> ThreadLocalRandom.current().nextInt(bound));
+    }
+
+    MysteryChallengeService(
+            SceneRepository sceneRepository,
+            CityRepository cityRepository,
+            LandmarkStageRegistry stageRegistry,
+            LandmarkStageService stageService,
+            LandmarkChallengePoolRegistry challengePoolRegistry,
+            QuizQuestionService quizQuestionService,
+            ExplorationService explorationService,
+            ImageRecognitionService imageRecognitionService,
+            Clock clock,
+            IntUnaryOperator randomIndex
+    ) {
         this.sceneRepository = sceneRepository;
         this.cityRepository = cityRepository;
         this.stageRegistry = stageRegistry;
@@ -72,6 +92,7 @@ public class MysteryChallengeService {
         this.explorationService = explorationService;
         this.imageRecognitionService = imageRecognitionService;
         this.clock = clock;
+        this.randomIndex = randomIndex;
     }
 
     @Transactional(readOnly = true)
@@ -150,7 +171,7 @@ public class MysteryChallengeService {
         List<MysteryChallengeType> selectable = candidates.size() > 1
                 ? candidates.stream().filter(type -> type != previous).toList()
                 : candidates;
-        return selectable.get(ThreadLocalRandom.current().nextInt(selectable.size()));
+        return selectable.get(randomIndex.applyAsInt(selectable.size()));
     }
 
     private IssuedChildChallenge issueChildChallenge(
@@ -198,7 +219,7 @@ public class MysteryChallengeService {
     private String challengeTitle(MysteryChallengeType type) {
         return switch (type) {
             case EXPLORATION -> "神秘旅人的委託";
-            case IMAGE_RECOGNITION -> "旅行筆記的模糊照片";
+            case IMAGE_RECOGNITION -> "重點圖片辨識";
             case QUIZ -> "城市居民的文化考驗";
         };
     }

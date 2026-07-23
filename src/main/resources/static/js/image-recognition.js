@@ -92,6 +92,9 @@ function stopImageRecognitionTimer() {
     function renderImageRecognition() {
       const container = document.getElementById("image-recognition");
       if (!container || !session?.token) return;
+      const challengeLabel = imageRecognitionState.mysteryChallenge
+        ? "重點圖片辨識"
+        : "圖片辨識挑戰";
       if (Number(imageRecognitionState.cityId) !== Number(activeCityId)
           && !imageRecognitionState.result) {
         container.innerHTML = "";
@@ -100,7 +103,7 @@ function stopImageRecognitionTimer() {
       if (imageRecognitionState.loading) {
         container.innerHTML = `
           <article class="image-recognition-card">
-            <span class="exploration-kicker">圖片辨識挑戰</span>
+            <span class="exploration-kicker">${challengeLabel}</span>
             <h2>正在準備景點照片…</h2>
           </article>
         `;
@@ -109,7 +112,7 @@ function stopImageRecognitionTimer() {
       if (imageRecognitionState.error) {
         container.innerHTML = `
           <article class="image-recognition-card">
-            <span class="exploration-kicker">圖片辨識挑戰</span>
+            <span class="exploration-kicker">${challengeLabel}</span>
             <h2>目前無法取得圖片</h2>
             <p>${escapeHtml(imageRecognitionState.error)}</p>
             <button class="btn ghost" id="retryImageRecognitionBtn" type="button">重新取得挑戰</button>
@@ -135,7 +138,7 @@ function stopImageRecognitionTimer() {
         <article class="image-recognition-card">
           <div class="section-head">
             <div>
-              <span class="exploration-kicker">圖片辨識挑戰 · ${escapeHtml(imageRecognitionState.difficulty)}</span>
+              <span class="exploration-kicker">${challengeLabel} · ${escapeHtml(imageRecognitionState.difficulty)}</span>
               <h2>${escapeHtml(imageRecognitionState.prompt)}</h2>
             </div>
             <span class="image-timer ${imageRecognitionState.remainingSeconds <= 2 ? "warning" : ""}">
@@ -172,10 +175,13 @@ function stopImageRecognitionTimer() {
 
     function renderImageRecognitionResult(container) {
       const result = imageRecognitionState.result;
+      const challengeLabel = imageRecognitionState.mysteryChallenge
+        ? "重點圖片辨識"
+        : "圖片辨識挑戰";
       if (!result.correct) {
         container.innerHTML = `
           <article class="image-recognition-card">
-            <span class="exploration-kicker">圖片辨識挑戰</span>
+            <span class="exploration-kicker">${challengeLabel}</span>
             <div class="exploration-result wrong">
               <strong>辨識錯誤</strong>
               <span>「${escapeHtml(result.sceneName)}」不是這張照片的景點，本題已失效。</span>
@@ -191,7 +197,7 @@ function stopImageRecognitionTimer() {
       }
       container.innerHTML = `
         <article class="image-recognition-card image-recognition-complete">
-          <span class="exploration-kicker">圖片辨識完成</span>
+          <span class="exploration-kicker">${challengeLabel}完成</span>
           <h2>辨識成功：${escapeHtml(result.sceneName)}</h2>
           <p>${escapeHtml(result.cultureExplanation)}</p>
           <div class="exploration-rewards">

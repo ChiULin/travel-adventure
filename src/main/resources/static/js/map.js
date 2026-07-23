@@ -541,8 +541,8 @@ const CHALLENGE_REVEAL_TEXT = Object.freeze({
       },
       IMAGE_RECOGNITION: {
         icon: "🖼️",
-        title: "圖片辨識",
-        description: "一張模糊照片出現在你的旅行筆記中。"
+        title: "重點圖片辨識",
+        description: "旅行筆記中出現了一張景點局部照片。"
       },
       QUIZ: {
         icon: "❓",

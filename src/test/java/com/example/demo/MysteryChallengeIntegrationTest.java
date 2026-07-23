@@ -3,6 +3,8 @@ package com.example.demo;
 import com.example.demo.entity.User;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.service.ExplorationService;
+import com.example.demo.service.ImageRecognitionService;
+import com.example.demo.service.LandmarkChallengePoolRegistry;
 import com.example.demo.service.MysteryChallengeService;
 import com.example.demo.service.MysteryChallengeType;
 import org.junit.jupiter.api.Test;
@@ -14,6 +16,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Map;
+import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -37,6 +41,9 @@ class MysteryChallengeIntegrationTest {
 
     @Autowired
     private MysteryChallengeService mysteryChallengeService;
+
+    @Autowired
+    private LandmarkChallengePoolRegistry challengePoolRegistry;
 
     @Test
     void taipei101MysteryChallengeReturnsSameActiveSession() throws Exception {
@@ -77,18 +84,28 @@ class MysteryChallengeIntegrationTest {
     }
 
     @Test
-    void taipei101PoolUsesOnlyPreparedChallengeTypes() throws Exception {
+    void taipei101PoolContainsAllThreePreparedChallengeTypes() throws Exception {
         String token = registerAndGetToken("mystery-pool-player");
         String response = startMystery(token, 1L);
         String type = extract(response, "challengeType");
 
-        assertTrue(type.equals("QUIZ") || type.equals("EXPLORATION"));
-        assertNotEquals(MysteryChallengeType.IMAGE_RECOGNITION.name(), type);
+        assertEquals(
+                List.of(
+                        MysteryChallengeType.EXPLORATION,
+                        MysteryChallengeType.QUIZ,
+                        MysteryChallengeType.IMAGE_RECOGNITION
+                ),
+                challengePoolRegistry.getAvailableTypes(1, 1)
+        );
+        assertTrue(Set.of("QUIZ", "EXPLORATION", "IMAGE_RECOGNITION").contains(type));
     }
 
     private String childChallengeId(MysteryChallengeService.MysteryChallengeResponse response) {
         if (response.challengeType() == MysteryChallengeType.EXPLORATION) {
             return ((ExplorationService.ExplorationMissionView) response.challengeData()).missionId();
+        }
+        if (response.challengeType() == MysteryChallengeType.IMAGE_RECOGNITION) {
+            return ((ImageRecognitionService.ImageChallengeView) response.challengeData()).questionId();
         }
         @SuppressWarnings("unchecked")
         Map<String, Object> question = (Map<String, Object>) response.challengeData();

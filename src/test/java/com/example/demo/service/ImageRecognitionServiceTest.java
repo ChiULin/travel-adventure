@@ -1,10 +1,13 @@
 package com.example.demo.service;
 
+import com.example.demo.entity.City;
 import com.example.demo.entity.Scene;
 import com.example.demo.entity.UserProgress;
 import com.example.demo.repository.CheckinRepository;
+import com.example.demo.repository.CityRepository;
 import com.example.demo.repository.SceneRepository;
 import com.example.demo.repository.UserProgressRepository;
+import com.example.demo.stage.LandmarkStageRegistry;
 import com.example.demo.stage.LandmarkStageService;
 import com.example.demo.stage.StageLockedException;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,11 +48,27 @@ class ImageRecognitionServiceTest {
         progressRepository = mock(UserProgressRepository.class);
         checkinService = mock(CheckinService.class);
         SceneRepository sceneRepository = mock(SceneRepository.class);
+        CityRepository cityRepository = mock(CityRepository.class);
         clock = new MutableClock(Instant.parse("2026-07-22T00:00:00Z"));
         stageService = mock(LandmarkStageService.class);
+        LandmarkStageRegistry stageRegistry = new LandmarkStageRegistry();
+        Map<Long, City> cities = Map.of(
+                1L, City.builder().id(1L).unlockOrder(1).build(),
+                2L, City.builder().id(2L).unlockOrder(2).build(),
+                3L, City.builder().id(3L).unlockOrder(3).build(),
+                4L, City.builder().id(4L).unlockOrder(4).build(),
+                5L, City.builder().id(5L).unlockOrder(5).build(),
+                6L, City.builder().id(6L).unlockOrder(6).build()
+        );
         when(progressRepository.findByUserIdAndCityId(1L, 1L))
                 .thenReturn(Optional.of(UserProgress.builder().unlocked(true).build()));
         when(checkinRepository.findByUserIdAndSceneId(1L, 2L)).thenReturn(Optional.empty());
+        when(cityRepository.findAllByOrderByUnlockOrderAsc()).thenReturn(
+                cities.values().stream()
+                        .sorted(java.util.Comparator.comparingInt(City::getUnlockOrder))
+                        .toList());
+        when(sceneRepository.findById(2L)).thenReturn(Optional.of(
+                Scene.builder().id(2L).name("國立故宮博物院").city(cities.get(1L)).build()));
         when(sceneRepository.findAllById(any())).thenAnswer(invocation -> {
             Iterable<Long> ids = invocation.getArgument(0);
             Map<Long, String> names = Map.of(
@@ -59,8 +78,8 @@ class ImageRecognitionServiceTest {
             return scenes;
         });
         service = new ImageRecognitionService(
-                new ImageRecognitionRegistry(), sceneRepository, checkinRepository,
-                progressRepository, checkinService, clock, stageService);
+                new ImageRecognitionRegistry(), sceneRepository, cityRepository, checkinRepository,
+                progressRepository, checkinService, stageRegistry, clock, stageService);
     }
 
     @Test
