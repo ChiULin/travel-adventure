@@ -479,11 +479,31 @@
         linear-gradient(180deg, rgba(255, 236, 188, .96), rgba(192, 224, 193, .96));
     }
 
-    .city-route-board--default,
-    .city-route-board--tainan,
-    .city-route-board--kaohsiung,
-    .city-route-board--hualien,
+    .city-route-board--tainan {
+      background:
+        radial-gradient(circle at 78% 20%, rgba(255, 225, 170, .85), transparent 32%),
+        linear-gradient(180deg, rgba(252, 231, 195, .97), rgba(196, 134, 95, .94));
+    }
+
+    .city-route-board--kaohsiung {
+      background:
+        radial-gradient(circle at 20% 15%, rgba(255, 210, 145, .86), transparent 30%),
+        linear-gradient(180deg, rgba(178, 224, 244, .96), rgba(84, 155, 181, .94));
+    }
+
+    .city-route-board--hualien {
+      background:
+        radial-gradient(circle at 75% 18%, rgba(232, 248, 231, .86), transparent 32%),
+        linear-gradient(180deg, rgba(183, 222, 204, .97), rgba(91, 153, 145, .95));
+    }
+
     .city-route-board--penghu {
+      background:
+        radial-gradient(circle at 25% 20%, rgba(255, 243, 184, .9), transparent 30%),
+        linear-gradient(180deg, rgba(159, 222, 240, .97), rgba(82, 168, 201, .95));
+    }
+
+    .city-route-board--default {
       background:
         radial-gradient(circle at 82% 18%, rgba(255, 255, 255, .68), transparent 18%),
         linear-gradient(155deg, #eff8ff, #fffaf0 52%, #edf8ee);

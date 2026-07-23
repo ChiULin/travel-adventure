@@ -14,8 +14,6 @@ const CITY_ROUTE_POSITIONS = Object.freeze({
       4: { left: "72%", top: "16%" }
     });
 
-const CITY_ADVENTURE_MAP_ENABLED_ORDERS = new Set([1, 2]);
-
 const CITY_MAP_THEMES = Object.freeze({
       1: {
         key: "taipei",
@@ -41,8 +39,8 @@ const CITY_MAP_THEMES = Object.freeze({
       },
       3: {
         key: "tainan",
-        title: "臺南城市冒險",
-        subtitle: "走入古城的歷史記憶",
+        title: "臺南古城冒險",
+        subtitle: "穿越府城古蹟與歷史記憶",
         icon: "🏯",
         backgroundClass: "city-route-board--tainan",
         decorations: [
@@ -52,8 +50,8 @@ const CITY_MAP_THEMES = Object.freeze({
       },
       4: {
         key: "kaohsiung",
-        title: "高雄城市冒險",
-        subtitle: "港都藝術與文化之旅",
+        title: "高雄港都冒險",
+        subtitle: "探索港灣、藝術與城市文化",
         icon: "⚓",
         backgroundClass: "city-route-board--kaohsiung",
         decorations: [
@@ -63,8 +61,8 @@ const CITY_MAP_THEMES = Object.freeze({
       },
       5: {
         key: "hualien",
-        title: "花蓮城市冒險",
-        subtitle: "穿越山海交會的自然景觀",
+        title: "花蓮山海冒險",
+        subtitle: "走入峽谷、海岸與自然秘境",
         icon: "⛰️",
         backgroundClass: "city-route-board--hualien",
         decorations: [
@@ -74,8 +72,8 @@ const CITY_MAP_THEMES = Object.freeze({
       },
       6: {
         key: "penghu",
-        title: "澎湖城市冒險",
-        subtitle: "踏上海島與石滬的旅程",
+        title: "澎湖海島冒險",
+        subtitle: "航向石滬、跨海大橋與花火之夜",
         icon: "🏝️",
         backgroundClass: "city-route-board--penghu",
         decorations: [
@@ -92,10 +90,10 @@ function cityRouteLandmarks(city) {
 
 function shouldRenderAdventureMap(city) {
       const landmarks = cityRouteLandmarks(city);
-      return CITY_ADVENTURE_MAP_ENABLED_ORDERS.has(Number(city?.unlockOrder))
-        && landmarks.length === 3
+      return landmarks.length === 3
         && landmarks.every(landmark => landmark.stageConfigured === true)
-        && city?.bossStage != null;
+        && city?.bossStage != null
+        && getCityMapTheme(city) != null;
     }
 
 function getCityMapTheme(city) {
