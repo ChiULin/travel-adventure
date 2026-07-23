@@ -197,6 +197,53 @@ public class VisualChallengeRegistry {
                                 ),
                                 new VisualChallengeKey(4, 3)
                         )
+                ),
+                Map.of(
+                        new VisualChallengeKey(5, 1),
+                        new VisualChallengeDefinition(
+                                "HUALIEN-TAROKO-VISUAL",
+                                "/images/challenges/taroko-focus.jpg",
+                                "/images/challenges/taroko-puzzle.jpg",
+                                "觀察岩壁、河谷、步道與地形特徵的組合，找出正確景點。",
+                                "太魯閣以大理石峽谷、立霧溪與沿山步道呈現花蓮壯闊的河谷地形。",
+                                List.of(
+                                        candidate(5, 1),
+                                        candidate(5, 3),
+                                        candidate(5, 2),
+                                        candidate(2, 1)
+                                ),
+                                new VisualChallengeKey(5, 1)
+                        ),
+                        new VisualChallengeKey(5, 2),
+                        new VisualChallengeDefinition(
+                                "HUALIEN-QIXINGTAN-VISUAL",
+                                "/images/challenges/qixingtan-focus.jpg",
+                                "/images/challenges/qixingtan-puzzle.jpg",
+                                "觀察礫石、海浪、海岸弧線與遠方山勢的組合，找出正確景點。",
+                                "七星潭以礫石海灘、弧形海岸及中央山脈與太平洋相接的景觀聞名。",
+                                List.of(
+                                        candidate(5, 2),
+                                        candidate(2, 1),
+                                        candidate(4, 2),
+                                        candidate(6, 1)
+                                ),
+                                new VisualChallengeKey(5, 2)
+                        ),
+                        new VisualChallengeKey(5, 3),
+                        new VisualChallengeDefinition(
+                                "HUALIEN-QINGSHUI-CLIFF-VISUAL",
+                                "/images/challenges/qingshui-focus.jpg",
+                                "/images/challenges/qingshui-puzzle.jpg",
+                                "觀察高聳岩壁、海岸道路與深淺海色的組合，找出正確景點。",
+                                "清水斷崖由高山岩壁直接落入太平洋，形成花蓮代表性的壯闊海岸地形。",
+                                List.of(
+                                        candidate(5, 3),
+                                        candidate(5, 1),
+                                        candidate(5, 2),
+                                        candidate(6, 2)
+                                ),
+                                new VisualChallengeKey(5, 3)
+                        )
                 )
         ));
     }
@@ -227,9 +274,12 @@ public class VisualChallengeRegistry {
         return new VisualCandidate(new VisualChallengeKey(cityOrder, stageOrder));
     }
 
-    private static <K, V> Map<K, V> merge(Map<K, V> first, Map<K, V> second) {
-        Map<K, V> merged = new HashMap<>(first);
-        merged.putAll(second);
+    @SafeVarargs
+    private static <K, V> Map<K, V> merge(Map<K, V>... maps) {
+        Map<K, V> merged = new HashMap<>();
+        for (Map<K, V> map : maps) {
+            merged.putAll(map);
+        }
         return Map.copyOf(merged);
     }
 }

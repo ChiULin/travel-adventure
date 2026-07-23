@@ -74,7 +74,7 @@ class ExplorationIntegrationTest {
     }
 
     @Test
-    void legacyTaipeiExplorationIsBlockedWhileOtherCityMissionStillCompletes() throws Exception {
+    void legacyTaipeiAndHualienExplorationsRequireMysteryEntry() throws Exception {
         String token = registerAndGetToken("multi-explore");
         User user = userRepository.findByUsername("multi-explore").orElseThrow();
         unlockCity(user.getId(), 5L);
@@ -87,44 +87,14 @@ class ExplorationIntegrationTest {
 
         mockMvc.perform(get("/api/explorations/cities/5/random")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.missionId").value("HUALIEN-TAROKO-01"))
-                .andExpect(jsonPath("$.data.cityId").value(5))
-                .andExpect(jsonPath("$.data.availableInvestigations", hasSize(3)))
-                .andExpect(jsonPath("$.data.candidates", hasSize(3)))
-                .andExpect(jsonPath("$.data.candidates[0].sceneId").value(13))
-                .andExpect(jsonPath("$.data.candidates[1].sceneId").value(14))
-                .andExpect(jsonPath("$.data.candidates[2].sceneId").value(15))
-                .andExpect(jsonPath("$.data.correctSceneId").doesNotExist())
-                .andExpect(jsonPath("$.data.cultureAnswer").doesNotExist());
-
-        mockMvc.perform(post("/api/explorations/TAIPEI-101-01/guess")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"sceneId\":13}"))
-                .andExpect(status().isForbidden());
-
-        String tarokoChallenge = submitCorrectGuess(token, "HUALIEN-TAROKO-01", 13L, "太魯閣");
-        String tarokoQuestionId = extract(tarokoChallenge, "questionId");
-
-        mockMvc.perform(post("/api/explorations/HUALIEN-TAROKO-01/complete")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(completeRequest(tarokoQuestionId, "立霧溪")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.completed").value(true))
-                .andExpect(jsonPath("$.data.sceneId").value(13))
-                .andExpect(jsonPath("$.data.sceneName").value("太魯閣"));
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("此城市的探索已啟用未知挑戰，請由未知挑戰入口開始"));
 
         if (checkinRepository.existsByUserIdAndSceneId(user.getId(), 1L)
-                || !checkinRepository.existsByUserIdAndSceneId(user.getId(), 13L)) {
-            throw new AssertionError("Only the issued non-mystery mission may create a checkin");
+                || checkinRepository.existsByUserIdAndSceneId(user.getId(), 13L)) {
+            throw new AssertionError("Legacy mystery-only exploration must not create a checkin");
         }
-
-        mockMvc.perform(get("/api/explorations/cities/5/random")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("目前沒有未完成的探索委託"));
     }
 
     @Test
@@ -133,6 +103,7 @@ class ExplorationIntegrationTest {
         User user = userRepository.findByUsername("remaining-cities").orElseThrow();
         unlockCity(user.getId(), 2L);
         unlockCity(user.getId(), 4L);
+        unlockCity(user.getId(), 5L);
         unlockCity(user.getId(), 6L);
 
         mockMvc.perform(get("/api/journey/me").header("Authorization", "Bearer " + token))
@@ -141,10 +112,15 @@ class ExplorationIntegrationTest {
                 .andExpect(jsonPath("$.data.cities[1].scenes[0].interactionType").value("MYSTERY"))
                 .andExpect(jsonPath("$.data.cities[2].scenes[1].interactionType").value("MYSTERY"))
                 .andExpect(jsonPath("$.data.cities[3].scenes[0].interactionType").value("MYSTERY"))
-                .andExpect(jsonPath("$.data.cities[4].scenes[0].interactionType").value("EXPLORATION"))
+                .andExpect(jsonPath("$.data.cities[4].scenes[0].interactionType").value("MYSTERY"))
                 .andExpect(jsonPath("$.data.cities[5].scenes[0].interactionType").value("EXPLORATION"));
 
         mockMvc.perform(get("/api/explorations/cities/4/random")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("此城市的探索已啟用未知挑戰，請由未知挑戰入口開始"));
+        mockMvc.perform(get("/api/explorations/cities/5/random")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message")
@@ -158,6 +134,7 @@ class ExplorationIntegrationTest {
                 token, "PENGHU-DOUBLE-HEART-01", questionId, "潮汐", 16L, "雙心石滬");
 
         if (checkinRepository.existsByUserIdAndSceneId(user.getId(), 10L)
+                || checkinRepository.existsByUserIdAndSceneId(user.getId(), 13L)
                 || !checkinRepository.existsByUserIdAndSceneId(user.getId(), 16L)) {
             throw new AssertionError("Only the issued Penghu mission may create a checkin");
         }

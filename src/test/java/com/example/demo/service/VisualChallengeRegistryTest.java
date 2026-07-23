@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 class VisualChallengeRegistryTest {
 
     @Test
-    void firstFourCitiesShareStableVisualDefinitions() {
+    void firstFiveCitiesShareStableVisualDefinitions() {
         VisualChallengeRegistry registry = new VisualChallengeRegistry();
         VisualChallengeDefinition taipei = registry.findRequired(new VisualChallengeKey(1, 1));
         VisualChallengeDefinition palace = registry.findRequired(new VisualChallengeKey(1, 2));
@@ -49,8 +49,14 @@ class VisualChallengeRegistryTest {
                 registry.findRequired(new VisualChallengeKey(4, 2));
         VisualChallengeDefinition dragonTiger =
                 registry.findRequired(new VisualChallengeKey(4, 3));
+        VisualChallengeDefinition taroko =
+                registry.findRequired(new VisualChallengeKey(5, 1));
+        VisualChallengeDefinition qixingtan =
+                registry.findRequired(new VisualChallengeKey(5, 2));
+        VisualChallengeDefinition qingshui =
+                registry.findRequired(new VisualChallengeKey(5, 3));
 
-        assertEquals(12, registry.findAll().size());
+        assertEquals(15, registry.findAll().size());
         assertEquals("/images/challenges/taipei101-focus.jpg", taipei.focusImageUrl());
         assertEquals(taipei.focusImageUrl(), taipei.puzzleImageUrl());
         assertEquals("/images/challenges/palace-focus.jpg", palace.focusImageUrl());
@@ -81,6 +87,15 @@ class VisualChallengeRegistryTest {
         assertEquals("/images/challenges/love-river-puzzle.jpg", loveRiver.puzzleImageUrl());
         assertEquals("/images/challenges/dragon-tiger-focus.jpg", dragonTiger.focusImageUrl());
         assertEquals("/images/challenges/dragon-tiger-puzzle.jpg", dragonTiger.puzzleImageUrl());
+        assertEquals("/images/challenges/taroko-focus.jpg", taroko.focusImageUrl());
+        assertEquals("/images/challenges/taroko-puzzle.jpg", taroko.puzzleImageUrl());
+        assertEquals("/images/challenges/qixingtan-focus.jpg", qixingtan.focusImageUrl());
+        assertEquals("/images/challenges/qixingtan-puzzle.jpg", qixingtan.puzzleImageUrl());
+        assertEquals("/images/challenges/qingshui-focus.jpg", qingshui.focusImageUrl());
+        assertEquals("/images/challenges/qingshui-puzzle.jpg", qingshui.puzzleImageUrl());
+        assertTrue(taroko.focusPrompt().contains("岩壁"));
+        assertTrue(qixingtan.focusPrompt().contains("礫石"));
+        assertTrue(qingshui.focusPrompt().contains("岩壁"));
         registry.findAll().forEach((key, definition) -> {
             assertEquals(4, definition.candidateStages().size());
             assertEquals(4, definition.candidateStages().stream().distinct().count());

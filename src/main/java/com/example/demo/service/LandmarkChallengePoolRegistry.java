@@ -88,6 +88,27 @@ public class LandmarkChallengePoolRegistry {
                     MysteryChallengeType.IMAGE_RECOGNITION,
                     MysteryChallengeType.PUZZLE
             )
+            ),
+            Map.of(
+            new LandmarkStageKey(5, 1),
+            List.of(
+                    MysteryChallengeType.EXPLORATION,
+                    MysteryChallengeType.QUIZ,
+                    MysteryChallengeType.IMAGE_RECOGNITION,
+                    MysteryChallengeType.PUZZLE
+            ),
+            new LandmarkStageKey(5, 2),
+            List.of(
+                    MysteryChallengeType.QUIZ,
+                    MysteryChallengeType.IMAGE_RECOGNITION,
+                    MysteryChallengeType.PUZZLE
+            ),
+            new LandmarkStageKey(5, 3),
+            List.of(
+                    MysteryChallengeType.QUIZ,
+                    MysteryChallengeType.IMAGE_RECOGNITION,
+                    MysteryChallengeType.PUZZLE
+            )
             )
     );
 
@@ -103,9 +124,12 @@ public class LandmarkChallengePoolRegistry {
         return pools;
     }
 
-    private static <K, V> Map<K, V> merge(Map<K, V> first, Map<K, V> second) {
-        Map<K, V> merged = new HashMap<>(first);
-        merged.putAll(second);
+    @SafeVarargs
+    private static <K, V> Map<K, V> merge(Map<K, V>... maps) {
+        Map<K, V> merged = new HashMap<>();
+        for (Map<K, V> map : maps) {
+            merged.putAll(map);
+        }
         return Map.copyOf(merged);
     }
 }
