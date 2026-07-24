@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import com.example.demo.dto.JourneyBossStageResponse;
 import com.example.demo.entity.Checkin;
 import com.example.demo.entity.City;
 import com.example.demo.entity.Scene;
@@ -10,6 +11,10 @@ import com.example.demo.repository.CityRepository;
 import com.example.demo.repository.SceneRepository;
 import com.example.demo.repository.UserProgressRepository;
 import com.example.demo.repository.UserRepository;
+import com.example.demo.stage.LandmarkStageRegistry;
+import com.example.demo.stage.LandmarkStageService;
+import com.example.demo.stage.LandmarkStageStatus;
+import com.example.demo.stage.StageStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -17,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,14 +36,29 @@ public class JourneyStateService {
     private final SceneRepository sceneRepository;
     private final CheckinRepository checkinRepository;
     private final UserProgressRepository userProgressRepository;
+    private final ExplorationMissionRegistry explorationMissionRegistry;
+    private final VisualChallengeRegistry visualChallengeRegistry;
+    private final LandmarkStageRegistry landmarkStageRegistry;
+    private final LandmarkStageService landmarkStageService;
+    private final LandmarkChallengePoolRegistry landmarkChallengePoolRegistry;
 
     public JourneyStateService(UserRepository userRepository, CityRepository cityRepository, SceneRepository sceneRepository,
-                               CheckinRepository checkinRepository, UserProgressRepository userProgressRepository) {
+                               CheckinRepository checkinRepository, UserProgressRepository userProgressRepository,
+                               ExplorationMissionRegistry explorationMissionRegistry,
+                               VisualChallengeRegistry visualChallengeRegistry,
+                               LandmarkStageRegistry landmarkStageRegistry,
+                               LandmarkStageService landmarkStageService,
+                               LandmarkChallengePoolRegistry landmarkChallengePoolRegistry) {
         this.userRepository = userRepository;
         this.cityRepository = cityRepository;
         this.sceneRepository = sceneRepository;
         this.checkinRepository = checkinRepository;
         this.userProgressRepository = userProgressRepository;
+        this.explorationMissionRegistry = explorationMissionRegistry;
+        this.visualChallengeRegistry = visualChallengeRegistry;
+        this.landmarkStageRegistry = landmarkStageRegistry;
+        this.landmarkStageService = landmarkStageService;
+        this.landmarkChallengePoolRegistry = landmarkChallengePoolRegistry;
     }
 
     public Map<String, Object> state(Long userId) {
@@ -61,6 +82,15 @@ public class JourneyStateService {
 
         List<Map<String, Object>> cityDtos = cities.stream().map(city -> {
             List<Scene> scenes = sceneRepository.findByCityId(city.getId());
+            boolean stageMode = landmarkStageRegistry.isCityFullyConfigured(city.getId());
+            List<Map<String, Object>> sceneDtos = scenes.stream()
+                    .map(scene -> sceneDto(
+                            userId, scene, checkedSceneIds.contains(scene.getId()), stageMode,
+                            city.getUnlockOrder()))
+                    .collect(Collectors.toCollection(ArrayList::new));
+            if (stageMode) {
+                sceneDtos.sort(Comparator.comparingInt(scene -> (Integer) scene.get("stageOrder")));
+            }
             long done = scenes.stream().filter(scene -> checkedSceneIds.contains(scene.getId())).count();
             UserProgress cityProgress = progressByCityId.get(city.getId());
             CityBadge badge = badgeFor(city);
@@ -88,13 +118,38 @@ public class JourneyStateService {
             dto.put("lastCompletedAt", cityProgress == null ? null : cityProgress.getLastCompletedAt());
             dto.put("done", done);
             dto.put("total", scenes.size());
-            dto.put("scenes", scenes.stream().map(scene -> sceneDto(scene, checkedSceneIds.contains(scene.getId()))).toList());
+            dto.put("scenes", sceneDtos);
+            dto.put("bossStage", stageMode
+                    ? buildBossStage(city, cityProgress, scenes, checkedSceneIds)
+                    : null);
             return dto;
         }).toList();
+
+        int completedCityCount = (int) cityDtos.stream()
+                .filter(city -> Boolean.TRUE.equals(city.get("defeated")))
+                .count();
+        int completedLandmarkCount = cityDtos.stream()
+                .mapToInt(city -> ((Number) city.get("done")).intValue())
+                .sum();
+        int badgeCount = (int) cityDtos.stream()
+                .filter(city -> Boolean.TRUE.equals(city.get("badgeUnlocked")))
+                .count();
+        int totalCityCount = cityDtos.size();
+        int totalLandmarkCount = cityDtos.stream()
+                .mapToInt(city -> ((Number) city.get("total")).intValue())
+                .sum();
+        boolean journeyCompleted = totalCityCount > 0 && completedCityCount == totalCityCount;
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("user", userDto(user));
         result.put("cities", cityDtos);
+        result.put("journeyCompleted", journeyCompleted);
+        result.put("completedCityCount", completedCityCount);
+        result.put("totalCityCount", totalCityCount);
+        result.put("completedLandmarkCount", completedLandmarkCount);
+        result.put("totalLandmarkCount", totalLandmarkCount);
+        result.put("badgeCount", badgeCount);
+        result.put("totalBadgeCount", totalCityCount);
         result.put("unlockedCityIds", unlockedCityIds);
         result.put("defeatedBossCityIds", defeatedCityIds);
         result.put("checkedSceneIds", checkedSceneIds);
@@ -253,7 +308,13 @@ public class JourneyStateService {
         return new LevelInfo(level, remainingExp, requiredExp, progressPercent);
     }
 
-    private Map<String, Object> sceneDto(Scene scene, boolean checked) {
+    private Map<String, Object> sceneDto(
+            Long userId,
+            Scene scene,
+            boolean checked,
+            boolean stageMode,
+            int cityOrder
+    ) {
         Map<String, Object> dto = new LinkedHashMap<>();
         dto.put("id", scene.getId());
         dto.put("name", scene.getName());
@@ -268,7 +329,102 @@ public class JourneyStateService {
         dto.put("expReward", scene.getExpReward());
         dto.put("coinReward", scene.getCoinReward());
         dto.put("checked", checked);
+        boolean stageConfigured = false;
+        Integer stageOrder = null;
+        String stageLabel = null;
+        StageStatus stageStatus = null;
+        if (stageMode) {
+            landmarkStageRegistry.findByLandmarkId(scene.getId())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "城市已啟用關卡模式，但景點缺少關卡設定"));
+            stageConfigured = true;
+            LandmarkStageStatus result = landmarkStageService.getStageStatus(userId, scene.getId());
+            stageOrder = result.stageOrder();
+            stageLabel = "第 " + result.stageOrder() + " 關";
+            stageStatus = result.status();
+        }
+
+        SceneInteractionType interactionType;
+        if (explorationMissionRegistry.findByTargetSceneId(scene.getId()).isPresent()) {
+            interactionType = SceneInteractionType.EXPLORATION;
+        } else if (stageOrder != null
+                && visualChallengeRegistry.findByStage(cityOrder, stageOrder).isPresent()) {
+            interactionType = SceneInteractionType.IMAGE_RECOGNITION;
+        } else {
+            interactionType = SceneInteractionType.QUIZ;
+        }
+
+        boolean mysteryChallengeEnabled = stageOrder != null
+                && landmarkChallengePoolRegistry.isEnabled(cityOrder, stageOrder);
+        dto.put("interactionType", mysteryChallengeEnabled ? "MYSTERY" : interactionType.name());
+        dto.put("actionLabel", mysteryChallengeEnabled
+                && !checked
+                && stageStatus != StageStatus.LOCKED
+                ? "開始未知挑戰"
+                : resolveActionLabel(checked, interactionType, stageStatus, stageConfigured));
+        dto.put("stageOrder", stageOrder);
+        dto.put("stageLabel", stageLabel);
+        dto.put("stageStatus", stageStatus);
+        dto.put("stageConfigured", stageConfigured);
+        dto.put("mysteryChallengeEnabled", mysteryChallengeEnabled);
         return dto;
+    }
+
+    private String resolveActionLabel(boolean checked, SceneInteractionType interactionType,
+                                      StageStatus stageStatus, boolean stageConfigured) {
+        if (stageConfigured) {
+            if (stageStatus == StageStatus.LOCKED) {
+                return "完成上一關後解鎖";
+            }
+            return checked ? "查看故事" : "開始挑戰";
+        }
+
+        if (checked) {
+            return "查看景點故事";
+        }
+        return switch (interactionType) {
+            case EXPLORATION -> "接旅行委託";
+            case IMAGE_RECOGNITION -> "觀察景點照片";
+            default -> "開始答題";
+        };
+    }
+
+    private JourneyBossStageResponse buildBossStage(City city, UserProgress cityProgress,
+                                                     List<Scene> scenes, Set<Long> checkedSceneIds) {
+        boolean allLandmarksCompleted = scenes.stream()
+                .allMatch(scene -> checkedSceneIds.contains(scene.getId()));
+        boolean bossCompleted = cityProgress != null
+                && Boolean.TRUE.equals(cityProgress.getBossCompleted());
+        StageStatus status;
+        if (bossCompleted) {
+            status = StageStatus.COMPLETED;
+        } else if (allLandmarksCompleted) {
+            status = StageStatus.AVAILABLE;
+        } else {
+            status = StageStatus.LOCKED;
+        }
+
+        int stageOrder = landmarkStageRegistry.findByCityId(city.getId()).stream()
+                .mapToInt(stage -> stage.stageOrder())
+                .max()
+                .orElse(0) + 1;
+
+        return new JourneyBossStageResponse(
+                city.getId(),
+                city.getBossName(),
+                stageOrder,
+                "第 " + stageOrder + " 關",
+                status,
+                resolveBossActionLabel(status)
+        );
+    }
+
+    private String resolveBossActionLabel(StageStatus status) {
+        return switch (status) {
+            case LOCKED -> "完成前三關後解鎖";
+            case AVAILABLE -> "挑戰城市守護者";
+            case COMPLETED -> "再次挑戰守護者";
+        };
     }
 
     private Map<String, String> optionsDto(String optionA, String optionB, String optionC, String optionD) {
@@ -314,19 +470,16 @@ public class JourneyStateService {
     }
 
     private CityBadge badgeFor(City city) {
-        if (city.getBadgeIcon() != null && city.getBadgeName() != null) {
-            return new CityBadge(city.getBadgeIcon(), city.getBadgeName());
-        }
-        String cityName = city.getName();
-        return switch (cityName) {
-            case "台北" -> new CityBadge("🏙️", "101 徽章");
-            case "台中" -> new CityBadge("🌅", "高美濕地徽章");
-            case "台南" -> new CityBadge("🏯", "古都徽章");
-            case "高雄" -> new CityBadge("🌊", "港都徽章");
-            case "花蓮" -> new CityBadge("⛰️", "山海徽章");
-            case "澎湖" -> new CityBadge("🏝️", "海島徽章");
-            default -> new CityBadge("🎒", cityName + "徽章");
-        };
+        String cityName = city.getName() == null || city.getName().isBlank()
+                ? "城市"
+                : city.getName();
+        String icon = city.getBadgeIcon() == null || city.getBadgeIcon().isBlank()
+                ? "🏅"
+                : city.getBadgeIcon();
+        String name = city.getBadgeName() == null || city.getBadgeName().isBlank()
+                ? cityName + "徽章"
+                : city.getBadgeName();
+        return new CityBadge(icon, name);
     }
 
     private record CityBadge(String icon, String name) {

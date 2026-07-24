@@ -3,6 +3,7 @@ package com.example.demo.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import lombok.ToString;
 
 @Data
 public class AuthRequest {
@@ -12,5 +13,6 @@ public class AuthRequest {
 
     @NotBlank(message = "請輸入密碼")
     @Size(min = 8, max = 72, message = "密碼需為 8 到 72 個字元")
+    @ToString.Exclude
     private String password;
 }

@@ -45,36 +45,47 @@
 
   <div id="tutorial" class="tutorial hidden" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle">
     <div class="tutorial-card">
-      <h2 id="tutorialTitle">新手教學</h2>
-      <p>跟著四個步驟開始旅程，準備好後就出發探索台灣。</p>
+      <h2 id="tutorialTitle">開始你的文化冒險</h2>
+      <p>記住四件事，就能開始第一段旅程。</p>
       <div class="tutorial-steps">
         <article class="tutorial-step">
-          <strong>步驟一</strong>
-          <h3>歡迎來到台灣旅行冒險！</h3>
-          <p>你將透過探索景點、回答問題與挑戰守護者，
-逐步解鎖台灣六座城市。</p>
+          <strong>步驟 1</strong>
+          <h3>從可挑戰的景點開始</h3>
+          <p>找到目前可挑戰的景點，開始你的第一關。</p>
         </article>
         <article class="tutorial-step">
-          <strong>步驟二</strong>
-          <h3>查看角色狀態</h3>
-          <p>完成景點後可以獲得：
-・EXP
-・金幣
-・城市徽章</p>
+          <strong>步驟 2</strong>
+          <h3>完成後解鎖下一關</h3>
+          <p>完成目前的景點，下一個景點就會開放挑戰。</p>
         </article>
         <article class="tutorial-step">
-          <strong>步驟三</strong>
-          <h3>選擇已解鎖城市</h3>
-          <p>選擇目前已解鎖的城市，
-閱讀城市故事後開始探索。</p>
+          <strong>步驟 3</strong>
+          <h3>挑戰城市 Boss</h3>
+          <p>完成城市內三個景點後，就能挑戰城市 Boss。</p>
         </article>
         <article class="tutorial-step">
-          <strong>步驟四</strong>
-          <h3>挑戰城市守護者</h3>
-          <p>完成城市內全部景點，
-即可挑戰城市守護者。</p>
+          <strong>步驟 4</strong>
+          <h3>前往下一座城市</h3>
+          <p>擊敗城市 Boss，解鎖下一座城市並繼續旅程。</p>
         </article>
       </div>
+      <section class="tutorial-difficulties" aria-labelledby="tutorialDifficultyTitle">
+        <h3 id="tutorialDifficultyTitle">選擇適合你的難度</h3>
+        <div class="tutorial-difficulty-list">
+          <div class="tutorial-difficulty">
+            <strong>休閒</strong>
+            <span>時間較長、生命較多</span>
+          </div>
+          <div class="tutorial-difficulty">
+            <strong>一般</strong>
+            <span>適合一般玩家</span>
+          </div>
+          <div class="tutorial-difficulty">
+            <strong>極限</strong>
+            <span>時間短、獎勵較高</span>
+          </div>
+        </div>
+      </section>
       <button class="btn full" id="startAdventureBtn" type="button">開始冒險</button>
     </div>
   </div>
@@ -126,10 +137,49 @@
       <div class="main-stack">
         <section id="player-summary"></section>
         <section id="journey-progress"></section>
+
+        <section id="taiwan-map-view" class="taiwan-map-view" aria-labelledby="taiwanMapTitle">
+          <div class="taiwan-map-header">
+            <div>
+              <span class="taiwan-map-eyebrow">六城主線</span>
+              <h2 id="taiwanMapTitle">臺灣文化冒險地圖</h2>
+              <p>選擇已解鎖的城市，繼續你的旅程。</p>
+            </div>
+            <strong id="taiwan-map-summary">0 / 6 城市完成</strong>
+          </div>
+          <div id="taiwan-map" class="taiwan-map" aria-label="臺灣六城冒險路線">
+            <div id="taiwan-city-nodes" class="taiwan-city-nodes"></div>
+          </div>
+          <aside class="taiwan-map-tip" aria-label="旅程提示">
+            <span class="taiwan-map-tip__icon" aria-hidden="true">✦</span>
+            <span>
+              <strong>旅程提示</strong>
+              選擇已解鎖的城市，繼續你的旅程。
+            </span>
+          </aside>
+          <p id="taiwan-map-message" class="taiwan-map-message" role="status" aria-live="polite"></p>
+          <button class="btn ghost" id="reviewJourneyEndingBtn" type="button" hidden>
+            再次觀看旅程結局
+          </button>
+          <div class="taiwan-map-legend" aria-label="城市狀態圖例">
+            <span>📍 進行中</span>
+            <span>🏅 已完成</span>
+            <span>🔒 尚未解鎖</span>
+          </div>
+        </section>
+
+        <section id="city-stage-view" class="city-stage-view" hidden>
+          <button type="button" id="back-to-taiwan-map" class="btn ghost back-map-button">
+            ← 返回臺灣地圖
+          </button>
+          <section id="exploration-mission"></section>
+          <section id="image-recognition"></section>
+          <section id="puzzle-challenge"></section>
+          <section id="city-detail"></section>
+        </section>
+
         <section id="daily-missions"></section>
         <section id="achievements"></section>
-        <section id="city-list"></section>
-        <section id="city-detail"></section>
       </div>
     </div>
   </main>
@@ -137,7 +187,11 @@
   <script defer src="/js/state.js"></script>
   <script defer src="/js/api.js"></script>
   <script defer src="/js/auth.js"></script>
+  <script defer src="/js/exploration.js"></script>
+  <script defer src="/js/image-recognition.js"></script>
+  <script defer src="/js/puzzle.js"></script>
   <script defer src="/js/journey.js"></script>
+  <script defer src="/js/map.js"></script>
   <script defer src="/js/quiz.js"></script>
   <script defer src="/js/boss.js"></script>
   <script defer src="/js/missions.js"></script>

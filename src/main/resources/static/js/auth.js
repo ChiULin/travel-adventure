@@ -1,5 +1,10 @@
 function tutorialIsCompleted() {
-      return localStorage.getItem(TUTORIAL_KEY) === "true";
+      return localStorage.getItem(tutorialStorageKey()) === "true";
+    }
+
+    function tutorialStorageKey() {
+      const userId = appState?.user?.id || session?.userId;
+      return userId ? `${TUTORIAL_KEY}:${userId}` : TUTORIAL_KEY;
     }
 
     function showTutorialIfNeeded() {
@@ -10,9 +15,9 @@ function tutorialIsCompleted() {
     }
 
     function completeTutorial() {
-      localStorage.setItem(TUTORIAL_KEY, "true");
+      localStorage.setItem(tutorialStorageKey(), "true");
       document.getElementById("tutorial").classList.add("hidden");
-      addLog("新手教學完成，開始你的台灣探索旅程。");
+      addLog("新手教學完成，開始你的臺灣探索旅程。");
       setTimeout(maybeShowFinalEnding, 0);
     }
 
@@ -24,16 +29,62 @@ function validateAuthInput(username, password) {
       return "";
     }
 
+function clearAuthState() {
+      saveSession(null);
+      selectedDifficulty = "NORMAL";
+      resetLocalBattleState();
+      stopImageRecognitionTimer();
+      stopPuzzleTimer();
+      appState = null;
+      missionsState = null;
+      achievementsState = null;
+      collectionState = null;
+      selectedCollectionId = null;
+      explorationState = createExplorationState();
+      imageRecognitionState = createImageRecognitionState();
+      puzzleState = createPuzzleState();
+      activeCityId = null;
+      journeyView = "map";
+      answerSubmitting = false;
+      finalEndingShown = false;
+      logs = [];
+
+      document.getElementById("tutorial")?.classList.add("hidden");
+      document.getElementById("finalEnding")?.classList.add("hidden");
+      document.getElementById("collectionOverlay")?.classList.add("hidden");
+      document.getElementById("finalEndingCard").innerHTML = "";
+      document.getElementById("collectionGrid").innerHTML = "";
+      document.getElementById("collectionDetail").innerHTML = "";
+      document.getElementById("exploration-mission").innerHTML = "";
+      document.getElementById("image-recognition").innerHTML = "";
+      document.getElementById("puzzle-challenge").innerHTML = "";
+      closeResultCard();
+    }
+
+function showLoginPage(message = "") {
+      document.getElementById("passwordInput").value = "";
+      document.getElementById("loginError").textContent = message;
+      document.getElementById("login").classList.remove("hidden");
+    }
+
 async function authenticate(path, username, password) {
-      const auth = await api(path, {
-        method: "POST",
-        body: JSON.stringify({ username, password })
-      });
-      saveSession(auth);
-      document.getElementById("login").classList.add("hidden");
-      await refreshState();
-      showTutorialIfNeeded();
-      return auth;
+      try {
+        const auth = await api(path, {
+          method: "POST",
+          body: JSON.stringify({ username, password })
+        });
+        saveSession(auth);
+        document.getElementById("login").classList.add("hidden");
+        await refreshState();
+        showTutorialIfNeeded();
+        return auth;
+      } catch (error) {
+        if (session?.token) {
+          clearAuthState();
+          showLoginPage(error.message);
+        }
+        throw error;
+      }
     }
 
     async function login(username, password) {

@@ -4,6 +4,8 @@ import com.example.demo.entity.City;
 import com.example.demo.entity.Scene;
 import com.example.demo.repository.CityRepository;
 import com.example.demo.repository.SceneRepository;
+import com.example.demo.stage.LandmarkStageService;
+import com.example.demo.stage.StageLockedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,18 +20,22 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class QuizQuestionServiceTest {
     private SceneRepository sceneRepository;
     private CityRepository cityRepository;
+    private LandmarkStageService stageService;
     private MutableClock clock;
 
     @BeforeEach
     void setUp() {
         sceneRepository = mock(SceneRepository.class);
         cityRepository = mock(CityRepository.class);
+        stageService = mock(LandmarkStageService.class);
         clock = new MutableClock(Instant.parse("2026-07-21T00:00:00Z"));
 
         City city = mock(City.class);
@@ -93,8 +99,45 @@ class QuizQuestionServiceTest {
         assertEquals("scene-3-fact", next.get("questionId"));
     }
 
+    @Test
+    void bossQuestionTimeComesOnlyFromDifficulty() {
+        QuizQuestionService service = serviceWithLimit(5);
+        City bossCity = mock(City.class);
+        when(bossCity.getId()).thenReturn(3L);
+        when(bossCity.getName()).thenReturn("台南");
+        when(bossCity.getBossQuestion()).thenReturn("Boss question");
+        when(bossCity.getBossOptionA()).thenReturn("Correct");
+        when(bossCity.getBossOptionB()).thenReturn("Wrong B");
+        when(bossCity.getBossOptionC()).thenReturn("Wrong C");
+        when(bossCity.getBossOptionD()).thenReturn("Wrong D");
+        when(bossCity.getBossCorrectAnswer()).thenReturn("A");
+        when(cityRepository.findById(3L)).thenReturn(Optional.of(bossCity));
+        when(sceneRepository.findByCityId(3L)).thenReturn(List.of());
+
+        Map<String, Object> normal = service.randomBossQuestion(1L, 3L, "NORMAL");
+
+        assertEquals(5, normal.get("seconds"));
+        assertEquals(clock.instant().plusSeconds(5), normal.get("expiresAt"));
+    }
+
+    @Test
+    void lockedStageDoesNotCreateQuizQuestionState() {
+        QuizQuestionService service = serviceWithLimit(5);
+        doThrow(new StageLockedException("請先完成上一個景點關卡"))
+                .when(stageService).validateStageAvailable(1L, 3L);
+
+        assertThrows(StageLockedException.class,
+                () -> service.randomSceneQuestion(1L, 3L, "NORMAL"));
+        clock.advanceSeconds(1);
+        doNothing().when(stageService).validateStageAvailable(1L, 3L);
+
+        Map<String, Object> question = service.randomSceneQuestion(1L, 3L, "NORMAL");
+
+        assertEquals(clock.instant(), question.get("issuedAt"));
+    }
+
     private QuizQuestionService serviceWithLimit(int limit) {
-        return new QuizQuestionService(sceneRepository, cityRepository, limit, clock);
+        return new QuizQuestionService(sceneRepository, cityRepository, stageService, limit, clock);
     }
 
     private Scene scene(long id, City city) {

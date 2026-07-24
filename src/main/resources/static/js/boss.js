@@ -179,10 +179,11 @@ function renderBattleStatus() {
       `);
     }
 
-    async function submitBattleResult(city, rank) {
+    async function submitBattleResult(city, rank, battleResultToken) {
       return api(`/api/cities/${city.id}/battle-result`, {
         method: "POST",
         body: JSON.stringify({
+          battleResultToken,
           rank,
           maxCombo: cityBattleStats.maxCombo,
           remainingLives: cityLives,
@@ -196,45 +197,51 @@ function renderBattleStatus() {
       });
     }
 
-    function finalEndingStats() {
-      const user = appState.user || {};
-      const cities = appState.cities || [];
-      const completedCities = cities.filter(city => city.defeated).length;
-      const totalScenes = cities.reduce((sum, city) => sum + Number(city.total || 0), 0);
-      const doneScenes = cities.reduce((sum, city) => sum + Number(city.done || 0), 0);
-      const badgeCount = cities.filter(city => city.badgeUnlocked).length;
-      const bestCombo = cities.reduce((max, city) => Math.max(max, Number(city.bestCombo || 0)), 0);
-      const sRankCount = cities.filter(city => city.bestRank === "S").length;
-      return {
-        user,
-        cities,
-        completedCities,
-        totalCities: cities.length,
-        totalScenes,
-        doneScenes,
-        badgeCount,
-        bestCombo,
-        sRankCount
-      };
+    function shouldShowFinalEnding() {
+      return appState?.journeyCompleted === true;
     }
 
-    function shouldShowFinalEnding() {
-      const stats = finalEndingStats();
-      return stats.totalCities > 0 && stats.completedCities >= stats.totalCities;
+    function finalEndingStorageKey() {
+      const userId = appState?.user?.id;
+      return userId == null ? null : `journey-ending-shown:${userId}`;
+    }
+
+    function finalEndingWasShown() {
+      const key = finalEndingStorageKey();
+      if (!key) return false;
+      try {
+        return localStorage.getItem(key) === "true";
+      } catch {
+        return false;
+      }
+    }
+
+    function rememberFinalEnding() {
+      const key = finalEndingStorageKey();
+      if (!key) return;
+      try {
+        localStorage.setItem(key, "true");
+      } catch {
+        // Storage may be unavailable; the in-memory guard still prevents loops.
+      }
     }
 
     function maybeShowFinalEnding() {
-      if (!appState || finalEndingShown || !tutorialIsCompleted() || overlayIsOpen()) return;
-      if (shouldShowFinalEnding()) {
+      if (!appState || finalEndingShown || cityStageTransitionPlaying
+          || pendingCityStageTransition || !tutorialIsCompleted() || overlayIsOpen()) return;
+      if (shouldShowFinalEnding() && !finalEndingWasShown()) {
         showFinalEnding();
       }
     }
 
     function showFinalEnding() {
-      const stats = finalEndingStats();
+      if (!shouldShowFinalEnding()) return;
+      const user = appState.user || {};
+      const cities = appState.cities || [];
       finalEndingShown = true;
+      rememberFinalEnding();
       stopQuizTimer();
-      const cityRoute = stats.cities.map((city, index) => `
+      const cityRoute = cities.map((city, index) => `
         <div class="final-city" style="--d:${index * 0.16}s">
           <span>${escapeHtml(city.badgeIcon || "✓")}</span>
           <strong>${escapeHtml(city.name)}</strong>
@@ -244,20 +251,19 @@ function renderBattleStatus() {
 
       document.getElementById("finalEndingCard").innerHTML = `
         <section class="final-section final-hero">
-          <h2>🏆 台灣旅行冒險<br>Congratulations！</h2>
-          <p>你已完成台灣六座城市探索之旅。</p>
+          <h2>🏆 恭喜完成臺灣六城文化冒險！</h2>
+          <p>六座城市的文化旅程已全部完成。</p>
           <div class="final-checks">
-            <div class="final-check">✓ 六座城市</div>
-            <div class="final-check">✓ ${stats.totalScenes} 個景點</div>
-            <div class="final-check">✓ 六位城市守護者</div>
-            <div class="final-check">✓ ${stats.badgeCount} / 6 枚城市徽章</div>
+            <div class="final-check">完成城市：${appState.completedCityCount} / ${appState.totalCityCount}</div>
+            <div class="final-check">完成景點：${appState.completedLandmarkCount} / ${appState.totalLandmarkCount}</div>
+            <div class="final-check">取得徽章：${appState.badgeCount} / ${appState.totalBadgeCount}</div>
           </div>
         </section>
 
         <section class="final-section">
           <div class="section-head">
-            <h2>台灣旅程</h2>
-            <strong>六城完成</strong>
+            <h2>臺灣旅程</h2>
+            <strong>${appState.completedCityCount} / ${appState.totalCityCount} 城完成</strong>
           </div>
           <div class="final-route">${cityRoute}</div>
         </section>
@@ -265,40 +271,46 @@ function renderBattleStatus() {
         <section class="final-section">
           <div class="section-head">
             <h2>玩家統計</h2>
-            <strong>${escapeHtml(stats.user.username || "旅行者")}</strong>
+            <strong>${escapeHtml(user.username || "旅行者")}</strong>
           </div>
           <div class="final-stats">
-            <div class="final-stat"><span>等級</span>Lv.${stats.user.level || 1}</div>
-            <div class="final-stat"><span>總 EXP</span>${formatNumber(stats.user.experience || stats.user.exp || 0)}</div>
-            <div class="final-stat"><span>總金幣</span>${formatNumber(stats.user.coins || 0)}</div>
-            <div class="final-stat"><span>最高 Combo</span>${stats.bestCombo}</div>
-            <div class="final-stat"><span>S 評價</span>${stats.sRankCount} 座</div>
-            <div class="final-stat"><span>徽章</span>${stats.badgeCount} / 6</div>
+            <div class="final-stat"><span>最終等級</span>Lv.${user.level || 1}</div>
+            <div class="final-stat"><span>累積金幣</span>${formatNumber(user.coins || 0)}</div>
+            <div class="final-stat"><span>完成城市</span>${appState.completedCityCount} / ${appState.totalCityCount}</div>
+            <div class="final-stat"><span>完成景點</span>${appState.completedLandmarkCount} / ${appState.totalLandmarkCount}</div>
+            <div class="final-stat"><span>取得徽章</span>${appState.badgeCount} / ${appState.totalBadgeCount}</div>
           </div>
         </section>
 
         <section class="final-section final-title">
           <span style="font-size:44px">🏅</span>
-          <strong>最終稱號：台灣文化冒險家</strong>
+          <strong>最終稱號：臺灣文化冒險家</strong>
           <p>「旅行的終點，不是抵達，而是更了解腳下的土地。」</p>
         </section>
 
         <section class="final-section">
           <div class="final-actions">
-            <button class="btn full" id="finalChallengeBtn" type="button">重新挑戰</button>
-            <button class="btn ghost full" id="finalHomeBtn" type="button">返回首頁</button>
-            <button class="btn red full" id="finalRestartBtn" type="button">重新開始旅程</button>
+            <button class="btn full" id="finalCollectionBtn" type="button">查看完整收藏</button>
+            <button class="btn red full" id="finalChallengeBtn" type="button">重新挑戰 Boss</button>
+            <button class="btn ghost full" id="finalMapBtn" type="button">回到城市地圖</button>
           </div>
         </section>
       `;
 
       document.getElementById("finalEnding").classList.remove("hidden");
-      document.getElementById("finalChallengeBtn").addEventListener("click", closeFinalEnding);
-      document.getElementById("finalHomeBtn").addEventListener("click", () => {
+      const collectionButton = document.getElementById("finalCollectionBtn");
+      collectionButton.addEventListener("click", () => runWithButtonLock(collectionButton, async () => {
         closeFinalEnding();
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        await openCollection();
+      }));
+      const challengeButton = document.getElementById("finalChallengeBtn");
+      challengeButton.addEventListener("click", () =>
+        runWithButtonLock(challengeButton, replayFinalBoss)
+      );
+      document.getElementById("finalMapBtn").addEventListener("click", () => {
+        closeFinalEnding();
+        openTaiwanMapView();
       });
-      document.getElementById("finalRestartBtn").addEventListener("click", restartCompletedJourney);
     }
 
     function closeFinalEnding() {
@@ -307,40 +319,40 @@ function renderBattleStatus() {
       renderCityDetail(activeCityId);
     }
 
-    async function restartCompletedJourney() {
-      const completedCities = (appState?.cities || []).filter(city => city.defeated);
-      try {
-        for (const city of completedCities) {
-          await api(`/api/cities/${city.id}/restart`, { method: "POST" });
-        }
-        resetLocalBattleState();
-        activeCityId = appState?.cities?.[0]?.id || activeCityId;
-        finalEndingShown = false;
-        closeFinalEnding();
-        addLog("台灣旅行冒險已重新開始，歷史最佳紀錄會保留。");
-        await refreshState();
-      } catch (error) {
-        addLog(error.message);
-      }
+    async function replayFinalBoss() {
+      const finalCity = [...(appState?.cities || [])]
+        .sort((first, second) => Number(second.unlockOrder) - Number(first.unlockOrder))[0];
+      if (!finalCity) return;
+      closeFinalEnding();
+      openCityStageView(finalCity);
+      await startBossQuiz(finalCity.id);
     }
 
 async function challengeBoss(answer, answerText) {
+      if (answerSubmitting) return;
+      answerSubmitting = true;
       stopQuizTimer();
-      activeBossQuizCityId = null;
       const questionId = activeQuizQuestion?.questionId;
-      activeQuizQuestion = null;
       const city = activeCity();
+      disableVisibleQuizOptions();
       try {
         const result = await api(`/api/cities/${city.id}/boss/challenge`, {
           method: "POST",
-          body: JSON.stringify({ answer, answerText, questionId, difficulty: selectedDifficulty })
+          body: JSON.stringify({
+            answer,
+            answerText,
+            questionId,
+            difficulty: selectedDifficulty
+          })
         });
+        activeBossQuizCityId = null;
+        activeQuizQuestion = null;
         if (result.win) {
           registerCorrectAnswer({ expReward: result.earnedExp || 0, coinReward: result.earnedCoins || 0 });
           const rank = calculateBattleRank();
           let recordResult = null;
           try {
-            recordResult = await submitBattleResult(city, rank);
+            recordResult = await submitBattleResult(city, rank, result.battleResultToken);
           } catch (error) {
             addLog(`最佳紀錄儲存失敗：${error.message}`);
           }
@@ -356,9 +368,15 @@ async function challengeBoss(answer, answerText) {
           showBossFailedResult(city);
           addLog(`${city.bossName} 太強了，請提升實力後再挑戰。`);
         }
-        await refreshState();
+        if (result.win) {
+          await refreshCityMapWithAnimation(city.id);
+        } else {
+          await refreshState();
+        }
       } catch (error) {
         addLog(error.message);
+      } finally {
+        answerSubmitting = false;
       }
     }
 

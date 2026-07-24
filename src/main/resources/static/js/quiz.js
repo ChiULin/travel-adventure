@@ -17,7 +17,7 @@ function stopQuizTimer() {
       stopQuizTimer();
       if (overlayIsOpen()) return;
       quizTimerTarget = { type, targetId };
-      let seconds = difficultyConfig().seconds;
+      let seconds = Number(activeQuizQuestion?.seconds || difficultyConfig().seconds);
       updateQuizTimers(seconds);
       quizTimerId = setInterval(() => {
         seconds -= 1;
@@ -62,7 +62,11 @@ function stopQuizTimer() {
         return;
       }
       try {
-        activeQuizQuestion = await api(`/api/quizzes/cities/${cityId}/boss/random?difficulty=${selectedDifficulty}`);
+        const battle = await api(`/api/cities/${cityId}/boss/start`, {
+          method: "POST",
+          body: JSON.stringify({ difficulty: selectedDifficulty })
+        });
+        activeQuizQuestion = battle.question;
         difficultyLocked = true;
         activeBossQuizCityId = cityId;
         activeSceneQuizId = null;
@@ -115,17 +119,20 @@ function stopQuizTimer() {
     }
 
 async function checkin(sceneId, answer, answerText) {
+      if (answerSubmitting) return;
+      answerSubmitting = true;
       stopQuizTimer();
-      activeSceneQuizId = null;
       const questionId = activeQuizQuestion?.questionId;
-      activeQuizQuestion = null;
       const city = activeCity();
       const scene = city?.scenes?.find(item => item.id === sceneId);
+      disableVisibleQuizOptions();
       try {
         const result = await api("/api/checkins", {
           method: "POST",
           body: JSON.stringify({ sceneId, answer, answerText, questionId, difficulty: selectedDifficulty })
         });
+        activeSceneQuizId = null;
+        activeQuizQuestion = null;
         if (!result.ok) {
           registerWrongAnswer();
           if (cityLives <= 0) {
@@ -147,8 +154,10 @@ async function checkin(sceneId, answer, answerText) {
           showSceneResult(city, rewardedScene);
         }
         addLog(`${scene?.name || "景點"}探索完成。`);
-        await refreshState();
+        await refreshCityMapWithAnimation(city?.id || activeCityId);
       } catch (error) {
         addLog(error.message);
+      } finally {
+        answerSubmitting = false;
       }
     }

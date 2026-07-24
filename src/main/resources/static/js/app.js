@@ -1,16 +1,36 @@
-document.getElementById("loginForm").addEventListener("submit", async event => {
+const loginForm = document.getElementById("loginForm");
+
+async function runAuthRequest(button, action) {
+      if (loginForm.dataset.submitting === "true") return;
+      loginForm.dataset.submitting = "true";
+      const authButtons = [...loginForm.querySelectorAll("button")];
+      authButtons.filter(item => item !== button).forEach(item => {
+        item.disabled = true;
+      });
+      try {
+        await runWithButtonLock(button, action);
+      } finally {
+        delete loginForm.dataset.submitting;
+        authButtons.filter(item => item !== button && item.isConnected).forEach(item => {
+          item.disabled = false;
+        });
+      }
+    }
+
+loginForm.addEventListener("submit", async event => {
       event.preventDefault();
+      const button = event.submitter || loginForm.querySelector('button[type="submit"]');
       const username = document.getElementById("nameInput").value.trim() || "旅行者";
       const password = document.getElementById("passwordInput").value;
       document.getElementById("loginError").textContent = "";
       try {
-        await login(username, password);
+        await runAuthRequest(button, () => login(username, password));
       } catch (error) {
         document.getElementById("loginError").textContent = error.message;
       }
     });
 
-    document.getElementById("registerBtn").addEventListener("click", async () => {
+    document.getElementById("registerBtn").addEventListener("click", async event => {
       const username = document.getElementById("nameInput").value.trim();
       const password = document.getElementById("passwordInput").value;
       const errorElement = document.getElementById("loginError");
@@ -18,7 +38,7 @@ document.getElementById("loginForm").addEventListener("submit", async event => {
       errorElement.textContent = validationMessage;
       if (validationMessage) return;
       try {
-        await register(username, password);
+        await runAuthRequest(event.currentTarget, () => register(username, password));
       } catch (error) {
         errorElement.textContent = error.message;
       }
@@ -35,33 +55,20 @@ document.getElementById("loginForm").addEventListener("submit", async event => {
     });
 
     document.getElementById("logoutBtn").addEventListener("click", () => {
-      saveSession(null);
-      appState = null;
-      missionsState = null;
-      achievementsState = null;
-      collectionState = null;
-      selectedCollectionId = null;
-      activeCityId = null;
-      finalEndingShown = false;
-      logs = [];
-      document.getElementById("tutorial").classList.add("hidden");
-      document.getElementById("finalEnding").classList.add("hidden");
-      document.getElementById("finalEndingCard").innerHTML = "";
-      document.getElementById("collectionOverlay").classList.add("hidden");
-      document.getElementById("collectionGrid").innerHTML = "";
-      document.getElementById("collectionDetail").innerHTML = "";
-      closeResultCard();
-      document.getElementById("login").classList.remove("hidden");
+      clearAuthState();
+      showLoginPage();
     });
 
     document.getElementById("startAdventureBtn").addEventListener("click", completeTutorial);
+    document.getElementById("back-to-taiwan-map").addEventListener("click", openTaiwanMapView);
 
     if (session?.token) {
       document.getElementById("login").classList.add("hidden");
-      refreshState().then(showTutorialIfNeeded).catch(() => {
-        saveSession(null);
-        document.getElementById("tutorial").classList.add("hidden");
-        document.getElementById("login").classList.remove("hidden");
+      refreshState().then(showTutorialIfNeeded).catch(error => {
+        if (session?.token) {
+          clearAuthState();
+          showLoginPage(error.message);
+        }
       });
     }
 

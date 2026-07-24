@@ -5,7 +5,13 @@ import lombok.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
-@Table(name = "cities")
+@Table(
+        name = "cities",
+        uniqueConstraints = @UniqueConstraint(
+                name = "idx_cities_unlock_order",
+                columnNames = "city_order"
+        )
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -31,9 +37,11 @@ public class City {
     private String imageUrl;
 
     @Column(name = "city_order")
+    @Builder.Default
     private Integer unlockOrder = 0;
 
     private String bossName;
+    @Builder.Default
     private Integer bossPower = 0;
 
     @Column(name = "boss_question", length = 500)
