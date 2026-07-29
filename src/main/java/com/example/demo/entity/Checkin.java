@@ -6,7 +6,17 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "check_ins", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "landmark_id"}))
+@Table(
+        name = "check_ins",
+        uniqueConstraints = @UniqueConstraint(
+                name = "idx_checkins_user_landmark",
+                columnNames = {"user_id", "landmark_id"}
+        ),
+        indexes = @Index(
+                name = "idx_checkins_user_completed",
+                columnList = "user_id, completed"
+        )
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -28,11 +38,15 @@ public class Checkin {
     private String selectedAnswer;
 
     @Column(name = "quiz_correct")
+    @Builder.Default
     private Boolean quizCorrect = false;
 
+    @Builder.Default
     private Boolean completed = false;
 
+    @Builder.Default
     private Integer earnedExp = 0;
+    @Builder.Default
     private Integer earnedCoins = 0;
 
     @Column(name = "completed_at")

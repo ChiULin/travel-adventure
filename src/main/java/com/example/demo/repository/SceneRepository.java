@@ -10,4 +10,5 @@ import java.util.List;
 public interface SceneRepository extends JpaRepository<Scene, Long> {
     List<Scene> findByCityId(Long cityId);
     long countByCityId(Long cityId);
+    boolean existsByIdAndCityId(Long id, Long cityId);
 }

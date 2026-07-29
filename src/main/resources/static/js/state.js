@@ -13,11 +13,17 @@ const SESSION_KEY = "travelAdventureApiSession";
     let missionsState = null;
     let achievementsState = null;
     let activeCityId = null;
+    let journeyView = "map";
     let logs = [];
     let quizTimerId = null;
     let quizTimerTarget = null;
     let activeSceneQuizId = null;
     let activeBossQuizCityId = null;
+    let answerSubmitting = false;
+    let pendingCityStageTransition = null;
+    let cityStageTransitionPlaying = false;
+    let cityRouteMessageTimer = null;
+    let mysteryChallengeStarting = false;
     let answerCombo = 0;
     let cityLives = DIFFICULTIES[selectedDifficulty].lives;
     let cityFailedPending = false;
@@ -27,6 +33,78 @@ const SESSION_KEY = "travelAdventureApiSession";
     let collectionState = null;
     let collectionTab = "landmarks";
     let selectedCollectionId = null;
+    let explorationState = createExplorationState();
+    let imageRecognitionState = createImageRecognitionState();
+    let puzzleState = createPuzzleState();
+
+    function createExplorationState() {
+      return {
+        mission: null,
+        cityId: null,
+        remainingActions: 4,
+        discoveredClues: [],
+        wrongGuesses: 0,
+        reasoningStarted: false,
+        guessCorrect: false,
+        guessedScene: null,
+        cultureChallenge: null,
+        challengeStarted: false,
+        completion: null,
+        feedback: null,
+        error: null,
+        loading: false,
+        submitting: false
+      };
+    }
+
+    function createImageRecognitionState() {
+      return {
+        questionId: null,
+        cityId: null,
+        sceneId: null,
+        prompt: null,
+        imageUrl: null,
+        displayMode: null,
+        initialBlurLevel: 0,
+        currentBlurLevel: 0,
+        difficulty: null,
+        issuedAt: null,
+        expiresAt: null,
+        candidates: [],
+        timerId: null,
+        remainingSeconds: 0,
+        loading: false,
+        submitting: false,
+        expired: false,
+        result: null,
+        mysteryChallenge: false,
+        error: null
+      };
+    }
+
+    function createPuzzleState() {
+      return {
+        challengeId: null,
+        cityId: null,
+        landmarkId: null,
+        imageUrl: null,
+        gridSize: 3,
+        tileOrder: [],
+        candidates: [],
+        difficulty: null,
+        seconds: 0,
+        issuedAt: null,
+        expiresAt: null,
+        selectedPosition: null,
+        solved: false,
+        timerId: null,
+        remainingSeconds: 0,
+        submitting: false,
+        expired: false,
+        result: null,
+        error: null
+      };
+    }
 
     function emptyCityBattleStats() {
       return {

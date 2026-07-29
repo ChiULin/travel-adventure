@@ -2,8 +2,11 @@ function journeyTotals() {
       const doneScenes = appState.cities.reduce((sum, city) => sum + (city.done || 0), 0);
       const completedCities = appState.cities.filter(city => city.defeated).length;
       const badgeCount = appState.cities.filter(city => city.badgeUnlocked).length;
-      const taipei = appState.cities.find(city => city.name === "台北") || appState.cities[0];
-      return { doneScenes, completedCities, badgeCount, taipeiCompleted: Boolean(taipei?.defeated) };
+      const firstCity = appState.cities.reduce((first, city) => {
+        if (!first) return city;
+        return Number(city.unlockOrder) < Number(first.unlockOrder) ? city : first;
+      }, null);
+      return { doneScenes, completedCities, badgeCount, firstCityCompleted: Boolean(firstCity?.defeated) };
     }
 
     function missionRow(label, current, target) {
@@ -63,7 +66,7 @@ function journeyTotals() {
       const totals = journeyTotals();
       const fallbackAchievements = [
         { title: "初次探索", description: "完成第一次景點打卡", unlocked: totals.doneScenes >= 1 },
-        { title: "台北征服者", description: "完成第一座城市", unlocked: totals.taipeiCompleted },
+        { title: "台北征服者", description: "完成第一座城市", unlocked: totals.firstCityCompleted },
         { title: "三題連勝", description: "累積答對 3 題", unlocked: totals.doneScenes >= 3 },
         { title: "徽章收藏家", description: "收集 3 枚城市徽章", unlocked: totals.badgeCount >= 3 },
         { title: "台灣冒險王", description: "完成全部 6 座城市", unlocked: totals.completedCities >= 6 }

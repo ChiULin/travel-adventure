@@ -4,6 +4,7 @@ import com.example.demo.entity.City;
 import com.example.demo.entity.Scene;
 import com.example.demo.repository.CityRepository;
 import com.example.demo.repository.SceneRepository;
+import com.example.demo.stage.LandmarkStageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -26,6 +27,7 @@ public class QuizQuestionService {
 
     private final SceneRepository sceneRepository;
     private final CityRepository cityRepository;
+    private final LandmarkStageService stageService;
     private final Map<String, IssuedQuestion> issuedQuestions = new ConcurrentHashMap<>();
     private final Map<String, LastQuestion> lastQuestionIds = new ConcurrentHashMap<>();
     private final int maxPendingQuestionsPerPlayer;
@@ -36,17 +38,21 @@ public class QuizQuestionService {
     public QuizQuestionService(
             SceneRepository sceneRepository,
             CityRepository cityRepository,
+            LandmarkStageService stageService,
             @Value("${game.quiz.max-pending-per-player:5}") int maxPendingQuestionsPerPlayer) {
-        this(sceneRepository, cityRepository, maxPendingQuestionsPerPlayer, Clock.systemUTC());
+        this(sceneRepository, cityRepository, stageService,
+                maxPendingQuestionsPerPlayer, Clock.systemUTC());
     }
 
     QuizQuestionService(SceneRepository sceneRepository, CityRepository cityRepository,
+                        LandmarkStageService stageService,
                         int maxPendingQuestionsPerPlayer, Clock clock) {
         if (maxPendingQuestionsPerPlayer < 1) {
             throw new IllegalArgumentException("max pending questions per player must be positive");
         }
         this.sceneRepository = sceneRepository;
         this.cityRepository = cityRepository;
+        this.stageService = stageService;
         this.maxPendingQuestionsPerPlayer = maxPendingQuestionsPerPlayer;
         this.clock = clock;
     }
@@ -54,15 +60,16 @@ public class QuizQuestionService {
     public Map<String, Object> randomSceneQuestion(Long userId, Long sceneId, String difficultyName) {
         Scene scene = sceneRepository.findById(sceneId)
                 .orElseThrow(() -> new IllegalArgumentException("scene not found"));
+        stageService.validateStageAvailable(userId, sceneId);
         List<Question> questions = sceneQuestions(scene);
-        return issueQuestion(userId, sceneKey(userId, sceneId), questions, difficultyName);
+        return issueQuestion(userId, sceneKey(userId, sceneId), questions, difficultyName, true);
     }
 
     public Map<String, Object> randomBossQuestion(Long userId, Long cityId, String difficultyName) {
         City city = cityRepository.findById(cityId)
                 .orElseThrow(() -> new IllegalArgumentException("city not found"));
         List<Question> questions = bossQuestions(city);
-        return issueQuestion(userId, bossKey(userId, cityId), questions, difficultyName);
+        return issueQuestion(userId, bossKey(userId, cityId), questions, difficultyName, false);
     }
 
     public boolean sceneAnswerCorrect(Long userId, Scene scene, String questionId, String answerText, String difficultyName) {
@@ -75,7 +82,8 @@ public class QuizQuestionService {
         return answerCorrect(bossQuestions(city), questionId, answerText);
     }
 
-    private Map<String, Object> issueQuestion(Long userId, String key, List<Question> questions, String difficultyName) {
+    private Map<String, Object> issueQuestion(Long userId, String key, List<Question> questions,
+                                              String difficultyName, boolean includeSubmissionGrace) {
         if (questions.isEmpty()) {
             throw new IllegalArgumentException("question bank is empty");
         }
@@ -96,7 +104,8 @@ public class QuizQuestionService {
                     .filter(question -> !question.id().equals(previousId)).toList();
             selected = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
 
-            Instant expiresAt = now.plusSeconds(difficulty.seconds() + 2L);
+            long expirySeconds = difficulty.seconds() + (includeSubmissionGrace ? 2L : 0L);
+            Instant expiresAt = now.plusSeconds(expirySeconds);
             issued = new IssuedQuestion(selected.id(), userId, difficulty, now, expiresAt);
             issuedQuestions.put(key, issued);
             lastQuestionIds.put(key, new LastQuestion(selected.id(), now.plus(LAST_QUESTION_RETENTION)));

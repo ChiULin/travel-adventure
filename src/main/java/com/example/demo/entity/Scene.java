@@ -52,11 +52,15 @@ public class Scene {
     @Column(name = "quiz_explanation", length = 500)
     private String quizExplanation;
 
+    @Builder.Default
     private Integer rarity = 1;
 
+    @Builder.Default
     private Integer expReward = 0;
+    @Builder.Default
     private Integer coinReward = 0;
 
+    @Builder.Default
     private Boolean isHidden = false;
 
     @ManyToOne(fetch = FetchType.LAZY)

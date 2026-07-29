@@ -17,6 +17,9 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Version
+    private Long version;
+
     @Column(unique = true, length = 50)
     private String username;
 
@@ -26,10 +29,14 @@ public class User {
     @Column(length = 255)
     private String password;
 
+    @Builder.Default
     private Integer level = 1;
     @Column(name = "total_exp")
+    @Builder.Default
     private Integer exp = 0;
+    @Builder.Default
     private Integer coins = 0;
+    @Builder.Default
     private Integer bossPoints = 0;
 
     @Column(length = 50)

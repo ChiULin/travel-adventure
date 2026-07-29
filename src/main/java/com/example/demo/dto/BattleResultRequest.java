@@ -4,6 +4,7 @@ import lombok.Data;
 
 @Data
 public class BattleResultRequest {
+    private String battleResultToken;
     private String rank;
     private Integer maxCombo;
     private Integer remainingLives;
