@@ -11,15 +11,53 @@
 <body>
   <div id="login" class="login">
     <div class="login-shell">
-    <form class="login-card" id="loginForm">
-      <h2>台灣旅行冒險</h2>
-      <p>一邊玩遊戲，一邊認識台灣歷史與文化。</p>
-      <input id="nameInput" minlength="3" maxlength="20" autocomplete="username" placeholder="玩家名稱" value="旅行者" />
-      <input id="passwordInput" type="password" minlength="8" maxlength="72" autocomplete="current-password" placeholder="密碼（至少 8 個字元）" />
-      <div class="error" id="loginError"></div>
-      <button class="btn full" type="submit">登入</button>
-      <button class="btn ghost full" id="registerBtn" type="button">建立帳號</button>
-    </form>
+    <div class="login-card">
+      <div class="login-card__brand">
+        <span class="login-card__eyebrow">旅人入口</span>
+        <h1>開始你的台灣冒險</h1>
+        <p>從台北出發，探索六座城市，解鎖文化地標與守護者。</p>
+      </div>
+
+      <form id="login-form" class="login-form">
+        <label for="login-username">旅人帳號</label>
+        <input
+          id="login-username"
+          name="username"
+          type="text"
+          placeholder="輸入旅人帳號"
+          autocomplete="username"
+          minlength="3"
+          maxlength="20"
+          required
+        />
+
+        <label for="login-password">密碼</label>
+        <input
+          id="login-password"
+          name="password"
+          type="password"
+          placeholder="至少 8 個字元"
+          autocomplete="current-password"
+          minlength="8"
+          maxlength="72"
+          required
+        />
+
+        <div class="error" id="login-error" role="alert" aria-live="polite"></div>
+
+        <button type="submit" class="login-primary-button">
+          開始旅程
+        </button>
+
+        <button
+          type="button"
+          id="show-register-button"
+          class="login-secondary-button"
+        >
+          註冊成為旅人
+        </button>
+      </form>
+    </div>
     <aside class="login-banner" aria-label="台灣旅行冒險預覽">
       <div>
         <h3>從台北出發，解鎖六座城市</h3>

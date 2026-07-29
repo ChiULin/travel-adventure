@@ -1,4 +1,4 @@
-const loginForm = document.getElementById("loginForm");
+const loginForm = document.getElementById("login-form");
 
 async function runAuthRequest(button, action) {
       if (loginForm.dataset.submitting === "true") return;
@@ -20,20 +20,20 @@ async function runAuthRequest(button, action) {
 loginForm.addEventListener("submit", async event => {
       event.preventDefault();
       const button = event.submitter || loginForm.querySelector('button[type="submit"]');
-      const username = document.getElementById("nameInput").value.trim() || "旅行者";
-      const password = document.getElementById("passwordInput").value;
-      document.getElementById("loginError").textContent = "";
+      const username = document.getElementById("login-username").value.trim() || "旅行者";
+      const password = document.getElementById("login-password").value;
+      document.getElementById("login-error").textContent = "";
       try {
         await runAuthRequest(button, () => login(username, password));
       } catch (error) {
-        document.getElementById("loginError").textContent = error.message;
+        document.getElementById("login-error").textContent = error.message;
       }
     });
 
-    document.getElementById("registerBtn").addEventListener("click", async event => {
-      const username = document.getElementById("nameInput").value.trim();
-      const password = document.getElementById("passwordInput").value;
-      const errorElement = document.getElementById("loginError");
+    document.getElementById("show-register-button").addEventListener("click", async event => {
+      const username = document.getElementById("login-username").value.trim();
+      const password = document.getElementById("login-password").value;
+      const errorElement = document.getElementById("login-error");
       const validationMessage = validateAuthInput(username, password);
       errorElement.textContent = validationMessage;
       if (validationMessage) return;

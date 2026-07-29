@@ -62,8 +62,8 @@ function clearAuthState() {
     }
 
 function showLoginPage(message = "") {
-      document.getElementById("passwordInput").value = "";
-      document.getElementById("loginError").textContent = message;
+      document.getElementById("login-password").value = "";
+      document.getElementById("login-error").textContent = message;
       document.getElementById("login").classList.remove("hidden");
     }
 
