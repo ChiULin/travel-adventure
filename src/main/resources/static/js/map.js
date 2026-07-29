@@ -987,7 +987,7 @@ function renderCityNode(city, cities, options = {}) {
       if (!Number.isFinite(cityId) || !position) return "";
 
       const status = getCityMapStatus(city);
-      const active = cityId === Number(activeCityId);
+      const current = cityId === Number(options.currentCityId);
       const previousStatus = previousWorldMapStatuses.get(cityId);
       const transitionClass = worldMapHasRendered && previousStatus === "LOCKED" && status !== "LOCKED"
         ? "city-node--just-unlocked"
@@ -1004,7 +1004,7 @@ function renderCityNode(city, cities, options = {}) {
       return `
         <button
           type="button"
-          class="city-node city-node--${status.toLowerCase()} ${active ? "city-node--current" : ""} ${transitionClass} ${mobileClass}"
+          class="city-node city-node--${status.toLowerCase()} ${current ? "city-node--current" : ""} ${transitionClass} ${mobileClass}"
           data-world-city-id="${cityId}"
           data-city-order="${cityOrder}"
           ${positionStyle}
@@ -1077,23 +1077,27 @@ function renderWorldMapRoute(cities) {
       `;
     }
 
-function renderCityNodes(cities) {
+function renderCityNodes(cities, currentCityId) {
       const desktop = document.getElementById("world-city-nodes");
       const mobile = document.getElementById("world-mobile-cities");
       if (desktop) {
-        desktop.innerHTML = cities.map(city => renderCityNode(city, cities)).join("");
+        desktop.innerHTML = cities
+          .map(city => renderCityNode(city, cities, { currentCityId }))
+          .join("");
       }
       if (mobile) {
-        mobile.innerHTML = cities.map(city => renderCityNode(city, cities, { mobile: true })).join("");
+        mobile.innerHTML = cities
+          .map(city => renderCityNode(city, cities, { mobile: true, currentCityId }))
+          .join("");
       }
     }
 
-function renderTravelerMarker(cities) {
+function renderTravelerMarker(currentCityId, cities) {
       const marker = document.getElementById("traveler-marker");
       if (!marker) return;
 
       const currentCity = cities.find(city =>
-        getCityMapId(city) === Number(activeCityId) && getCityMapStatus(city) !== "LOCKED"
+        getCityMapId(city) === Number(currentCityId) && getCityMapStatus(city) !== "LOCKED"
       );
       const position = currentCity && CITY_MAP_POSITIONS[getCityMapOrder(currentCity)];
       if (!currentCity || !position) {
@@ -1130,8 +1134,8 @@ function renderTaiwanAdventureMap(journey) {
       renderWorldMapProgress(journey);
       renderTaiwanIsland(journey);
       renderWorldMapRoute(cities);
-      renderCityNodes(cities);
-      renderTravelerMarker(cities);
+      renderCityNodes(cities, journey?.currentCityId);
+      renderTravelerMarker(journey?.currentCityId, cities);
       bindCityNodeEvents(cities);
 
       const endingButton = document.getElementById("reviewJourneyEndingBtn");

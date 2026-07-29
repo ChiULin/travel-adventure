@@ -132,10 +132,11 @@ async function refreshState() {
       appState = journey;
       missionsState = missions;
       achievementsState = achievements;
-      if (!activeCityId) {
-        const firstUnlocked = appState.cities.find(city => city.unlocked) || appState.cities[0];
-        activeCityId = firstUnlocked.id;
-      }
+      const apiCurrentCityId = Number(appState.currentCityId);
+      const apiCurrentCity = appState.cities.find(city =>
+        Number(city.id) === apiCurrentCityId
+      );
+      activeCityId = apiCurrentCity ? Number(apiCurrentCity.id) : null;
       renderAll();
       const explorationCity = appState.cities.find(city => city.id === activeCityId);
       const supportsExploration = explorationCity?.scenes?.some(scene =>

@@ -90,6 +90,8 @@ class JourneyStateServiceTest {
         assertEquals(3, state.get("totalLandmarkCount"));
         assertEquals(0, state.get("badgeCount"));
         assertEquals(1, state.get("totalBadgeCount"));
+        assertEquals(CITY_ID, state.get("currentCityId"));
+        assertEquals("TST", state.get("currentCityCode"));
         verify(landmarkStageRegistry).isCityFullyConfigured(CITY_ID);
     }
 
@@ -115,6 +117,63 @@ class JourneyStateServiceTest {
         verify(landmarkStageRegistry, never()).findByLandmarkId(903L);
     }
 
+    @Test
+    void currentCityUsesFirstUnlockedCityWithoutCompletedBoss() {
+        User user = User.builder().id(USER_ID).username("generic-player").build();
+        City taipei = city(1L, "台北", "TPE", 1);
+        City taichung = city(2L, "台中", "TXG", 2);
+        City tainan = city(3L, "台南", "TNN", 3);
+        List<UserProgress> progress = List.of(
+                progress(user, taipei, true, true),
+                progress(user, taichung, true, false),
+                progress(user, tainan, false, false)
+        );
+        stubJourneyState(user, List.of(taipei, taichung, tainan), progress);
+
+        Map<String, Object> state = service.state(USER_ID);
+
+        assertEquals(2L, state.get("currentCityId"));
+        assertEquals("TXG", state.get("currentCityCode"));
+        assertFalse((Boolean) state.get("journeyCompleted"));
+    }
+
+    @Test
+    void completedJourneyUsesLastCompletedCity() {
+        User user = User.builder().id(USER_ID).username("generic-player").build();
+        City taipei = city(1L, "台北", "TPE", 1);
+        City taichung = city(2L, "台中", "TXG", 2);
+        City penghu = city(6L, "澎湖", "PEN", 6);
+        List<UserProgress> progress = List.of(
+                progress(user, taipei, true, true),
+                progress(user, taichung, true, true),
+                progress(user, penghu, true, true)
+        );
+        stubJourneyState(user, List.of(taipei, taichung, penghu), progress);
+
+        Map<String, Object> state = service.state(USER_ID);
+
+        assertEquals(6L, state.get("currentCityId"));
+        assertEquals("PEN", state.get("currentCityCode"));
+        assertEquals(true, state.get("journeyCompleted"));
+    }
+
+    @Test
+    void newJourneyUsesFirstCity() {
+        User user = User.builder().id(USER_ID).username("new-player").build();
+        City taipei = city(1L, "台北", "TPE", 1);
+        City taichung = city(2L, "台中", "TXG", 2);
+        List<UserProgress> progress = List.of(
+                progress(user, taipei, true, false),
+                progress(user, taichung, false, false)
+        );
+        stubJourneyState(user, List.of(taipei, taichung), progress);
+
+        Map<String, Object> state = service.state(USER_ID);
+
+        assertEquals(1L, state.get("currentCityId"));
+        assertEquals("TPE", state.get("currentCityCode"));
+    }
+
     private void stubJourney(City city, List<Scene> scenes) {
         User user = User.builder().id(USER_ID).username("generic-player").build();
         UserProgress progress = UserProgress.builder().user(user).city(city).unlocked(true).build();
@@ -126,6 +185,26 @@ class JourneyStateServiceTest {
         scenes.forEach(scene -> {
             when(explorationMissionRegistry.findByTargetSceneId(scene.getId())).thenReturn(Optional.empty());
         });
+    }
+
+    private void stubJourneyState(User user, List<City> cities, List<UserProgress> progress) {
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(cityRepository.findAllByOrderByUnlockOrderAsc()).thenReturn(cities);
+        when(userProgressRepository.findByUserId(USER_ID)).thenReturn(progress);
+        when(checkinRepository.findByUserIdAndCompletedTrue(USER_ID)).thenReturn(List.of());
+        cities.forEach(city -> {
+            when(sceneRepository.findByCityId(city.getId())).thenReturn(List.of());
+            when(landmarkStageRegistry.isCityFullyConfigured(city.getId())).thenReturn(false);
+        });
+    }
+
+    private UserProgress progress(User user, City city, boolean unlocked, boolean bossCompleted) {
+        return UserProgress.builder()
+                .user(user)
+                .city(city)
+                .unlocked(unlocked)
+                .bossCompleted(bossCompleted)
+                .build();
     }
 
     private void stubStage(Scene scene, int order) {
@@ -140,10 +219,15 @@ class JourneyStateServiceTest {
     }
 
     private City city() {
+        return city(CITY_ID, "測試城", "TST", 1);
+    }
+
+    private City city(Long id, String name, String code, int unlockOrder) {
         return City.builder()
-                .id(CITY_ID)
-                .name("測試城")
-                .unlockOrder(1)
+                .id(id)
+                .name(name)
+                .code(code)
+                .unlockOrder(unlockOrder)
                 .bossName("測試守護者")
                 .build();
     }
