@@ -58,24 +58,74 @@
         </button>
       </form>
     </div>
-    <aside class="login-banner" aria-label="台灣旅行冒險預覽">
-      <div>
-        <h3>從台北出發，解鎖六座城市</h3>
-        <p>探索景點、回答問題、挑戰守護者，把台灣的歷史與文化收進你的旅程徽章。</p>
+    <aside class="login-showcase" aria-labelledby="login-showcase-title">
+      <header class="login-showcase__header">
+        <span class="login-showcase__eyebrow">六城文化主線</span>
+        <h2 id="login-showcase-title">從台北啟程，完成六城文化旅程</h2>
+        <p>透過問答、探索、圖片辨識與拼圖，收集文化記憶，挑戰六座城市守護者。</p>
+      </header>
+
+      <div class="login-route" aria-label="六城冒險路線">
+        <div class="login-route__city login-route__city--active">
+          <span class="login-route__icon" aria-hidden="true">北</span>
+          <strong>台北</strong>
+        </div>
+        <div class="login-route__city">
+          <span class="login-route__icon" aria-hidden="true">中</span>
+          <strong>台中</strong>
+        </div>
+        <div class="login-route__city">
+          <span class="login-route__icon" aria-hidden="true">南</span>
+          <strong>台南</strong>
+        </div>
+        <div class="login-route__city">
+          <span class="login-route__icon" aria-hidden="true">高</span>
+          <strong>高雄</strong>
+        </div>
+        <div class="login-route__city">
+          <span class="login-route__icon" aria-hidden="true">花</span>
+          <strong>花蓮</strong>
+        </div>
+        <div class="login-route__city">
+          <span class="login-route__icon" aria-hidden="true">澎</span>
+          <strong>澎湖</strong>
+        </div>
       </div>
-      <div class="route-map" aria-hidden="true">
-        <span class="route-node"><span class="route-dot">北</span>台北</span>
-        <span class="route-node"><span class="route-dot">中</span>台中</span>
-        <span class="route-node"><span class="route-dot">南</span>台南</span>
-        <span class="route-node"><span class="route-dot">港</span>高雄</span>
-        <span class="route-node"><span class="route-dot">山</span>花蓮</span>
-        <span class="route-node"><span class="route-dot">海</span>澎湖</span>
+
+      <div class="login-features" aria-label="旅程玩法特色">
+        <article class="login-feature">
+          <span aria-hidden="true">❓</span>
+          <div>
+            <strong>神秘挑戰</strong>
+            <small>每次關卡隨機揭曉</small>
+          </div>
+        </article>
+        <article class="login-feature">
+          <span aria-hidden="true">🧩</span>
+          <div>
+            <strong>四種玩法</strong>
+            <small>問答、探索、辨識、拼圖</small>
+          </div>
+        </article>
+        <article class="login-feature">
+          <span aria-hidden="true">🏅</span>
+          <div>
+            <strong>城市徽章</strong>
+            <small>完成守護者即可取得</small>
+          </div>
+        </article>
+        <article class="login-feature">
+          <span aria-hidden="true">👹</span>
+          <div>
+            <strong>Boss 挑戰</strong>
+            <small>擊敗後解鎖下一城市</small>
+          </div>
+        </article>
       </div>
-      <div class="login-tags" aria-hidden="true">
-        <span class="login-tag">景點答題</span>
-        <span class="login-tag">EXP 成長</span>
-        <span class="login-tag">城市徽章</span>
-        <span class="login-tag">Boss 挑戰</span>
+
+      <div class="login-journey-tip">
+        <span aria-hidden="true">🧭</span>
+        <p>旅程從台北開始，完成三個景點與城市守護者，即可解鎖下一座城市。</p>
       </div>
     </aside>
     </div>

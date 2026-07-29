@@ -17,6 +17,8 @@
 
     .login-shell {
       width: min(100%, 980px);
+      min-width: 0;
+      max-width: 100%;
       display: grid;
       grid-template-columns: 420px minmax(0, 1fr);
       gap: 18px;
@@ -25,6 +27,8 @@
 
     .login-card {
       width: 100%;
+      min-width: 0;
+      max-width: 100%;
       padding: 22px;
       border-radius: 8px;
       position: relative;
@@ -113,109 +117,211 @@
       background: white;
     }
 
-    .login-banner {
-      min-height: 370px;
+    .login-showcase {
+      min-width: 0;
+      min-height: 520px;
       display: grid;
-      align-content: space-between;
-      gap: 18px;
-      padding: 22px;
+      align-content: start;
+      gap: 0;
+      padding: 28px;
       border: 1px solid rgba(216, 229, 251, .46);
-      border-radius: 8px;
+      border-radius: 16px;
       color: white;
       background:
-        linear-gradient(180deg, rgba(8, 37, 72, .08), rgba(8, 37, 72, .72)),
-        linear-gradient(135deg, rgba(36, 111, 229, .88), rgba(26, 126, 103, .9)),
-        url("/images/landmarks/taipei-101.webp");
-      background-position: center;
-      background-size: cover;
+        linear-gradient(145deg, rgba(8, 35, 67, .98), rgba(10, 83, 94, .95));
       box-shadow: 0 24px 70px rgba(7, 25, 58, .28);
       overflow: hidden;
       position: relative;
+      isolation: isolate;
       animation: loginRise .48s ease both;
     }
 
-    .login-banner::after {
+    .login-showcase::before {
       content: "";
       position: absolute;
-      inset: 18px;
-      border: 1px solid rgba(255, 255, 255, .28);
-      border-radius: 8px;
+      inset: 0;
+      background:
+        radial-gradient(circle at 75% 30%, rgba(77, 204, 190, .25), transparent 38%),
+        radial-gradient(circle at 20% 80%, rgba(65, 119, 219, .2), transparent 42%),
+        repeating-radial-gradient(circle at 82% 22%, rgba(255, 255, 255, .08) 0 1px, transparent 1px 18px);
       pointer-events: none;
+      z-index: -2;
     }
 
-    .login-banner h3 {
-      margin-bottom: 8px;
-      color: white;
-      font-size: 28px;
-      line-height: 1.25;
-      max-width: 12em;
+    .login-showcase::after {
+      content: "";
+      position: absolute;
+      inset: 4% -5% 3% 42%;
+      background: url("/images/map/taiwan-island-adventure.png") center / contain no-repeat;
+      filter: grayscale(1) brightness(1.8);
+      opacity: .08;
+      pointer-events: none;
+      z-index: -1;
     }
 
-    .login-banner p {
-      margin-bottom: 0;
-      max-width: 28em;
-      color: rgba(255,255,255,.86);
+    .login-showcase__header {
+      max-width: 32rem;
+    }
+
+    .login-showcase__eyebrow {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      margin-bottom: 10px;
+      padding: 5px 10px;
+      border: 1px solid rgba(255, 226, 154, .42);
+      border-radius: 999px;
+      color: #ffe29a;
+      background: rgba(255, 226, 154, .08);
+      font-size: .76rem;
       font-weight: 800;
-      line-height: 1.55;
+      letter-spacing: .12em;
     }
 
-    .route-map {
+    .login-showcase h2 {
+      margin: 0;
+      color: white;
+      font-size: clamp(1.65rem, 3vw, 2.15rem);
+      line-height: 1.3;
+      text-wrap: balance;
+    }
+
+    .login-showcase__header p {
+      margin: 12px 0 0;
+      color: rgba(255, 255, 255, .78);
+      font-weight: 700;
+      line-height: 1.7;
+    }
+
+    .login-route {
+      min-width: 0;
       display: grid;
       grid-template-columns: repeat(6, minmax(0, 1fr));
-      gap: 8px;
+      gap: 10px;
+      margin-top: 30px;
       position: relative;
-      z-index: 1;
     }
 
-    .route-map::before {
+    .login-route::before {
       content: "";
       position: absolute;
       left: 8%;
       right: 8%;
-      top: 20px;
+      top: 23px;
       height: 3px;
-      background: linear-gradient(90deg, var(--gold), white, var(--green));
-      opacity: .72;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #f2c86b, #55c9a5, rgba(255, 255, 255, .3));
     }
 
-    .route-node {
+    .login-route__city {
+      min-width: 0;
       display: grid;
       justify-items: center;
       gap: 8px;
-      color: white;
-      font-size: 12px;
-      font-weight: 900;
+      color: rgba(255, 255, 255, .78);
       position: relative;
       z-index: 1;
     }
 
-    .route-dot {
-      width: 38px;
-      height: 38px;
+    .login-route__city strong {
+      font-size: .78rem;
+      line-height: 1.2;
+      text-align: center;
+    }
+
+    .login-route__icon {
+      width: 46px;
+      height: 46px;
       display: grid;
       place-items: center;
-      border: 2px solid rgba(255,255,255,.76);
-      border-radius: 999px;
-      background: rgba(255,255,255,.16);
-      box-shadow: 0 8px 18px rgba(0,0,0,.18);
+      border: 2px solid rgba(255, 255, 255, .65);
+      border-radius: 50%;
+      background: rgba(11, 45, 80, .85);
+      font-weight: 800;
     }
 
-    .login-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      position: relative;
-      z-index: 1;
-    }
-
-    .login-tag {
-      padding: 7px 9px;
-      border: 1px solid rgba(255,255,255,.28);
-      border-radius: 999px;
-      background: rgba(255,255,255,.14);
+    .login-route__city--active {
       color: white;
-      font-size: 13px;
-      font-weight: 900;
+    }
+
+    .login-route__city--active .login-route__icon {
+      color: #fff4ce;
+      border-color: #ffe29a;
+      background: rgba(94, 69, 19, .72);
+      box-shadow:
+        0 0 0 6px rgba(255, 226, 154, .12),
+        0 0 24px rgba(255, 217, 120, .65);
+    }
+
+    .login-features {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .login-feature {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid rgba(255, 255, 255, .18);
+      border-radius: 14px;
+      background: rgba(7, 34, 62, .4);
+      backdrop-filter: blur(8px);
+    }
+
+    .login-feature > span {
+      flex: 0 0 auto;
+      font-size: 1.5rem;
+    }
+
+    .login-feature > div {
+      min-width: 0;
+    }
+
+    .login-feature strong,
+    .login-feature small {
+      display: block;
+    }
+
+    .login-feature strong {
+      color: white;
+      font-size: .9rem;
+    }
+
+    .login-feature small {
+      margin-top: 3px;
+      color: rgba(255, 255, 255, .68);
+      font-size: .74rem;
+      line-height: 1.45;
+    }
+
+    .login-journey-tip {
+      min-width: 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-top: 22px;
+      padding: 13px 14px;
+      border-left: 3px solid #ffe29a;
+      border-radius: 0 12px 12px 0;
+      background: rgba(5, 29, 54, .38);
+    }
+
+    .login-journey-tip > span {
+      flex: 0 0 auto;
+      font-size: 1.25rem;
+    }
+
+    .login-journey-tip p {
+      margin: 0;
+      color: rgba(255, 255, 255, .78);
+      font-size: .8rem;
+      font-weight: 700;
+      line-height: 1.6;
     }
 
     .error {
@@ -1056,8 +1162,19 @@
 
     @media (max-width: 980px) {
       .city-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .login { align-items: start; overflow-x: hidden; overflow-y: auto; }
       .login-shell { grid-template-columns: 1fr; }
-      .login-banner { min-height: 280px; }
+      .login-showcase { min-height: auto; }
+    }
+
+    @media (max-width: 768px) {
+      .login-route {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        row-gap: 24px;
+      }
+
+      .login-route::before { display: none; }
+      .login-features { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 640px) {
@@ -1083,11 +1200,12 @@
       .avatar { width: 52px; height: 52px; font-size: 23px; }
       .scene-card { grid-template-columns: 72px minmax(0, 1fr); }
       .scene-image { width: 72px; }
-      .login { padding: 12px; align-items: start; overflow: auto; }
+      .login { padding: 12px; align-items: start; overflow-x: hidden; overflow-y: auto; }
       .login-shell { gap: 12px; }
       .login-card { padding: 20px 18px; }
       .login-card__brand p { margin-bottom: 22px; }
-      .login-banner { min-height: 250px; padding: 18px; }
-      .route-map { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .route-map::before { display: none; }
+      .login-showcase { padding: 22px 18px; }
+      .login-showcase::after { inset: 8% -24% 22% 35%; }
+      .login-route { column-gap: 8px; }
+      .login-feature { padding: 12px; }
     }
