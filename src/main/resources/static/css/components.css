@@ -63,15 +63,53 @@
     }
 
     .login-card__brand p {
-      margin: 12px 0 28px;
+      margin: 12px 0 20px;
       color: #627086;
       font-weight: 700;
       line-height: 1.7;
     }
 
+    .auth-mode-tabs {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      margin-bottom: 20px;
+      padding: 5px;
+      border-radius: 12px;
+      background: #edf2f7;
+    }
+
+    .auth-mode-tab {
+      min-width: 0;
+      min-height: 42px;
+      padding: 8px 10px;
+      border: 0;
+      border-radius: 9px;
+      color: #64748b;
+      background: transparent;
+      font-size: .88rem;
+      font-weight: 800;
+    }
+
+    .auth-mode-tab--active {
+      color: #174f80;
+      background: #fff;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, .1);
+    }
+
+    .auth-mode-tab:focus-visible {
+      outline: 3px solid rgba(36, 111, 229, .25);
+      outline-offset: 2px;
+    }
+
     .login-form {
       display: grid;
       gap: 16px;
+    }
+
+    .login-form[hidden] {
+      display: none;
     }
 
     .login-field {
@@ -121,13 +159,12 @@
     }
 
     .password-field .password-field__toggle:focus-visible,
-    .login-primary-button:focus-visible,
-    .login-secondary-button:focus-visible {
+    .login-primary-button:focus-visible {
       outline: 3px solid rgba(36, 111, 229, .25);
       outline-offset: 2px;
     }
 
-    .password-field #login-password {
+    .password-field input {
       padding-right: 74px;
     }
 
@@ -173,8 +210,7 @@
       box-shadow: 0 18px 48px rgba(8, 116, 67, .2);
     }
 
-    .login-primary-button,
-    .login-secondary-button {
+    .login-primary-button {
       width: 100%;
       padding: 9px 13px;
       border-radius: 8px;
@@ -188,15 +224,8 @@
     }
 
     .login-primary-button[aria-busy="true"],
-    .login-secondary-button[aria-busy="true"] {
+    .auth-mode-tab:disabled {
       cursor: progress;
-    }
-
-    .login-secondary-button {
-      min-height: 44px;
-      color: #123b78;
-      border: 1px solid #bfd3f6;
-      background: white;
     }
 
     .login-showcase {

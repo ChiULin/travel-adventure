@@ -21,8 +21,8 @@ function tutorialIsCompleted() {
       setTimeout(maybeShowFinalEnding, 0);
     }
 
-function showLoginMessage(message = "", type = "error") {
-      const messageElement = document.getElementById("login-message");
+function showAuthMessage(mode, message = "", type = "error") {
+      const messageElement = document.getElementById(`${mode}-message`);
       messageElement.textContent = message;
       messageElement.classList.remove("login-message--error", "login-message--success");
       if (message) {
@@ -30,66 +30,133 @@ function showLoginMessage(message = "", type = "error") {
       }
     }
 
-function clearLoginMessage() {
-      showLoginMessage("");
+function showLoginMessage(message = "", type = "error") {
+      showAuthMessage("login", message, type);
     }
 
-function setLoginFieldError(input, message = "") {
+function showRegisterMessage(message = "", type = "error") {
+      showAuthMessage("register", message, type);
+    }
+
+function clearAuthMessage(mode) {
+      showAuthMessage(mode, "");
+    }
+
+function clearLoginMessage() {
+      clearAuthMessage("login");
+    }
+
+function clearAuthMessages() {
+      clearAuthMessage("login");
+      clearAuthMessage("register");
+    }
+
+function setAuthFieldError(input, message = "") {
       const errorElement = document.getElementById(`${input.id}-error`);
       input.classList.toggle("input--invalid", Boolean(message));
       input.setAttribute("aria-invalid", String(Boolean(message)));
       errorElement.textContent = message;
     }
 
-function clearLoginFieldError(input) {
-      setLoginFieldError(input);
+function clearAuthFieldError(input) {
+      setAuthFieldError(input);
     }
 
-function clearLoginFieldErrors() {
-      ["login-username", "login-password"].forEach(inputId => {
-        clearLoginFieldError(document.getElementById(inputId));
+function clearAuthFormFieldErrors(mode) {
+      document.querySelectorAll(`#${mode}-form [aria-invalid]`).forEach(input => {
+        clearAuthFieldError(input);
       });
     }
 
-function validateLoginFields(username, password) {
-      const usernameInput = document.getElementById("login-username");
-      const passwordInput = document.getElementById("login-password");
-      clearLoginFieldErrors();
-      clearLoginMessage();
+function clearAuthFieldErrors() {
+      clearAuthFormFieldErrors("login");
+      clearAuthFormFieldErrors("register");
+    }
+
+function validateCredentialFields(mode, username, password) {
+      const usernameInput = document.getElementById(`${mode}-username`);
+      const passwordInput = document.getElementById(`${mode}-password`);
 
       if (!username) {
-        setLoginFieldError(usernameInput, "請輸入旅人帳號");
+        setAuthFieldError(usernameInput, "請輸入旅人帳號");
       } else if (username.length < 3) {
-        setLoginFieldError(usernameInput, "旅人帳號至少需要 3 個字元");
+        setAuthFieldError(usernameInput, "旅人帳號至少需要 3 個字元");
       } else if (username.length > 20) {
-        setLoginFieldError(usernameInput, "旅人帳號最多只能有 20 個字元");
+        setAuthFieldError(usernameInput, "旅人帳號最多只能有 20 個字元");
       }
 
       if (!password) {
-        setLoginFieldError(passwordInput, "請輸入密碼");
+        setAuthFieldError(passwordInput, "請輸入密碼");
       } else if (password.length < 8) {
-        setLoginFieldError(passwordInput, "密碼至少需要 8 個字元");
+        setAuthFieldError(passwordInput, "密碼至少需要 8 個字元");
       } else if (password.length > 72) {
-        setLoginFieldError(passwordInput, "密碼最多只能有 72 個字元");
+        setAuthFieldError(passwordInput, "密碼最多只能有 72 個字元");
       }
-
-      const firstInvalidInput = loginForm.querySelector(".input--invalid");
-      if (firstInvalidInput) {
-        firstInvalidInput.focus();
-        return false;
-      }
-      return true;
     }
 
-function togglePasswordVisibility() {
-      const input = document.getElementById("login-password");
-      const button = document.getElementById("toggle-login-password");
+function focusFirstInvalidAuthField(mode) {
+      const firstInvalidInput = document.querySelector(`#${mode}-form .input--invalid`);
+      if (!firstInvalidInput) return true;
+      firstInvalidInput.focus();
+      return false;
+    }
+
+function validateLoginFields(username, password) {
+      clearAuthFormFieldErrors("login");
+      clearAuthMessage("login");
+      validateCredentialFields("login", username, password);
+      return focusFirstInvalidAuthField("login");
+    }
+
+function validateRegisterFields(username, password, confirmPassword) {
+      clearAuthFormFieldErrors("register");
+      clearAuthMessage("register");
+      validateCredentialFields("register", username, password);
+
+      const confirmPasswordInput = document.getElementById("register-confirm-password");
+      if (!confirmPassword) {
+        setAuthFieldError(confirmPasswordInput, "請再次輸入密碼");
+      } else if (password !== confirmPassword) {
+        setAuthFieldError(confirmPasswordInput, "兩次輸入的密碼不一致");
+      }
+
+      return focusFirstInvalidAuthField("register");
+    }
+
+function togglePasswordVisibility(inputId, buttonId, label = "密碼") {
+      const input = document.getElementById(inputId);
+      const button = document.getElementById(buttonId);
       const willShow = input.type === "password";
 
       input.type = willShow ? "text" : "password";
       button.textContent = willShow ? "隱藏" : "顯示";
-      button.setAttribute("aria-label", willShow ? "隱藏密碼" : "顯示密碼");
+      button.setAttribute("aria-label", `${willShow ? "隱藏" : "顯示"}${label}`);
       button.setAttribute("aria-pressed", String(willShow));
+    }
+
+function resetAuthPasswordVisibility() {
+      [
+        ["login-password", "toggle-login-password", "密碼"],
+        ["register-password", "toggle-register-password", "密碼"],
+        ["register-confirm-password", "toggle-register-confirm-password", "確認密碼"]
+      ].forEach(([inputId, buttonId, label]) => {
+        const input = document.getElementById(inputId);
+        const button = document.getElementById(buttonId);
+        input.type = "password";
+        button.textContent = "顯示";
+        button.setAttribute("aria-label", `顯示${label}`);
+        button.setAttribute("aria-pressed", "false");
+      });
+    }
+
+function clearAuthPasswords() {
+      [
+        "login-password",
+        "register-password",
+        "register-confirm-password"
+      ].forEach(inputId => {
+        document.getElementById(inputId).value = "";
+      });
     }
 
 async function showLoginSuccessTransition(message) {
@@ -135,17 +202,16 @@ function clearAuthState() {
     }
 
 function showLoginPage(message = "") {
-      const passwordInput = document.getElementById("login-password");
-      const passwordToggle = document.getElementById("toggle-login-password");
-      passwordInput.value = "";
-      passwordInput.type = "password";
-      passwordToggle.textContent = "顯示";
-      passwordToggle.setAttribute("aria-label", "顯示密碼");
-      passwordToggle.setAttribute("aria-pressed", "false");
-      clearLoginFieldErrors();
+      if (typeof switchAuthMode === "function") {
+        switchAuthMode("login", { focus: false });
+      }
+      clearAuthPasswords();
+      resetAuthPasswordVisibility();
+      clearAuthFieldErrors();
       document.querySelector(".login-card")?.classList.remove("login-card--success");
       showLoginMessage(message, "error");
       document.getElementById("login").classList.remove("hidden");
+      document.getElementById("login-username").focus();
     }
 
 async function authenticate(path, username, password, successMessage) {
@@ -180,11 +246,8 @@ async function authenticate(path, username, password, successMessage) {
     }
 
     async function register(username, password) {
-      const auth = await authenticate(
-        "/api/auth/register",
-        username,
-        password,
-        "旅人帳號建立成功，現在可以開始旅程。"
-      );
-      addLog(`${auth.username} 的帳號已建立。`);
+      return api("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ username, password })
+      });
     }

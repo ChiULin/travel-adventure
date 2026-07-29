@@ -14,11 +14,42 @@
     <div class="login-card">
       <div class="login-card__brand">
         <span class="login-card__eyebrow">旅人入口</span>
-        <h1>開始你的台灣冒險</h1>
-        <p>從台北出發，探索六座城市，解鎖文化地標與守護者。</p>
+        <h1 id="auth-card-title">開始你的台灣冒險</h1>
+        <p id="auth-card-description">從台北出發，探索六座城市，解鎖文化地標與守護者。</p>
       </div>
 
-      <form id="login-form" class="login-form" novalidate>
+      <div class="auth-mode-tabs" role="tablist" aria-label="旅人帳號模式">
+        <button
+          id="login-mode-tab"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          aria-controls="login-form"
+          tabindex="0"
+          class="auth-mode-tab auth-mode-tab--active"
+        >
+          登入旅程
+        </button>
+        <button
+          id="register-mode-tab"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          aria-controls="register-form"
+          tabindex="-1"
+          class="auth-mode-tab"
+        >
+          建立旅人
+        </button>
+      </div>
+
+      <form
+        id="login-form"
+        class="login-form"
+        role="tabpanel"
+        aria-labelledby="login-mode-tab"
+        novalidate
+      >
         <div class="login-field">
           <label for="login-username">旅人帳號</label>
           <input
@@ -75,11 +106,101 @@
         <button id="login-submit" type="submit" class="login-primary-button">
           開始旅程
         </button>
+      </form>
+
+      <form
+        id="register-form"
+        class="login-form"
+        role="tabpanel"
+        aria-labelledby="register-mode-tab"
+        novalidate
+        hidden
+      >
+        <div class="login-field">
+          <label for="register-username">旅人帳號</label>
+          <input
+            id="register-username"
+            name="username"
+            type="text"
+            placeholder="建立旅人帳號"
+            autocomplete="username"
+            minlength="3"
+            maxlength="20"
+            aria-describedby="register-username-error"
+            aria-invalid="false"
+            required
+          />
+          <small id="register-username-error" class="field-error"></small>
+        </div>
+
+        <div class="login-field">
+          <label for="register-password">密碼</label>
+          <div class="password-field">
+            <input
+              id="register-password"
+              name="password"
+              type="password"
+              placeholder="至少 8 個字元"
+              autocomplete="new-password"
+              minlength="8"
+              maxlength="72"
+              aria-describedby="register-password-error"
+              aria-invalid="false"
+              required
+            />
+            <button
+              type="button"
+              id="toggle-register-password"
+              class="password-field__toggle"
+              aria-label="顯示密碼"
+              aria-pressed="false"
+            >
+              顯示
+            </button>
+          </div>
+          <small id="register-password-error" class="field-error"></small>
+        </div>
+
+        <div class="login-field">
+          <label for="register-confirm-password">確認密碼</label>
+          <div class="password-field">
+            <input
+              id="register-confirm-password"
+              name="confirmPassword"
+              type="password"
+              placeholder="再次輸入密碼"
+              autocomplete="new-password"
+              minlength="8"
+              maxlength="72"
+              aria-describedby="register-confirm-password-error"
+              aria-invalid="false"
+              required
+            />
+            <button
+              type="button"
+              id="toggle-register-confirm-password"
+              class="password-field__toggle"
+              aria-label="顯示確認密碼"
+              aria-pressed="false"
+            >
+              顯示
+            </button>
+          </div>
+          <small id="register-confirm-password-error" class="field-error"></small>
+        </div>
+
+        <p
+          id="register-message"
+          class="login-message"
+          role="alert"
+          aria-live="polite"
+          aria-atomic="true"
+        ></p>
 
         <button
-          type="button"
-          id="show-register-button"
-          class="login-secondary-button"
+          id="register-submit"
+          type="submit"
+          class="login-primary-button"
         >
           註冊成為旅人
         </button>
