@@ -18,34 +18,61 @@
         <p>從台北出發，探索六座城市，解鎖文化地標與守護者。</p>
       </div>
 
-      <form id="login-form" class="login-form">
-        <label for="login-username">旅人帳號</label>
-        <input
-          id="login-username"
-          name="username"
-          type="text"
-          placeholder="輸入旅人帳號"
-          autocomplete="username"
-          minlength="3"
-          maxlength="20"
-          required
-        />
+      <form id="login-form" class="login-form" novalidate>
+        <div class="login-field">
+          <label for="login-username">旅人帳號</label>
+          <input
+            id="login-username"
+            name="username"
+            type="text"
+            placeholder="輸入旅人帳號"
+            autocomplete="username"
+            minlength="3"
+            maxlength="20"
+            aria-describedby="login-username-error"
+            aria-invalid="false"
+            required
+          />
+          <small id="login-username-error" class="field-error"></small>
+        </div>
 
-        <label for="login-password">密碼</label>
-        <input
-          id="login-password"
-          name="password"
-          type="password"
-          placeholder="至少 8 個字元"
-          autocomplete="current-password"
-          minlength="8"
-          maxlength="72"
-          required
-        />
+        <div class="login-field">
+          <label for="login-password">密碼</label>
+          <div class="password-field">
+            <input
+              id="login-password"
+              name="password"
+              type="password"
+              placeholder="至少 8 個字元"
+              autocomplete="current-password"
+              minlength="8"
+              maxlength="72"
+              aria-describedby="login-password-error"
+              aria-invalid="false"
+              required
+            />
+            <button
+              type="button"
+              id="toggle-login-password"
+              class="password-field__toggle"
+              aria-label="顯示密碼"
+              aria-pressed="false"
+            >
+              顯示
+            </button>
+          </div>
+          <small id="login-password-error" class="field-error"></small>
+        </div>
 
-        <div class="error" id="login-error" role="alert" aria-live="polite"></div>
+        <p
+          id="login-message"
+          class="login-message"
+          role="alert"
+          aria-live="polite"
+          aria-atomic="true"
+        ></p>
 
-        <button type="submit" class="login-primary-button">
+        <button id="login-submit" type="submit" class="login-primary-button">
           開始旅程
         </button>
 

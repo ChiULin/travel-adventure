@@ -1,47 +1,82 @@
 const loginForm = document.getElementById("login-form");
+const loginSubmitButton = document.getElementById("login-submit");
+const registerButton = document.getElementById("show-register-button");
+const passwordToggleButton = document.getElementById("toggle-login-password");
 
-async function runAuthRequest(button, action) {
+function setAuthSubmitting(activeButton, submitting, busyText) {
+      const authButtons = [...loginForm.querySelectorAll("button")];
+      loginForm.toggleAttribute("aria-busy", submitting);
+      authButtons.forEach(button => {
+        button.disabled = submitting;
+      });
+
+      if (submitting) {
+        activeButton.dataset.idleText = activeButton.textContent.trim();
+        activeButton.textContent = busyText;
+        activeButton.setAttribute("aria-busy", "true");
+      } else {
+        activeButton.textContent = activeButton.dataset.idleText || activeButton.textContent;
+        delete activeButton.dataset.idleText;
+        activeButton.removeAttribute("aria-busy");
+      }
+    }
+
+function setLoginSubmitting(submitting) {
+      setAuthSubmitting(loginSubmitButton, submitting, "正在進入旅程……");
+    }
+
+function setRegisterSubmitting(submitting) {
+      setAuthSubmitting(registerButton, submitting, "正在建立旅人帳號……");
+    }
+
+async function runAuthRequest(setSubmitting, action) {
       if (loginForm.dataset.submitting === "true") return;
       loginForm.dataset.submitting = "true";
-      const authButtons = [...loginForm.querySelectorAll("button")];
-      authButtons.filter(item => item !== button).forEach(item => {
-        item.disabled = true;
-      });
+      setSubmitting(true);
+      clearLoginMessage();
       try {
-        await runWithButtonLock(button, action);
+        return await action();
       } finally {
         delete loginForm.dataset.submitting;
-        authButtons.filter(item => item !== button && item.isConnected).forEach(item => {
-          item.disabled = false;
-        });
+        setSubmitting(false);
       }
     }
 
 loginForm.addEventListener("submit", async event => {
       event.preventDefault();
-      const button = event.submitter || loginForm.querySelector('button[type="submit"]');
-      const username = document.getElementById("login-username").value.trim() || "旅行者";
+      const username = document.getElementById("login-username").value.trim();
       const password = document.getElementById("login-password").value;
-      document.getElementById("login-error").textContent = "";
+      if (!validateLoginFields(username, password)) return;
+
       try {
-        await runAuthRequest(button, () => login(username, password));
+        await runAuthRequest(setLoginSubmitting, () => login(username, password));
       } catch (error) {
-        document.getElementById("login-error").textContent = error.message;
+        const message = error?.status === 401
+          ? "帳號或密碼錯誤，請重新輸入。"
+          : error?.message || "登入失敗，請確認帳號與密碼。";
+        showLoginMessage(message, "error");
       }
     });
 
-    document.getElementById("show-register-button").addEventListener("click", async event => {
+    registerButton.addEventListener("click", async () => {
       const username = document.getElementById("login-username").value.trim();
       const password = document.getElementById("login-password").value;
-      const errorElement = document.getElementById("login-error");
-      const validationMessage = validateAuthInput(username, password);
-      errorElement.textContent = validationMessage;
-      if (validationMessage) return;
+      if (!validateLoginFields(username, password)) return;
+
       try {
-        await runAuthRequest(event.currentTarget, () => register(username, password));
+        await runAuthRequest(setRegisterSubmitting, () => register(username, password));
       } catch (error) {
-        errorElement.textContent = error.message;
+        showLoginMessage(error?.message || "帳號建立失敗，請稍後再試。", "error");
       }
+    });
+
+    passwordToggleButton.addEventListener("click", togglePasswordVisibility);
+
+    ["login-username", "login-password"].forEach(inputId => {
+      document.getElementById(inputId).addEventListener("input", event => {
+        clearLoginFieldError(event.currentTarget);
+        clearLoginMessage();
+      });
     });
 
     document.getElementById("openCollectionBtn").addEventListener("click", openCollection);

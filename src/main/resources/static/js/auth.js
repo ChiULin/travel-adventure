@@ -21,12 +21,85 @@ function tutorialIsCompleted() {
       setTimeout(maybeShowFinalEnding, 0);
     }
 
-function validateAuthInput(username, password) {
-      if (!username) return "請輸入玩家名稱";
-      if (username.length < 3 || username.length > 20) return "玩家名稱需為 3 到 20 個字元";
-      if (!password) return "請輸入密碼";
-      if (password.length < 8 || password.length > 72) return "密碼需為 8 到 72 個字元";
-      return "";
+function showLoginMessage(message = "", type = "error") {
+      const messageElement = document.getElementById("login-message");
+      messageElement.textContent = message;
+      messageElement.classList.remove("login-message--error", "login-message--success");
+      if (message) {
+        messageElement.classList.add(`login-message--${type}`);
+      }
+    }
+
+function clearLoginMessage() {
+      showLoginMessage("");
+    }
+
+function setLoginFieldError(input, message = "") {
+      const errorElement = document.getElementById(`${input.id}-error`);
+      input.classList.toggle("input--invalid", Boolean(message));
+      input.setAttribute("aria-invalid", String(Boolean(message)));
+      errorElement.textContent = message;
+    }
+
+function clearLoginFieldError(input) {
+      setLoginFieldError(input);
+    }
+
+function clearLoginFieldErrors() {
+      ["login-username", "login-password"].forEach(inputId => {
+        clearLoginFieldError(document.getElementById(inputId));
+      });
+    }
+
+function validateLoginFields(username, password) {
+      const usernameInput = document.getElementById("login-username");
+      const passwordInput = document.getElementById("login-password");
+      clearLoginFieldErrors();
+      clearLoginMessage();
+
+      if (!username) {
+        setLoginFieldError(usernameInput, "請輸入旅人帳號");
+      } else if (username.length < 3) {
+        setLoginFieldError(usernameInput, "旅人帳號至少需要 3 個字元");
+      } else if (username.length > 20) {
+        setLoginFieldError(usernameInput, "旅人帳號最多只能有 20 個字元");
+      }
+
+      if (!password) {
+        setLoginFieldError(passwordInput, "請輸入密碼");
+      } else if (password.length < 8) {
+        setLoginFieldError(passwordInput, "密碼至少需要 8 個字元");
+      } else if (password.length > 72) {
+        setLoginFieldError(passwordInput, "密碼最多只能有 72 個字元");
+      }
+
+      const firstInvalidInput = loginForm.querySelector(".input--invalid");
+      if (firstInvalidInput) {
+        firstInvalidInput.focus();
+        return false;
+      }
+      return true;
+    }
+
+function togglePasswordVisibility() {
+      const input = document.getElementById("login-password");
+      const button = document.getElementById("toggle-login-password");
+      const willShow = input.type === "password";
+
+      input.type = willShow ? "text" : "password";
+      button.textContent = willShow ? "隱藏" : "顯示";
+      button.setAttribute("aria-label", willShow ? "隱藏密碼" : "顯示密碼");
+      button.setAttribute("aria-pressed", String(willShow));
+    }
+
+async function showLoginSuccessTransition(message) {
+      showLoginMessage(message, "success");
+      document.querySelector(".login-card")?.classList.add("login-card--success");
+
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!reduceMotion) {
+        await new Promise(resolve => setTimeout(resolve, 650));
+      }
     }
 
 function clearAuthState() {
@@ -62,18 +135,27 @@ function clearAuthState() {
     }
 
 function showLoginPage(message = "") {
-      document.getElementById("login-password").value = "";
-      document.getElementById("login-error").textContent = message;
+      const passwordInput = document.getElementById("login-password");
+      const passwordToggle = document.getElementById("toggle-login-password");
+      passwordInput.value = "";
+      passwordInput.type = "password";
+      passwordToggle.textContent = "顯示";
+      passwordToggle.setAttribute("aria-label", "顯示密碼");
+      passwordToggle.setAttribute("aria-pressed", "false");
+      clearLoginFieldErrors();
+      document.querySelector(".login-card")?.classList.remove("login-card--success");
+      showLoginMessage(message, "error");
       document.getElementById("login").classList.remove("hidden");
     }
 
-async function authenticate(path, username, password) {
+async function authenticate(path, username, password, successMessage) {
       try {
         const auth = await api(path, {
           method: "POST",
           body: JSON.stringify({ username, password })
         });
         saveSession(auth);
+        await showLoginSuccessTransition(successMessage);
         document.getElementById("login").classList.add("hidden");
         await refreshState();
         showTutorialIfNeeded();
@@ -88,11 +170,21 @@ async function authenticate(path, username, password) {
     }
 
     async function login(username, password) {
-      const auth = await authenticate("/api/auth/login", username, password);
+      const auth = await authenticate(
+        "/api/auth/login",
+        username,
+        password,
+        "登入成功，正在載入你的旅程……"
+      );
       addLog(`${auth.username} 已登入。`);
     }
 
     async function register(username, password) {
-      const auth = await authenticate("/api/auth/register", username, password);
+      const auth = await authenticate(
+        "/api/auth/register",
+        username,
+        password,
+        "旅人帳號建立成功，現在可以開始旅程。"
+      );
       addLog(`${auth.username} 的帳號已建立。`);
     }
