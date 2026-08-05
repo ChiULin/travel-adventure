@@ -52,6 +52,53 @@ function resolveApiErrorMessage(status, body, path, authenticatedRequest) {
 const DEMO_MODE = true;
 
 async function api(path, options = {}) {
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {})
+  };
+
+  const requestToken = session?.token || null;
+
+  if (requestToken) {
+    headers.Authorization = `Bearer ${requestToken}`;
+  }
+
+  // GitHub Pages 純前端 Demo
+  if (DEMO_MODE) {
+    if (typeof demoApiRequest !== "function") {
+      throw new ApiError("Demo API 尚未載入，請重新整理頁面", 0);
+    }
+
+    const demoResponse = await demoApiRequest(path, {
+      ...options,
+      headers
+    });
+
+    if (!demoResponse || demoResponse.success !== true) {
+      throw new ApiError(
+        demoResponse?.message || "Demo 操作失敗",
+        400
+      );
+    }
+
+    return demoResponse.data;
+  }
+
+  let response;
+
+  try {
+    response = await fetch(path, { ...options, headers });
+  } catch {
+    throw new ApiError(
+      "無法連線至伺服器，請檢查網路後重試",
+      0
+    );
+  }
+
+  // 以下保留你原本的處理內容
+}
+
+async function api(path, options = {}) {
       const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
       const requestToken = session?.token || null;
       if (requestToken) headers.Authorization = `Bearer ${requestToken}`;
