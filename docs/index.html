@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>台灣旅行冒險：一邊玩遊戲，一邊認識台灣歷史與文化</title>
+  <link rel="stylesheet" href="/css/base.css" />
+  <link rel="stylesheet" href="/css/game.css" />
+  <link rel="stylesheet" href="/css/components.css" />
+</head>
+<body>
+  <div id="login" class="login">
+    <div class="login-shell">
+    <div class="login-card">
+      <div class="login-card__brand">
+        <span class="login-card__eyebrow">旅人入口</span>
+        <h1 id="auth-card-title">開始你的台灣冒險</h1>
+        <p id="auth-card-description">從台北出發，探索六座城市，解鎖文化地標與守護者。</p>
+      </div>
+
+      <div class="auth-mode-tabs" role="tablist" aria-label="旅人帳號模式">
+        <button
+          id="login-mode-tab"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          aria-controls="login-form"
+          tabindex="0"
+          class="auth-mode-tab auth-mode-tab--active"
+        >
+          登入旅程
+        </button>
+        <button
+          id="register-mode-tab"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          aria-controls="register-form"
+          tabindex="-1"
+          class="auth-mode-tab"
+        >
+          建立旅人
+        </button>
+      </div>
+
+      <form
+        id="login-form"
+        class="login-form"
+        role="tabpanel"
+        aria-labelledby="login-mode-tab"
+        novalidate
+      >
+        <div class="login-field">
+          <label for="login-username">旅人帳號</label>
+          <input
+            id="login-username"
+            name="username"
+            type="text"
+            placeholder="輸入旅人帳號"
+            autocomplete="username"
+            minlength="3"
+            maxlength="20"
+            aria-describedby="login-username-error"
+            aria-invalid="false"
+            required
+          />
+          <small id="login-username-error" class="field-error"></small>
+        </div>
+
+        <div class="login-field">
+          <label for="login-password">密碼</label>
+          <div class="password-field">
+            <input
+              id="login-password"
+              name="password"
+              type="password"
+              placeholder="至少 8 個字元"
+              autocomplete="current-password"
+              minlength="8"
+              maxlength="72"
+              aria-describedby="login-password-error"
+              aria-invalid="false"
+              required
+            />
+            <button
+              type="button"
+              id="toggle-login-password"
+              class="password-field__toggle"
+              aria-label="顯示密碼"
+              aria-pressed="false"
+            >
+              顯示
+            </button>
+          </div>
+          <small id="login-password-error" class="field-error"></small>
+        </div>
+
+        <p
+          id="login-message"
+          class="login-message"
+          role="alert"
+          aria-live="polite"
+          aria-atomic="true"
+        ></p>
+
+        <button id="login-submit" type="submit" class="login-primary-button">
+          開始旅程
+        </button>
+      </form>
+
+      <form
+        id="register-form"
+        class="login-form"
+        role="tabpanel"
+        aria-labelledby="register-mode-tab"
+        novalidate
+        hidden
+      >
+        <div class="login-field">
+          <label for="register-username">旅人帳號</label>
+          <input
+            id="register-username"
+            name="username"
+            type="text"
+            placeholder="建立旅人帳號"
+            autocomplete="username"
+            minlength="3"
+            maxlength="20"
+            aria-describedby="register-username-error"
+            aria-invalid="false"
+            required
+          />
+          <small id="register-username-error" class="field-error"></small>
+        </div>
+
+        <div class="login-field">
+          <label for="register-password">密碼</label>
+          <div class="password-field">
+            <input
+              id="register-password"
+              name="password"
+              type="password"
+              placeholder="至少 8 個字元"
+              autocomplete="new-password"
+              minlength="8"
+              maxlength="72"
+              aria-describedby="register-password-error"
+              aria-invalid="false"
+              required
+            />
+            <button
+              type="button"
+              id="toggle-register-password"
+              class="password-field__toggle"
+              aria-label="顯示密碼"
+              aria-pressed="false"
+            >
+              顯示
+            </button>
+          </div>
+          <small id="register-password-error" class="field-error"></small>
+        </div>
+
+        <div class="login-field">
+          <label for="register-confirm-password">確認密碼</label>
+          <div class="password-field">
+            <input
+              id="register-confirm-password"
+              name="confirmPassword"
+              type="password"
+              placeholder="再次輸入密碼"
+              autocomplete="new-password"
+              minlength="8"
+              maxlength="72"
+              aria-describedby="register-confirm-password-error"
+              aria-invalid="false"
+              required
+            />
+            <button
+              type="button"
+              id="toggle-register-confirm-password"
+              class="password-field__toggle"
+              aria-label="顯示確認密碼"
+              aria-pressed="false"
+            >
+              顯示
+            </button>
+          </div>
+          <small id="register-confirm-password-error" class="field-error"></small>
+        </div>
+
+        <p
+          id="register-message"
+          class="login-message"
+          role="alert"
+          aria-live="polite"
+          aria-atomic="true"
+        ></p>
+
+        <button
+          id="register-submit"
+          type="submit"
+          class="login-primary-button"
+        >
+          註冊成為旅人
+        </button>
+      </form>
+    </div>
+    <aside class="login-showcase" aria-labelledby="login-showcase-title">
+      <header class="login-showcase__header">
+        <span class="login-showcase__eyebrow">六城文化主線</span>
+        <h2 id="login-showcase-title">從台北啟程，完成六城文化旅程</h2>
+        <p>透過問答、探索、圖片辨識與拼圖，收集文化記憶，挑戰六座城市守護者。</p>
+      </header>
+
+      <div class="login-route" aria-label="六城冒險路線">
+        <div class="login-route__city login-route__city--active">
+          <span class="login-route__icon" aria-hidden="true">北</span>
+          <strong>台北</strong>
+        </div>
+        <div class="login-route__city">
+          <span class="login-route__icon" aria-hidden="true">中</span>
+          <strong>台中</strong>
+        </div>
+        <div class="login-route__city">
+          <span class="login-route__icon" aria-hidden="true">南</span>
+          <strong>台南</strong>
+        </div>
+        <div class="login-route__city">
+          <span class="login-route__icon" aria-hidden="true">高</span>
+          <strong>高雄</strong>
+        </div>
+        <div class="login-route__city">
+          <span class="login-route__icon" aria-hidden="true">花</span>
+          <strong>花蓮</strong>
+        </div>
+        <div class="login-route__city">
+          <span class="login-route__icon" aria-hidden="true">澎</span>
+          <strong>澎湖</strong>
+        </div>
+      </div>
+
+      <div class="login-features" aria-label="旅程玩法特色">
+        <article class="login-feature">
+          <span aria-hidden="true">❓</span>
+          <div>
+            <strong>神秘挑戰</strong>
+            <small>每次關卡隨機揭曉</small>
+          </div>
+        </article>
+        <article class="login-feature">
+          <span aria-hidden="true">🧩</span>
+          <div>
+            <strong>四種玩法</strong>
+            <small>問答、探索、辨識、拼圖</small>
+          </div>
+        </article>
+        <article class="login-feature">
+          <span aria-hidden="true">🏅</span>
+          <div>
+            <strong>城市徽章</strong>
+            <small>完成守護者即可取得</small>
+          </div>
+        </article>
+        <article class="login-feature">
+          <span aria-hidden="true">👹</span>
+          <div>
+            <strong>Boss 挑戰</strong>
+            <small>擊敗後解鎖下一城市</small>
+          </div>
+        </article>
+      </div>
+
+      <div class="login-journey-tip">
+        <span aria-hidden="true">🧭</span>
+        <p>旅程從台北開始，完成三個景點與城市守護者，即可解鎖下一座城市。</p>
+      </div>
+    </aside>
+    </div>
+  </div>
+
+  <div id="tutorial" class="tutorial hidden" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle">
+    <div class="tutorial-card">
+      <h2 id="tutorialTitle">開始你的文化冒險</h2>
+      <p>記住四件事，就能開始第一段旅程。</p>
+      <div class="tutorial-steps">
+        <article class="tutorial-step">
+          <strong>步驟 1</strong>
+          <h3>從可挑戰的景點開始</h3>
+          <p>找到目前可挑戰的景點，開始你的第一關。</p>
+        </article>
+        <article class="tutorial-step">
+          <strong>步驟 2</strong>
+          <h3>完成後解鎖下一關</h3>
+          <p>完成目前的景點，下一個景點就會開放挑戰。</p>
+        </article>
+        <article class="tutorial-step">
+          <strong>步驟 3</strong>
+          <h3>挑戰城市 Boss</h3>
+          <p>完成城市內三個景點後，就能挑戰城市 Boss。</p>
+        </article>
+        <article class="tutorial-step">
+          <strong>步驟 4</strong>
+          <h3>前往下一座城市</h3>
+          <p>擊敗城市 Boss，解鎖下一座城市並繼續旅程。</p>
+        </article>
+      </div>
+      <section class="tutorial-difficulties" aria-labelledby="tutorialDifficultyTitle">
+        <h3 id="tutorialDifficultyTitle">選擇適合你的難度</h3>
+        <div class="tutorial-difficulty-list">
+          <div class="tutorial-difficulty">
+            <strong>休閒</strong>
+            <span>時間較長、生命較多</span>
+          </div>
+          <div class="tutorial-difficulty">
+            <strong>一般</strong>
+            <span>適合一般玩家</span>
+          </div>
+          <div class="tutorial-difficulty">
+            <strong>極限</strong>
+            <span>時間短、獎勵較高</span>
+          </div>
+        </div>
+      </section>
+      <button class="btn full" id="startAdventureBtn" type="button">開始冒險</button>
+    </div>
+  </div>
+
+  <div id="resultModal" class="result-modal hidden" role="dialog" aria-modal="true" aria-live="polite">
+    <div class="result-card" id="resultCard"></div>
+  </div>
+
+  <div id="finalEnding" class="final-ending hidden" role="dialog" aria-modal="true" aria-live="polite">
+    <div class="final-card" id="finalEndingCard"></div>
+  </div>
+
+  <div id="collectionOverlay" class="collection-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="collectionTitle">
+    <div class="collection-panel">
+      <div class="section-head">
+        <div>
+          <h2 id="collectionTitle">收藏圖鑑</h2>
+          <p class="city-copy" id="collectionProgress">景點 0 / 18　徽章 0 / 6</p>
+        </div>
+        <button class="btn ghost" type="button" id="closeCollectionBtn">關閉</button>
+      </div>
+      <div class="collection-tabs">
+        <button class="collection-tab active" type="button" data-collection-tab="landmarks">景點圖鑑</button>
+        <button class="collection-tab" type="button" data-collection-tab="badges">城市徽章</button>
+      </div>
+      <div class="collection-layout">
+        <div class="collection-grid" id="collectionGrid"></div>
+        <div class="collection-detail" id="collectionDetail"></div>
+      </div>
+    </div>
+  </div>
+
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">TA</div>
+        <div>
+          <h1>台灣旅行冒險：一邊玩遊戲，一邊認識台灣歷史與文化</h1>
+          <p>探索城市、完成景點、挑戰守護者、收集徽章。</p>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap">
+        <button class="btn ghost" type="button" id="openCollectionBtn">📖 收藏圖鑑</button>
+        <button class="btn ghost" type="button" id="logoutBtn">登出</button>
+      </div>
+    </header>
+
+    <div class="home-grid">
+      <div class="main-stack">
+        <section id="player-summary"></section>
+        <section id="journey-progress"></section>
+
+        <section id="taiwan-map-view" class="world-map" aria-labelledby="worldMapTitle">
+          <header class="world-map__header">
+            <div>
+              <span class="world-map__eyebrow">六城主線</span>
+              <h2 id="worldMapTitle">臺灣文化冒險地圖</h2>
+              <p>選擇已解鎖的城市，繼續你的旅程。</p>
+            </div>
+            <div class="world-map__progress" aria-live="polite">
+              <strong id="taiwan-map-summary">0 / 6</strong>
+              <span>城市完成</span>
+            </div>
+          </header>
+
+          <div class="world-map__body">
+            <div id="world-map-stage" class="world-map__stage" aria-label="臺灣六城冒險路線">
+              <img
+                class="world-map__island"
+                src="/images/map/taiwan-island-adventure.png"
+                alt=""
+                aria-hidden="true"
+              />
+              <div id="world-map-route" class="world-map__route" aria-hidden="true"></div>
+              <div id="world-city-nodes" class="world-map__desktop-cities"></div>
+              <div id="traveler-marker" class="traveler-marker" hidden>
+                <img src="/images/map/traveler-marker.png" alt="" />
+                <span>你在這裡</span>
+              </div>
+            </div>
+
+            <div
+              id="world-mobile-cities"
+              class="world-map__mobile-cities"
+              aria-label="六城列表"
+            ></div>
+
+            <aside class="world-map__tip">
+              <span class="world-map__tip-icon" aria-hidden="true">🧭</span>
+              <div>
+                <strong>旅程提示</strong>
+                <p>完成城市景點與守護者，即可前往下一站。</p>
+              </div>
+            </aside>
+
+            <div class="world-map__footer">
+              <div class="world-map__legend" aria-label="城市狀態圖例">
+                <span><i class="legend-dot legend-dot--available"></i>目前可挑戰</span>
+                <span><i class="legend-dot legend-dot--locked"></i>尚未解鎖</span>
+                <span><i class="legend-dot legend-dot--completed"></i>城市完成</span>
+              </div>
+              <button class="btn ghost" id="reviewJourneyEndingBtn" type="button" hidden>
+                再次觀看旅程結局
+              </button>
+            </div>
+
+            <p id="taiwan-map-message" class="world-map__message" role="status" aria-live="polite"></p>
+          </div>
+        </section>
+
+        <section id="city-stage-view" class="city-stage-view" hidden>
+          <button type="button" id="back-to-taiwan-map" class="btn ghost back-map-button">
+            ← 返回臺灣地圖
+          </button>
+          <section id="exploration-mission"></section>
+          <section id="image-recognition"></section>
+          <section id="puzzle-challenge"></section>
+          <section id="city-detail"></section>
+        </section>
+
+        <section id="daily-missions"></section>
+        <section id="achievements"></section>
+      </div>
+    </div>
+  </main>
+
+  <script defer src="/js/state.js"></script>
+  <script defer src="/js/api.js"></script>
+  <script defer src="/js/auth.js"></script>
+  <script defer src="/js/exploration.js"></script>
+  <script defer src="/js/image-recognition.js"></script>
+  <script defer src="/js/puzzle.js"></script>
+  <script defer src="/js/journey.js"></script>
+  <script defer src="/js/map.js"></script>
+  <script defer src="/js/quiz.js"></script>
+  <script defer src="/js/boss.js"></script>
+  <script defer src="/js/missions.js"></script>
+  <script defer src="/js/collection.js"></script>
+  <script defer src="/js/app.js"></script>
+</body>
+</html>
