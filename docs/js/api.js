@@ -49,10 +49,16 @@ function resolveApiErrorMessage(status, body, path, authenticatedRequest) {
       return API_ERROR_MESSAGES[status] || serverMessage || `操作失敗（${status}）`;
     }
 
+const DEMO_MODE = true;
+
 async function api(path, options = {}) {
       const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
       const requestToken = session?.token || null;
       if (requestToken) headers.Authorization = `Bearer ${requestToken}`;
+
+      if (DEMO_MODE) {
+        return demoApiRequest(path, { ...options, headers });
+      }
 
       let response;
       try {
