@@ -263,7 +263,7 @@
       content: "";
       position: absolute;
       inset: 4% -5% 3% 42%;
-      background: url("/images/map/taiwan-island-adventure.png") center / contain no-repeat;
+      background: url("../images/map/taiwan-island-adventure.png") center / contain no-repeat;
       filter: grayscale(1) brightness(1.8);
       opacity: .08;
       pointer-events: none;
@@ -641,7 +641,7 @@
       padding: 18px;
       background:
         linear-gradient(180deg, rgba(8, 22, 55, .82), rgba(8, 22, 55, .72)),
-        url('/images/landmarks/taipei-101.webp') center / cover;
+        url('../images/landmarks/taipei-101.webp') center / cover;
       backdrop-filter: blur(10px);
     }
 
