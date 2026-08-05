@@ -139,9 +139,12 @@ public class JourneyStateService {
                 .mapToInt(city -> ((Number) city.get("total")).intValue())
                 .sum();
         boolean journeyCompleted = totalCityCount > 0 && completedCityCount == totalCityCount;
+        City currentCity = resolveCurrentCity(cities, progressByCityId);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("user", userDto(user));
+        result.put("currentCityId", currentCity == null ? null : currentCity.getId());
+        result.put("currentCityCode", currentCity == null ? null : currentCity.getCode());
         result.put("cities", cityDtos);
         result.put("journeyCompleted", journeyCompleted);
         result.put("completedCityCount", completedCityCount);
@@ -154,6 +157,27 @@ public class JourneyStateService {
         result.put("defeatedBossCityIds", defeatedCityIds);
         result.put("checkedSceneIds", checkedSceneIds);
         return result;
+    }
+
+    private City resolveCurrentCity(List<City> cities, Map<Long, UserProgress> progressByCityId) {
+        City lastCompletedCity = null;
+        for (City city : cities) {
+            UserProgress progress = progressByCityId.get(city.getId());
+            boolean completed = progress != null && Boolean.TRUE.equals(progress.getBossCompleted());
+            boolean unlocked = progress != null && Boolean.TRUE.equals(progress.getUnlocked());
+
+            if (completed) {
+                lastCompletedCity = city;
+            }
+            if (unlocked && !completed) {
+                return city;
+            }
+        }
+
+        if (lastCompletedCity != null) {
+            return lastCompletedCity;
+        }
+        return cities.isEmpty() ? null : cities.getFirst();
     }
 
     public Map<String, Object> missions(Long userId) {
