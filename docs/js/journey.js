@@ -122,10 +122,10 @@ function formatNumber(value) {
         || !document.getElementById("collectionOverlay").classList.contains("hidden");
     }
 
-  async function refreshState() {
-  const journey = await api("/api/journey/me");
+    async function refreshState() {
+    const journey = await api("/api/journey/me");
 
-  if (!journey || !Array.isArray(journey.cities)) {
+    if (!journey || !Array.isArray(journey.cities)) {
     throw new Error("無法取得 Demo 城市資料");
      }
 
@@ -154,7 +154,6 @@ function formatNumber(value) {
         loadExplorationMission(explorationCity.id);
       }
       setTimeout(maybeShowFinalEnding, 0);
-    }
 
     function renderPlayerSummary() {
       const user = appState.user;
