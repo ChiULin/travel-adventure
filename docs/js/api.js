@@ -51,6 +51,8 @@ function resolveApiErrorMessage(status, body, path, authenticatedRequest) {
 
 const DEMO_MODE = true;
 
+
+
 async function api(path, options = {}) {
   const headers = {
     "Content-Type": "application/json",
@@ -63,30 +65,34 @@ async function api(path, options = {}) {
     headers.Authorization = `Bearer ${requestToken}`;
   }
 
-if (DEMO_MODE) {
-  if (typeof demoApiRequest !== "function") {
-    throw new ApiError("Demo API 尚未載入", 0);
+  // GitHub Pages 純前端 Demo
+  if (DEMO_MODE) {
+    if (typeof demoApiRequest !== "function") {
+      throw new ApiError("Demo API 尚未載入", 0);
+    }
+
+    const demoResponse = await demoApiRequest(path, {
+      ...options,
+      headers
+    });
+
+    if (!demoResponse || demoResponse.success !== true) {
+      throw new ApiError(
+        demoResponse?.message || "Demo 操作失敗",
+        400
+      );
+    }
+
+    return demoResponse.data;
   }
-
-  const demoResponse = await demoApiRequest(path, {
-    ...options,
-    headers
-  });
-
-  if (!demoResponse || demoResponse.success !== true) {
-    throw new ApiError(
-      demoResponse?.message || "Demo 操作失敗",
-      400
-    );
-  }
-
-  return demoResponse.data;
-}
 
   let response;
 
   try {
-    response = await fetch(path, { ...options, headers });
+    response = await fetch(path, {
+      ...options,
+      headers
+    });
   } catch {
     throw new ApiError(
       "無法連線至伺服器，請檢查網路後重試",
@@ -94,61 +100,73 @@ if (DEMO_MODE) {
     );
   }
 
-  // 以下保留你原本的處理內容
-}
+  const text = await response.text();
+  let body = null;
 
-async function api(path, options = {}) {
-      const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
-      const requestToken = session?.token || null;
-      if (requestToken) headers.Authorization = `Bearer ${requestToken}`;
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch {
+    if (!response.ok) {
+      const authenticatedRequest = Boolean(
+        requestToken && session?.token === requestToken
+      );
 
-      if (DEMO_MODE) {
-        return demoApiRequest(path, { ...options, headers });
+      const message = resolveApiErrorMessage(
+        response.status,
+        null,
+        path,
+        authenticatedRequest
+      );
+
+      if (response.status === 401 && authenticatedRequest) {
+        clearAuthState();
+        showLoginPage(message);
       }
 
-      let response;
-      try {
-        response = await fetch(path, { ...options, headers });
-      } catch {
-        throw new ApiError("無法連線至伺服器，請檢查網路後重試", 0);
-      }
-
-      const text = await response.text();
-      let body = null;
-      try {
-        body = text ? JSON.parse(text) : null;
-      } catch {
-        if (!response.ok) {
-          const authenticatedRequest = Boolean(requestToken && session?.token === requestToken);
-          const message = resolveApiErrorMessage(response.status, null, path, authenticatedRequest);
-          if (response.status === 401 && authenticatedRequest) {
-            clearAuthState();
-            showLoginPage(message);
-          }
-          throw new ApiError(message, response.status);
-        }
-        throw new ApiError(`伺服器回傳格式不正確（${response.status}）`, response.status);
-      }
-
-      const validEnvelope = body
-        && typeof body.success === "boolean"
-        && typeof body.message === "string"
-        && Object.prototype.hasOwnProperty.call(body, "data");
-      if (!response.ok || (validEnvelope && !body.success)) {
-        const authenticatedRequest = Boolean(requestToken && session?.token === requestToken);
-        const message = resolveApiErrorMessage(response.status, body, path, authenticatedRequest);
-        if (response.status === 401 && authenticatedRequest) {
-          clearAuthState();
-          showLoginPage(message);
-        }
-        throw new ApiError(message, response.status);
-      }
-      if (!validEnvelope) {
-        throw new ApiError(`伺服器回傳格式不正確（${response.status}）`, response.status);
-      }
-      return body.data;
+      throw new ApiError(message, response.status);
     }
 
+    throw new ApiError(
+      `伺服器回傳格式不正確（${response.status}）`,
+      response.status
+    );
+  }
+
+  const validEnvelope =
+    body &&
+    typeof body.success === "boolean" &&
+    typeof body.message === "string" &&
+    Object.prototype.hasOwnProperty.call(body, "data");
+
+  if (!response.ok || (validEnvelope && !body.success)) {
+    const authenticatedRequest = Boolean(
+      requestToken && session?.token === requestToken
+    );
+
+    const message = resolveApiErrorMessage(
+      response.status,
+      body,
+      path,
+      authenticatedRequest
+    );
+
+    if (response.status === 401 && authenticatedRequest) {
+      clearAuthState();
+      showLoginPage(message);
+    }
+
+    throw new ApiError(message, response.status);
+  }
+
+  if (!validEnvelope) {
+    throw new ApiError(
+      `伺服器回傳格式不正確（${response.status}）`,
+      response.status
+    );
+  }
+
+  return body.data;
+}
 const buttonLocks = new WeakSet();
 
 async function runWithButtonLock(button, action) {
