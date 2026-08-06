@@ -63,26 +63,25 @@ async function api(path, options = {}) {
     headers.Authorization = `Bearer ${requestToken}`;
   }
 
-  // GitHub Pages 純前端 Demo
-  if (DEMO_MODE) {
-    if (typeof demoApiRequest !== "function") {
-      throw new ApiError("Demo API 尚未載入，請重新整理頁面", 0);
-    }
-
-    const demoResponse = await demoApiRequest(path, {
-      ...options,
-      headers
-    });
-
-    if (!demoResponse || demoResponse.success !== true) {
-      throw new ApiError(
-        demoResponse?.message || "Demo 操作失敗",
-        400
-      );
-    }
-
-    return demoResponse.data;
+if (DEMO_MODE) {
+  if (typeof demoApiRequest !== "function") {
+    throw new ApiError("Demo API 尚未載入", 0);
   }
+
+  const demoResponse = await demoApiRequest(path, {
+    ...options,
+    headers
+  });
+
+  if (!demoResponse || demoResponse.success !== true) {
+    throw new ApiError(
+      demoResponse?.message || "Demo 操作失敗",
+      400
+    );
+  }
+
+  return demoResponse.data;
+}
 
   let response;
 
