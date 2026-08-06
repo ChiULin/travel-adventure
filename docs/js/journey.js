@@ -122,13 +122,20 @@ function formatNumber(value) {
         || !document.getElementById("collectionOverlay").classList.contains("hidden");
     }
 
-async function refreshState() {
-      if (!session?.token) return;
-      const [journey, missions, achievements] = await Promise.all([
-        api("/api/journey/me"),
-        api("/api/journey/missions").catch(() => null),
-        api("/api/journey/achievements").catch(() => null)
-      ]);
+  async function refreshState() {
+  const journey = await api("/api/journey/me");
+
+  if (!journey || !Array.isArray(journey.cities)) {
+    throw new Error("無法取得 Demo 城市資料");
+     }
+
+        appState = journey;
+
+        renderPlayerSummary();
+        renderTaiwanAdventureMap(appState);
+
+        return appState;
+      }
       appState = journey;
       missionsState = missions;
       achievementsState = achievements;

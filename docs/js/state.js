@@ -9,7 +9,12 @@ const SESSION_KEY = "travelAdventureApiSession";
     let difficultyLocked = false;
     let activeQuizQuestion = null;
     let session = loadSession();
-    let appState = null;
+    let appState = {
+      player: null,
+      cities: [],
+      currentCityId: 1,
+      journeyCompleted: false
+    };
     let missionsState = null;
     let achievementsState = null;
     let activeCityId = null;
