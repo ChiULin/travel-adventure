@@ -125,12 +125,8 @@ function formatNumber(value) {
     async function refreshState() {
   const [journey, missions, achievements] = await Promise.all([
     api("/api/journey/me"),
-
-    api("/api/journey/missions")
-      .catch(() => []),
-
-    api("/api/journey/achievements")
-      .catch(() => [])
+    api("/api/journey/missions").catch(() => []),
+    api("/api/journey/achievements").catch(() => [])
   ]);
 
   if (!journey || !Array.isArray(journey.cities)) {
@@ -138,42 +134,23 @@ function formatNumber(value) {
   }
 
   appState = journey;
-  missionsState = missions || [];
-  achievementsState = achievements || [];
+  missionsState = Array.isArray(missions) ? missions : [];
+  achievementsState = Array.isArray(achievements) ? achievements : [];
 
-  const apiCurrentCityId = Number(appState.currentCityId);
+  const currentCityId = Number(appState.currentCityId);
 
-  const apiCurrentCity = appState.cities.find(city =>
-    Number(city.id) === apiCurrentCityId
+  const currentCity = appState.cities.find(city =>
+    Number(city.id) === currentCityId
   );
 
-  activeCityId = apiCurrentCity
-    ? Number(apiCurrentCity.id)
+  activeCityId = currentCity
+    ? Number(currentCity.id)
     : Number(appState.cities[0]?.id) || null;
 
   renderAll();
 
-  const explorationCity = appState.cities.find(city =>
-    Number(city.id) === Number(activeCityId)
-  );
-
-  const supportsExploration =
-    explorationCity?.scenes?.some(scene =>
-      scene.interactionType === "EXPLORATION"
-      && !scene.mysteryChallengeEnabled
-      && !scene.checked
-    );
-
-  if (
-    supportsExploration
-    && explorationCity.unlocked
-    && !explorationState.mission
-    && !explorationState.loading
-    && !explorationState.error
-    && !explorationState.completion
-  ) {
-    loadExplorationMission(explorationCity.id);
-  }
+  // 確保 Demo 登入後一定重新繪製臺灣地圖
+  renderTaiwanAdventureMap(appState);
 
   setTimeout(maybeShowFinalEnding, 0);
 
