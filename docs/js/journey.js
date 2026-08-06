@@ -123,37 +123,62 @@ function formatNumber(value) {
     }
 
     async function refreshState() {
-    const journey = await api("/api/journey/me");
+  const [journey, missions, achievements] = await Promise.all([
+    api("/api/journey/me"),
 
-    if (!journey || !Array.isArray(journey.cities)) {
+    api("/api/journey/missions")
+      .catch(() => []),
+
+    api("/api/journey/achievements")
+      .catch(() => [])
+  ]);
+
+  if (!journey || !Array.isArray(journey.cities)) {
     throw new Error("無法取得 Demo 城市資料");
-     }
+  }
 
-        appState = journey;
+  appState = journey;
+  missionsState = missions || [];
+  achievementsState = achievements || [];
 
-        renderPlayerSummary();
-        renderTaiwanAdventureMap(appState);
+  const apiCurrentCityId = Number(appState.currentCityId);
 
-        return appState;
-      }
-      appState = journey;
-      missionsState = missions;
-      achievementsState = achievements;
-      const apiCurrentCityId = Number(appState.currentCityId);
-      const apiCurrentCity = appState.cities.find(city =>
-        Number(city.id) === apiCurrentCityId
-      );
-      activeCityId = apiCurrentCity ? Number(apiCurrentCity.id) : null;
-      renderAll();
-      const explorationCity = appState.cities.find(city => city.id === activeCityId);
-      const supportsExploration = explorationCity?.scenes?.some(scene =>
-        scene.interactionType === "EXPLORATION" && !scene.mysteryChallengeEnabled && !scene.checked
-      );
-      if (supportsExploration && explorationCity.unlocked && !explorationState.mission && !explorationState.loading
-          && !explorationState.error && !explorationState.completion) {
-        loadExplorationMission(explorationCity.id);
-      }
-      setTimeout(maybeShowFinalEnding, 0);
+  const apiCurrentCity = appState.cities.find(city =>
+    Number(city.id) === apiCurrentCityId
+  );
+
+  activeCityId = apiCurrentCity
+    ? Number(apiCurrentCity.id)
+    : Number(appState.cities[0]?.id) || null;
+
+  renderAll();
+
+  const explorationCity = appState.cities.find(city =>
+    Number(city.id) === Number(activeCityId)
+  );
+
+  const supportsExploration =
+    explorationCity?.scenes?.some(scene =>
+      scene.interactionType === "EXPLORATION"
+      && !scene.mysteryChallengeEnabled
+      && !scene.checked
+    );
+
+  if (
+    supportsExploration
+    && explorationCity.unlocked
+    && !explorationState.mission
+    && !explorationState.loading
+    && !explorationState.error
+    && !explorationState.completion
+  ) {
+    loadExplorationMission(explorationCity.id);
+  }
+
+  setTimeout(maybeShowFinalEnding, 0);
+
+  return appState;
+}
 
     function renderPlayerSummary() {
       const user = appState.user;

@@ -294,20 +294,27 @@ return {
     success: true,
     message: "取得 Demo 旅程成功",
 data: {
+  user: demoState.player,
   player: demoState.player,
 
   currentCityId: demoState.currentCityId,
   currentCityCode:
-    demoCities.find(city => city.id === demoState.currentCityId)?.code,
+    demoCities.find(city =>
+      city.id === demoState.currentCityId
+    )?.code,
 
-  journeyCompleted: demoState.completedBosses.length === 6,
+  journeyCompleted:
+    demoState.completedBosses.length === 6,
 
-  completedLandmarks: demoState.checkins.length,
-  completedLandmarkCount: demoState.checkins.length,
+  completedLandmarks:
+    demoState.checkins.length,
 
-  completedCities: demoState.completedBosses.length,
-  completedCityCount: demoState.completedBosses.length,
-  totalCityCount: demoCities.length,
+  completedCityCount:
+    demoState.completedBosses.length,
+
+  totalCityCount:
+    demoCities.length,
+
   cities
 }
   };
