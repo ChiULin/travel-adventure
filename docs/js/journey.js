@@ -144,17 +144,22 @@ function formatNumber(value) {
   );
 
   activeCityId = currentCity
-    ? Number(currentCity.id)
-    : Number(appState.cities[0]?.id) || null;
+  ? Number(currentCity.id)
+  : Number(appState.cities[0]?.id) || null;
 
+renderTaiwanAdventureMap(appState);
+
+try {
   renderAll();
+} catch (error) {
+  console.error("部分 Demo 模組渲染失敗：", error);
+}
 
-  // 確保 Demo 登入後一定重新繪製臺灣地圖
-  renderTaiwanAdventureMap(appState);
+renderTaiwanAdventureMap(appState);
 
-  setTimeout(maybeShowFinalEnding, 0);
+setTimeout(maybeShowFinalEnding, 0);
 
-  return appState;
+return appState;
 }
 
     function renderPlayerSummary() {
