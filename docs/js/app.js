@@ -205,13 +205,21 @@ loginForm.addEventListener("submit", async event => {
     document.getElementById("back-to-taiwan-map").addEventListener("click", openTaiwanMapView);
 
     if (session?.token) {
-      document.getElementById("login").classList.add("hidden");
-      refreshState().then(showTutorialIfNeeded).catch(error => {
-        if (session?.token) {
-          clearAuthState();
-          showLoginPage(error.message);
-        }
-      });
-    }
+    document.getElementById("login").classList.add("hidden");
+
+    refreshState()
+      .then(() => {
+      console.log("Journey 載入成功", appState);
+
+      renderTaiwanAdventureMap(appState);
+      showTutorialIfNeeded();
+    })
+    .catch(error => {
+      console.error("Journey 載入失敗：", error);
+
+      // Demo 除錯期間先不要清除 appState
+      showLoginPage(error?.message || "Demo 載入失敗");
+    });
+  }
 
     document.documentElement.dataset.appReady = "true";

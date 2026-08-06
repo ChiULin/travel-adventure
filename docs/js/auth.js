@@ -215,35 +215,45 @@ function showLoginPage(message = "") {
     }
 
 async function authenticate(path, username, password, successMessage) {
-      try {
-        const auth = await api(path, {
-          method: "POST",
-          body: JSON.stringify({ username, password })
-        });
-        saveSession(auth);
-        await showLoginSuccessTransition(successMessage);
-        document.getElementById("login").classList.add("hidden");
-        await refreshState();
-        showTutorialIfNeeded();
-        return auth;
-      } catch (error) {
-        if (session?.token) {
-          clearAuthState();
-          showLoginPage(error.message);
-        }
-        throw error;
-      }
+  try {
+    const auth = await api(path, {
+      method: "POST",
+      body: JSON.stringify({ username, password })
+    });
+
+    saveSession(auth);
+    await showLoginSuccessTransition(successMessage);
+
+    await refreshState();
+
+    console.log("登入後 Journey：", appState);
+
+    renderTaiwanAdventureMap(appState);
+
+    document.getElementById("login").classList.add("hidden");
+    showTutorialIfNeeded();
+
+    return auth;
+  } catch (error) {
+    console.error("登入流程錯誤：", error);
+
+    if (session?.token) {
+      clearAuthState();
+      showLoginPage(error.message);
     }
 
-    async function login(username, password) {
-      const auth = await authenticate(
-        "/api/auth/login",
-        username,
-        password,
-        "登入成功，正在載入你的旅程……"
-      );
-      addLog(`${auth.username} 已登入。`);
-    }
+    throw error;
+  }
+}
+
+        async function register(username, password) {
+          return authenticate(
+            "/api/auth/register",
+              username,
+              password,
+            "註冊成功，正在建立你的旅程……"
+          );
+      }
 
     async function register(username, password) {
       return api("/api/auth/register", {
