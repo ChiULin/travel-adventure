@@ -206,45 +206,110 @@ function buildJourney() {
     const bossCompleted =
       demoState.completedBosses.includes(city.id);
 
-    return {
-      id: city.id,
-      code: city.code,
-      name: city.name,
-      unlocked: demoState.unlockedCities.includes(city.id),
-      completedScenes,
-      totalScenes: city.scenes.length || 3,
-      completionPercent: city.scenes.length
-        ? Math.round(completedScenes / city.scenes.length * 100)
-        : 0,
-      bossName: city.bossName,
-      bossCompleted,
-      scenes: city.scenes.map((scene, index) => ({
-        ...scene,
-        stageOrder: index + 1,
-        completed: demoState.checkins.includes(scene.id),
-        status:
-          demoState.checkins.includes(scene.id)
-            ? "COMPLETED"
-            : index === completedScenes
-              ? "AVAILABLE"
-              : "LOCKED"
-      }))
-    };
+return {
+  id: city.id,
+  cityId: city.id,
+
+  code: city.code,
+  name: city.name,
+  cityName: city.name,
+
+  unlockOrder: city.unlockOrder,
+
+  unlocked: demoState.unlockedCities.includes(city.id),
+  defeated: bossCompleted,
+
+  status: bossCompleted
+    ? "COMPLETED"
+    : demoState.unlockedCities.includes(city.id)
+      ? "AVAILABLE"
+      : "LOCKED",
+
+  done: completedScenes,
+  total: city.scenes.length || 3,
+
+  completedStageCount: completedScenes + (bossCompleted ? 1 : 0),
+  totalStageCount: (city.scenes.length || 3) + 1,
+
+  completedScenes,
+  totalScenes: city.scenes.length || 3,
+
+  completionPercent: city.scenes.length
+    ? Math.round(completedScenes / city.scenes.length * 100)
+    : 0,
+
+  bossName: city.bossName,
+  bossCompleted,
+
+  badgeIcon: bossCompleted ? "🏅" : "✦",
+
+  scenes: city.scenes.map((scene, index) => ({
+    ...scene,
+
+    stageOrder: index + 1,
+    stageLabel: `第 ${index + 1} 關`,
+    stageConfigured: true,
+
+    completed: demoState.checkins.includes(scene.id),
+
+    stageStatus:
+      demoState.checkins.includes(scene.id)
+        ? "COMPLETED"
+        : index === completedScenes
+          ? "AVAILABLE"
+          : "LOCKED",
+
+    status:
+      demoState.checkins.includes(scene.id)
+        ? "COMPLETED"
+        : index === completedScenes
+          ? "AVAILABLE"
+          : "LOCKED",
+
+    actionLabel: "開始挑戰",
+    interactionType: "QUIZ",
+    mysteryChallengeEnabled: true,
+
+    desc: scene.description,
+    story: scene.description
+  })),
+
+  bossStage: {
+    stageOrder: 4,
+    stageLabel: "第 4 關",
+    bossName: city.bossName,
+
+    stageStatus: bossCompleted
+      ? "COMPLETED"
+      : completedScenes >= (city.scenes.length || 3)
+        ? "AVAILABLE"
+        : "LOCKED",
+
+    actionLabel: bossCompleted ? "再次挑戰" : "挑戰守護者"
+  }
+};
   });
 
   return {
     success: true,
     message: "取得 Demo 旅程成功",
-    data: {
-      player: demoState.player,
-      currentCityId: demoState.currentCityId,
-      currentCityCode:
-        demoCities.find(city => city.id === demoState.currentCityId)?.code,
-      journeyCompleted: demoState.completedBosses.length === 6,
-      completedLandmarks: demoState.checkins.length,
-      completedCities: demoState.completedBosses.length,
-      cities
-    }
+data: {
+  player: demoState.player,
+
+  currentCityId: demoState.currentCityId,
+  currentCityCode:
+    demoCities.find(city => city.id === demoState.currentCityId)?.code,
+
+  journeyCompleted: demoState.completedBosses.length === 6,
+
+  completedLandmarks: demoState.checkins.length,
+  completedLandmarkCount: demoState.checkins.length,
+
+  completedCities: demoState.completedBosses.length,
+  completedCityCount: demoState.completedBosses.length,
+  totalCityCount: demoCities.length,
+  cities
+}
   };
 }
 
